@@ -1,0 +1,3 @@
+"libek" is an incipient API for a Game Creation System which may or may not be in development.
+
+For the time being, this is basically any Orthot III internal functionality which is either re-useable or not game-specific.

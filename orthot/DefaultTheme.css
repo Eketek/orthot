@@ -1,0 +1,100 @@
+.section {
+  border-style:solid;
+  border-color:hsl(0, 100%, 75%);
+  padding:3px;
+  margin:1px;
+}
+.nav.btn {
+  border-style:solid;
+  border-width:1px;
+  padding:1px;
+  margin-right:1px;
+}
+.nav.btn:hover {
+  background-color:hsl(201, 100%, 93%)
+}
+
+.btn_active {
+  border-style:solid;
+  border-width:1px;
+  padding:1px;
+  margin-right:1px;
+  background-color:hsl(60, 80%, 70%);
+  
+  /* Just to irritate USER: */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none; 
+  -ms-user-select: none; 
+  user-select: none;
+}
+.btn_active:hover {
+  background-color:hsl(60, 100%, 90%);
+}
+
+.btn_neutral {
+  border-style:solid;
+  border-width:1px;
+  padding:1px;
+  margin-right:1px;
+  background-color:hsl(45, 60%, 60%);
+  
+  /* Just to irritate USER: */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none; 
+  -ms-user-select: none; 
+  user-select: none;
+}
+.btn_neutral:hover {
+  background-color:hsl(45, 80%, 80%);
+}
+
+
+.btn_inactive {
+  border-style:solid;
+  border-width:1px;
+  padding:1px;
+  margin-right:1px;
+  background-color:hsl(30, 10%, 70%);
+  
+  /* Just to irritate USER: */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none; 
+  -ms-user-select: none; 
+  user-select: none;
+}
+.btn_inactive:hover {
+  background-color:hsl(30, 0%, 60%)
+}
+
+.name {
+  padding:2px;
+  margin-right:16px
+}
+
+.navspcr:after {
+  content:">";
+}
+
+.mainblock {
+  display:flex;
+  /*flex-wrap:wrap;*/
+}
+
+.thickline {
+  height:1.5em;
+}
+
+
+hr {
+ display: block;
+ margin:3px 8px 3px 8px;
+ border-style: solid;
+ border-width: 1px;
+ border-color:black;
+}

@@ -65,7 +65,7 @@ libek.Model = function(params) {
       
       this.hide = (function() {
         if (model.obj.children.indexOf(this.obj) != -1) {
-          model.obj.add(this.obj)
+          model.obj.remove(this.obj)
         }
       }).bind(this);
       
@@ -73,9 +73,7 @@ libek.Model = function(params) {
       this.setObject = function(objname, mdlarg) {
         
         let obj = this.content[objname]    
-        if (obj) {
-          //obj.matrix = new THREE.Matrix4()
-          //obj.matrixAutoUpdate = true      
+        if (obj) { 
           libek.releaseAsset(obj)
         }    
         if (mdlarg) {
@@ -91,10 +89,7 @@ libek.Model = function(params) {
         }
         else {
           obj = libek.getAsset(model.default)
-        }
-        //obj.matrix = this.matrix
-        //obj.matrixAutoUpdate = false
-        
+        }        
         
         this.obj.add(obj)
         this.content[objname] = obj
@@ -105,9 +100,7 @@ libek.Model = function(params) {
       }
       this.removeObject = function(cmpname, objname) {
         let obj = this.content[objname]    
-        if (obj) {
-          //obj.matrix = new THREE.Matrix4()
-          //obj.matrixAutoUpdate = true      
+        if (obj) {   
           libek.releaseAsset(obj)
         }    
         delete this.content[objname]
@@ -118,8 +111,6 @@ libek.Model = function(params) {
     
     this.removeComponent = function(cmp) {
       for (let obj of cmp.obj.children) {
-        //obj.matrix = new THREE.Matrix4()
-        //obj.matrixAutoUpdate = true      
         libek.releaseAsset(obj)   
       }
       this.model.obj.remove(cmp.obj)

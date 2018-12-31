@@ -37,7 +37,7 @@ orthot.Zone = function(ekvx, override_startloc) {
   let prevtick = Date.now()
   let prevtime = prevtick
   let prevreltime = 0
-  let ticklen = 200
+  this.ticklen = 200
   
   let player
   let startloc = vxc.get(0,1,0)
@@ -71,7 +71,6 @@ orthot.Zone = function(ekvx, override_startloc) {
   
   // Command sequences that are added at the beginning of a tick, end at the beginning of the next tick, and are measured in seconds (floating point values)
   this.addCommandsequence_short = function(cmdseq) {
-    //console.log("add-short-sequence", cmdseq)
     cmdSequences_short.push(cmdseq)
     cmdseq.start()
   }
@@ -111,6 +110,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     let t = Date.now()
     let dt = t-prevtime
     prevtime = t
+    
         
     for (let i = 0; i < cmdSequences_realtime.length; i++) {
       let seq = cmdSequences_realtime[i]
@@ -120,7 +120,7 @@ orthot.Zone = function(ekvx, override_startloc) {
       }
     }
     
-    let reltime = (t-prevtick) / ticklen  
+    let reltime = (t-prevtick) / this.ticklen  
     let d = reltime-prevreltime
     prevreltime = reltime
     
@@ -135,7 +135,6 @@ orthot.Zone = function(ekvx, override_startloc) {
     //update command sequences
     if (reltime < 1) {
       for (let seq of cmdSequences_short) {
-        //console.log("advance-short-sequence", seq)
         seq.advance(d)
       }
     }
@@ -143,7 +142,6 @@ orthot.Zone = function(ekvx, override_startloc) {
       // Complete all short animations.  "Now" here is immediately before the next tick.
       if (cmdSequences_short.length != 0) {
         for (let seq of cmdSequences_short) {
-          //console.log("complete-short-sequence", seq)
           seq.stop()
         }
         cmdSequences_short = []
@@ -258,7 +256,7 @@ orthot.Zone = function(ekvx, override_startloc) {
   
   this.inputAvailable = function() {
     if ( (cmdSequences_short.length == 0) && (cmdSequences_long.length == 0)) {
-      prevtick = Date.now() - ticklen
+      prevtick = Date.now() - this.ticklen
     }
   }
   
@@ -472,7 +470,6 @@ orthot.Zone = function(ekvx, override_startloc) {
   */
   this.getLocalTopology = function(obj, fromCTN, fromHEADING, fromFORWARD, fromUP) {
     let adjCTN = this.getAdjacentCTN(fromCTN, fromHEADING)
-    //console.log(obj, fromCTN, adjCTN)
     let outCTN = adjCTN
     let outFORWARD = fromFORWARD
     let outUP = fromUP
@@ -487,8 +484,27 @@ orthot.Zone = function(ekvx, override_startloc) {
       if (dportal) {
         isPortaljump = true 
         outHEADING = dportal.up
-        outFORWARD = dportal.up
-        outUP = dportal.forward
+        //outFORWARD = dportal.up
+        //outUP = dportal.forward
+        let sv = (portal.up == libek.direction.code.UP) || (portal.up == libek.direction.code.DOWN)
+        let dv = (dportal.up == libek.direction.code.UP) || (dportal.up == libek.direction.code.DOWN)
+        
+        if (sv && dv) {
+          outFORWARD = dportal.up
+          outUP = libek.direction.invert[fromUP]
+        }
+        else if (!sv && !dv) {
+          outFORWARD = dportal.up
+          outUP = fromUP
+        }        
+        else if (sv && !dv) {
+          outFORWARD = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromFORWARD, portal.up, portal.forward, dportal.up, dportal.forward)]
+          outUP = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromUP, libek.direction.invert[portal.up], portal.forward, dportal.up, dportal.forward)]
+        }
+        else {
+          outFORWARD = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromFORWARD, portal.up, portal.forward, dportal.up, dportal.forward)]
+          outUP = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromUP, libek.direction.invert[portal.up], portal.forward, dportal.up, dportal.forward)]
+        }
         outCTN = this.getAdjacentCTN(dportal.host.ctn, outHEADING)
       }
     }
@@ -533,7 +549,6 @@ orthot.Zone = function(ekvx, override_startloc) {
   let recent_insertion
     
   this.addForce = (function(force) {
-    //console.log("addforce 1", force)
     recent_insertion = true
     forces.push(force)
     
@@ -555,9 +570,7 @@ orthot.Zone = function(ekvx, override_startloc) {
       dstlist = []
       moves_by_dest[destID] = dstlist
     }
-    
-    //console.log("addforce 2")
-    
+        
     // Movement insertion during processMovement() [generally dragging and falling] might need to result in re-classification of movement in affected spaces,
     // but this doesn't seem particularly important.  So, for now, any movement inserted during processMovement() is assumed to be non-controversial and will
     // be blindly accepted.
@@ -588,14 +601,12 @@ orthot.Zone = function(ekvx, override_startloc) {
         
         //If the directions are neither, the source is striking the target's side
         else {
-          //console.log("edge-ram", force.toDIR, tgtForce.fromDIR)
           let ocol = {target:tgtForce, type:orthot.Collision.EDGE_RAM}
           force.outgoing.push( ocol )
           tgtForce.incoming.push({source:force, collision:ocol})
         }
       }
     }
-    //console.log("addforce 3")
     
     // Classify far-collisions (Two objects attempting to enter the same space)
     tgtList = moves_by_dest[destID]
@@ -628,7 +639,6 @@ orthot.Zone = function(ekvx, override_startloc) {
       }
     }
     
-    //console.log("addforce 4")
     srclist.push(force)
     dstlist.push(force)
     
@@ -648,7 +658,6 @@ orthot.Zone = function(ekvx, override_startloc) {
       fpropagated |= obj.__propagate_force__(force, this.ticknum)
     }
     return fpropagated
-    //console.log("addforce 5")
   }).bind(this)
   
   let processMovement = function() { 
@@ -671,7 +680,6 @@ orthot.Zone = function(ekvx, override_startloc) {
           let simpleResolve = true
           if (!force.deferred) {
             for (let collision of force.outgoing) {
-              console.log(collision.type)
               if (!force.OBJ.hasMovementPriority(collision.target.OBJ, collision.target.fromDIR, force.toDIR, collision.type)) {
                 priorityResolve = false
               }          
@@ -786,11 +794,6 @@ orthot.Zone = function(ekvx, override_startloc) {
       
       if (forces.length > 0) {
         console.log("ERROR:  force list not empty at end of processMovement()", forces)
-      /* for (let force of forces) {
-          console.log("domove: ", force)
-          force.OBJ.move(force)
-        }
-        */
         forces = []
         
       }
@@ -867,7 +870,6 @@ orthot.Zone = function(ekvx, override_startloc) {
     let loaded_objects = []
     let ldstage = 1
     ekvx.loadData( (x,y,z, template, data) => {
-      //console.log( "ADD", x,y,z, template, data)
       if (flipWorld) {
         z *= -1
       }
@@ -898,7 +900,6 @@ orthot.Zone = function(ekvx, override_startloc) {
             
           break
           case 'stairs': {
-            //console.log("STAIRS", datas) 
             color = libek.util.property("color", datas, "white", libek.util.color.parse)
             align = libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation)
             gobj = new orthot.Stair(this,  color, align)
@@ -910,7 +911,6 @@ orthot.Zone = function(ekvx, override_startloc) {
           }
           break
           case 'target': {
-            //console.log("TARGET", datas)
             let campos = libek.util.property("camPos", datas, undefined, libek.util.parseVec3)
             if (flipWorld) {
               campos.z *= -1
@@ -926,13 +926,11 @@ orthot.Zone = function(ekvx, override_startloc) {
           break
           case 'pblock':
             gobj = new orthot.PushBlock(this)
-            //console.log("PBLOC data", datas)
           break
           case 'sceneportal':
             gobj = new orthot.ScenePortal(this)
             gobj.destination = libek.util.property("dest", datas)
             gobj.target = libek.util.property("target", datas)
-            //console.log("SCENEPORTAL", datas)
           break
           case 'space_light':
           case 'face_light':
@@ -950,15 +948,12 @@ orthot.Zone = function(ekvx, override_startloc) {
             light.position.set( x,y,z );
             this.scene.add( light );
             
-            console.log(light)
             */
           break
           default:
             return true
           break
           case "start": {          
-            //console.log("START", datas)
-            
             let campos = libek.util.property("camPos", datas, undefined, libek.util.parseVec3)
             if (flipWorld) {
               campos.z *= -1
@@ -988,7 +983,6 @@ orthot.Zone = function(ekvx, override_startloc) {
                 libek.util.property("color", datas, "white", libek.util.color.parse),
                 p_class, p_name, p_target
               )
-              //console.log("PORTAL", datas, align, portal)
               this.attach(x,y,z, portal)
               
               if (p_target && p_class) {
@@ -1034,7 +1028,6 @@ orthot.Zone = function(ekvx, override_startloc) {
     for (let ld_gobj of loaded_objects) {      
       //ld_gobj._ekvxdata_ = datas 
       if (ld_gobj.initGraphics()) {
-        //console.log(ld_gobj)
         this.scene.add(ld_gobj.obj)
         if (!ld_gobj.worldpos) {
           ld_gobj.worldpos = ld_gobj.obj.position
@@ -1093,17 +1086,13 @@ orthot.Zone = function(ekvx, override_startloc) {
     this.destroyObjects()
     this.destroyTerrain()
     if (this.scene.children.length > 0) {
-      console.log("FOUND THESE:")
-      for (let obj of this.scene.children) {
-        console.log(obj)
-      }
+      console.log("Objects remaining in-scene on unload:", this.scene.children)
     }
     
   }
   this.destroyObjects = function() {
     vxc.forAll(ctn => {
       for (let gobj of ctn.content) {
-        //console.log(gobj)
         gobj.destroy()
       }
     })
@@ -1122,7 +1111,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     prevtick = Date.now()
     prevtime = prevtick
     prevreltime = 0
-    ticklen = 200
+    this.ticklen = 200
     startloc = vxc.get(0,1,0) 
     player = undefined
 

@@ -491,7 +491,7 @@ libek.shader = {
     
     Object.defineProperty(this, 'r', { 
       get: function() { return this.value.x },
-      set: function(v) { this.value.x = v; console.log("set-r?", r) }
+      set: function(v) { this.value.x = v; }
     })
     Object.defineProperty(this, 'g', { 
       get: function() { return this.value.y },

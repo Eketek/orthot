@@ -32,7 +32,6 @@ orthot.ScenePortal = function(zone) {
   }).bind(this)
   this.intruded = function(other) {
     if (other.isPlayer) {
-      //console.log("sceneportal-data", this._ekvxdata_)
       orthot.loadScene(this.destination, this.target)
     }
   }
@@ -145,8 +144,7 @@ orthot.PushBlock = function(zone, color) {
     
   }
   this.strike = function(force) {
-    //if (forc
-    //this.animCTL.impactDown(force)
+  
   }
   
   this.push = function(force) { 
@@ -184,7 +182,7 @@ orthot.PushBlock = function(zone, color) {
     else if (force.action == "fall") {
       if (this.state == orthot.ObjectState.FALLING) {
         this.state = orthot.ObjectState.IDLE
-        this.animCTL.impactDown()
+        this.animCTL.impactDown(force)
       }
       
       this.state = orthot.ObjectState.IDLE

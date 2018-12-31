@@ -24,7 +24,9 @@ solely of red, green, and blue pixels set at various levels (resulting in blendi
 multiple channels will result in an additive blending of the mixer colors.
 
 
-In general, artwork contributions to the Orthot III will only be accepted into the main graphics set if they are visually consistant with existing artwork.  
+In general, artwork contributions to the Orthot III will only be accepted into the *main graphics set if they are visually consistant with existing artwork.  
 (should attempt to keep details at about the same scale, stick with low-poly models, and don't get too radical with texturing).  Partly this is for visual 
-consistancy, and partly, this is to ensure that the graphics can be extended without having to either add graphics which look out-of-place and without having to 
+consistancy, and partly, this is to ensure that the graphics can be extended without having to add graphics which look out-of-place and without having to 
 rely upon a skilled artist.
+
+(*) Ability to load other graphics presently is only a planned feature.

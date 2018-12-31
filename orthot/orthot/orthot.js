@@ -108,6 +108,7 @@ $(async function() {
     RefocusTargetMBTN:"mmb",
     RefocusUpdatepickplane:true,
     RefocusLen:700,
+    QuickRefocusLen:150,
     
   })  
   sviewCTL.run()

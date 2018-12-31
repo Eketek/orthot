@@ -10,8 +10,13 @@ orthot.AnimateBlock = function(zone, blk) {
   let MDL = new libek.Model({default:blk.mdlgen})
   blk.obj = MDL.obj  
     
+  let transient = false
+  
+  blk.worldpos = new THREE.Vector3()
+    
   let CFG = function(inst) {  
     
+  
     let ctl = inst.ctl
     let mainCMP = ctl.mainCMP = new inst.Component()
     
@@ -20,7 +25,9 @@ orthot.AnimateBlock = function(zone, blk) {
     
     let scale = new THREE.Vector3(1,1,1)  
     let center = new THREE.Vector3()
-    let worldpos = new THREE.Vector3()    
+    let worldpos = new THREE.Vector3()  
+    
+    let _transient = transient  
     
     let main_txSHIFT = new libek.Transform(matrix)
         main_txSHIFT.translate(relpos)
@@ -49,7 +56,6 @@ orthot.AnimateBlock = function(zone, blk) {
         
         if (sidegrp.length > 0) {
           let orientation = libek.direction.sideorientations[i]   
-          //console.log("ORIENT", i, orientation)
           let sideCMP = new inst.Component()
           let txmat = sideCMP.matrix
           for (let sobj of sidegrp) {
@@ -96,18 +102,17 @@ orthot.AnimateBlock = function(zone, blk) {
       for (let tx of _txIMPACTDOWN) {
         tx.update()
       }
-    }
+    }or portal-related animations
             
-    let backward = new THREE.Vector3()
+    let behind = new THREE.Vector3()
+    let ahead = new THREE.Vector3()
+    let up = new THREE.Vector3()
+    let down = new THREE.Vector3()
     let forward = new THREE.Vector3()
-    let up = new THREE.Vector3(0,1,0)
-    let down = new THREE.Vector3(0,-1,0)
+    let backward = new THREE.Vector3()
+    let left = new THREE.Vector3()
+    let right = new THREE.Vector3()
     
-    ctl.up = up
-    ctl.down = down
-    ctl.backward = backward
-    ctl.forward = forward 
-    ctl.worldpos = worldpos
     ctl.txMAIN = txSHIFT
     
     let init_still = (d,t)=>{   
@@ -119,39 +124,84 @@ orthot.AnimateBlock = function(zone, blk) {
     }
     
     let init = (d,t) =>{   
-      relpos.copy(backward)
+      relpos.copy(behind)
+      lerprelpos_startpos.copy(relpos)
+      lerprelpos_endpos.set(0,0,0)   
+      lerprelpos_len = 1
+      lerprelpos_start = 0
+      if (_transient) {
+        mainCMP.show()
+      }
     }
     let end = (d,t)=>{ 
       relpos.copy(center)
       txSHIFT()
+      if (_transient) {
+        mainCMP.hide()
+      }
     }
     
-    /*  Animation component:  "shortmove"
+    
+    /*  Animation component:  "lerprelpos"
         This sets up a LERP of relpos from a specified start point to a specified end point over a specified time interval */
-    let shortmove_startpos = new THREE.Vector3()
-    let shortmove_endpos = new THREE.Vector3()
-    let shortmove_start, shortmove_len      
-    let shortmove = function(d,t) {   
-      relpos.lerpVectors(shortmove_startpos, shortmove_endpos, (t-shortmove_start) / shortmove_len)
+    let lerprelpos_startpos = new THREE.Vector3()
+    let lerprelpos_endpos = new THREE.Vector3()
+    let lerprelpos_start, lerprelpos_len      
+    let lerprelpos = function(d,t) {   
+      relpos.lerpVectors(lerprelpos_startpos, lerprelpos_endpos, (t-lerprelpos_start) / lerprelpos_len)
+    }
+    
+    let lerpscale_startscale = new THREE.Vector3()
+    let lerpscale_endscale = new THREE.Vector3()
+    let lerpscale_start, lerpscale_len      
+    let lerpscale = function(d,t) {   
+      scale.lerpVectors(lerpscale_startscale, lerpscale_endscale, (t-lerpscale_start) / lerpscale_len)
     }
     
     let vec = new THREE.Vector3()
     let vec2 = new THREE.Vector3()
     let vec3 = new THREE.Vector3()
     
-    ctl.ready = function() {
+    ctl.ready = function(wpos) {
       mainCMP.setObject("box")
-      txSHIFT()
+      if (wpos) {
+        worldpos.copy(wpos)
+        txSHIFT()
+      }
+      else {
+        mainCMP.hide()
+      }
+    }
+    
+    ctl.configure = function(_position, _heading, _forward, _up) {
+      if (_position) {
+        worldpos.copy(_position)
+      }
+      
+      //  For now, orientation property is omitted because all blocks didn't do any rotating in Orthot II.  Orientation should probably be re-added,
+      //  because portals in Orthot III do end up rotating things
+      //libek.direction.setOrientation(orientation, _forward, _up)or portal-related animations
+      
+      forward.copy(libek.direction.vector[_forward])
+      backward.copy(libek.direction.vector[libek.direction.invert[_forward]])
+      up.copy(libek.direction.vector[_up])
+      down.copy(libek.direction.vector[libek.direction.invert[_up]])
+      let _right = libek.direction.cross(_forward, _up)
+      right.copy(libek.direction.vector[_right])
+      left.copy(libek.direction.vector[libek.direction.invert[_right]])
+      ahead.copy(libek.direction.vector[_heading])
+      behind.copy(libek.direction.vector[libek.direction.invert[_heading]])
     }
     
     ctl.shift = new libek.CommandSequence(
       init, end, 1,
       
       (d,t) => { 
-        relpos.lerpVectors(backward, center, t) 
+        relpos.lerpVectors(behind, center, t) 
         txSHIFT()
       }
     )
+    
     
     let exg = 0.125
     // Orthot III blocks are ... "high-tech"
@@ -159,10 +209,10 @@ orthot.AnimateBlock = function(zone, blk) {
       init, end, 1, 
       [ {time:0.00, at: d => {
           vec2.set(1,1,1)
-          vec3.set(1+exg-Math.abs(forward.x)*exg*2, 1+exg-Math.abs(forward.y)*exg*2, 1+exg-Math.abs(forward.z)*exg*2)
-          vec.copy(forward)
+          vec3.set(1+exg-Math.abs(ahead.x)*exg*2, 1+exg-Math.abs(ahead.y)*exg*2, 1+exg-Math.abs(ahead.z)*exg*2)
+          vec.copy(ahead)
           vec.multiplyScalar(exg)
-          vec.add(backward)
+          vec.add(behind)
           relpos.copy(vec)
         }},
         (d,t) => {          
@@ -178,6 +228,36 @@ orthot.AnimateBlock = function(zone, blk) {
         relpos.lerpVectors( vec, center, t)  
         txIMPULSESHIFT()   
       }
+    )
+    
+    ctl.squeezethroughportal = new libek.CommandSequence(
+      init, end, 1, 
+      [ {time:0.00, at: d => {
+          lerpscale_startscale.set(1,1,1)
+          vec.set(1,1,1)
+          vec2.copy(ahead)
+          vec2.multiplyScalar(exg*2)
+          vec2.x -= exg
+          vec2.y -= exg
+          vec2.z -= exg
+          lerpscale_endscale.addVectors(vec, vec2)
+          lerpscale_start = 0
+          lerpscale_len = 0.25          
+        }},
+        lerpscale,
+        {time:0.25, at: d => { 
+        }},
+        {time:0.75, at: d => {
+          lerpscale_startscale.copy(lerpscale_endscale)
+          lerpscale_endscale.set(1,1,1)
+          lerpscale_start = 0.75
+          lerpscale_len = 0.25          
+        }},
+        lerpscale,
+        {time:1, at: d => { scale.set(1,1,1) }},
+      ],     
+      lerprelpos,
+      txIMPULSESHIFT
     )
     
     ctl.impactDown = new libek.CommandSequence(
@@ -205,11 +285,12 @@ orthot.AnimateBlock = function(zone, blk) {
   }  
   
   let mainINST = new MDL.Instance("main", CFG)  
-  let main_pos = blk.worldpos = new THREE.Vector3()
+  transient = true  
+  let altINST = new MDL.Instance("alt", CFG)  
+  altINST.ctl.ready()
   
   blk.ready = function() {
-    mainINST.ctl.worldpos.copy(blk.worldpos)
-    mainINST.ctl.ready()
+    mainINST.ctl.ready(blk.worldpos)
   }
   
   blk.animCTL = {
@@ -219,22 +300,45 @@ orthot.AnimateBlock = function(zone, blk) {
       MDL.destroy()
     },
     shift:function(force) {
-      mainINST.ctl.worldpos.copy(blk.worldpos)
-      mainINST.ctl.backward.copy(libek.direction.vector[libek.direction.invert[force.toHEADING]])
-      mainINST.ctl.forward.copy(libek.direction.vector[force.toHEADING])    
-      zone.addCommandsequence_short(mainINST.ctl.shift)
+      mainINST.ctl.configure(blk.worldpos, force.toHEADING, force.toFORWARD, force.toUP)
+      
+      if (force.isPortaljump) {   
+        let hop = force.path[0]
+        altINST.ctl.configure(hop.adjCTN, hop.fromHEADING, hop.fromFORWARD, hop.fromUP)        
+        zone.addCommandsequence_short(altINST.ctl.squeezethroughportal)         
+        zone.addCommandsequence_short(mainINST.ctl.squeezethroughportal)   
+      }
+      else {
+        zone.addCommandsequence_short(mainINST.ctl.shift)
+      }
     },
     
     impulseShift:function(force) {
-      mainINST.ctl.worldpos.copy(blk.worldpos)
-      mainINST.ctl.backward.copy(libek.direction.vector[libek.direction.invert[force.toHEADING]])
-      mainINST.ctl.forward.copy(libek.direction.vector[force.toHEADING])    
-      zone.addCommandsequence_short(mainINST.ctl.impulseShift)
+      mainINST.ctl.configure(blk.worldpos, force.toHEADING, force.toFORWARD, force.toUP)
+      
+      if (force.isPortaljump) {   
+        let hop = force.path[0]
+        altINST.ctl.configure(hop.adjCTN, hop.fromHEADING, hop.fromFORWARD, hop.fromUP)          
+        zone.addCommandsequence_short(altINST.ctl.squeezethroughportal)         
+        zone.addCommandsequence_short(mainINST.ctl.squeezethroughportal)   
+      }
+      else {
+        zone.addCommandsequence_short(mainINST.ctl.impulseShift)
+      }
     },
     
-    impactDown:function() { 
-      mainINST.ctl.worldpos.copy(blk.worldpos)
-      zone.addCommandsequence_short(mainINST.ctl.impactDown)
+    impactDown:function(force) { 
+      mainINST.ctl.configure(blk.worldpos, force.fromHEADING, force.fromFORWARD, force.fromUP)
+      
+      if (force.isPortaljump) {   
+        let hop = force.path[0]
+        altINST.ctl.configure(hop.adjCTN, hop.fromHEADING, hop.fromFORWARD, hop.fromUP)            
+        zone.addCommandsequence_short(altINST.ctl.squeezethroughportal)         
+        zone.addCommandsequence_short(mainINST.ctl.squeezethroughportal)   
+      }
+      else {
+        zone.addCommandsequence_short(mainINST.ctl.impactDown)
+      }
     },
   }
 }
@@ -245,6 +349,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
   
   let main_pos = cr.worldpos = new THREE.Vector3()
   
+  let actually_trackcam = false
   let tmp_trackcam = trackcam
   let transient = false
   
@@ -259,12 +364,14 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     //  orientation is used to orient the model  (this might later be combined with other orientation vectors for a general-purpose orientation data structure)
     let scale = ctl.scale = new THREE.Vector3(1,1,1)    
     let worldpos = ctl.worldpos = new THREE.Vector3()
-    let backward = ctl.backward = new THREE.Vector3()
-    let forward = ctl.forward = new THREE.Vector3()
-    let up = ctl.up = new THREE.Vector3(0,1,0)
-    let down = ctl.down = new THREE.Vector3(0,-1,0)
-    let left = ctl.left = new THREE.Vector3()
-    let right = ctl.right = new THREE.Vector3()
+    let forward = new THREE.Vector3()
+    let backward = new THREE.Vector3()
+    let behind = new THREE.Vector3()
+    let ahead = new THREE.Vector3()
+    let up = new THREE.Vector3(0,1,0)
+    let down =  new THREE.Vector3(0,-1,0)
+    let left = new THREE.Vector3()
+    let right = new THREE.Vector3()
     let orientation = ctl.orientation = {}
         
     //start point positioning vectors
@@ -295,16 +402,17 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     txMAIN.translate(relpos)
     txMAIN.translate(worldpos)
     
-    let rot = new THREE.Quaternion()
+    let relrot = new THREE.Quaternion()
     
-    let txMAIN_QROT = new libek.Transform(mainCMP.matrix)
-    txMAIN_QROT.scale(scale)
-    txMAIN_QROT.orient(orientation)
-    txMAIN_QROT.rotate(rot)
-    txMAIN_QROT.translate(relpos)
-    txMAIN_QROT.translate(worldpos)
+    let txMAIN_WITH_RELROT = new libek.Transform(mainCMP.matrix)
+    txMAIN_WITH_RELROT.scale(scale)
+    txMAIN_WITH_RELROT.orient(orientation)
+    txMAIN_WITH_RELROT.rotate(relrot)
+    txMAIN_WITH_RELROT.translate(relpos)
+    txMAIN_WITH_RELROT.translate(worldpos)
     
-    let __trackcam = tmp_trackcam
+    let _transient = transient
+    let _trackcam = tmp_trackcam
         
     //  Animation INITIALIZERS and FINALIZERS
     //  These are used to enforce expected poses and set up animation temp variables
@@ -314,27 +422,41 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     //  objects and animate through, but that easily doubles the amount of animations, so an intermediary controller was set up that abstracts the
     //  portals away by also duplicating the animation controllers).
     let init = (d,t) =>{   
-      relpos.copy(backward)
-      main_startpos.copy(backward)
-      if (__trackcam) {
+      relpos.copy(behind)
+      main_startpos.copy(behind)
+      lerprelpos_startpos.copy(relpos)
+      lerprelpos_endpos.set(0,0,0)   
+      lerprelpos_len = 1
+      lerprelpos_start = 0
+      
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
+      }
+      if (_transient) {
+        mainCMP.show()
       }
     }
     
     let init_still = (d,t)=>{   
       relpos.copy(center)
       main_startpos.copy(center)
-      if (__trackcam) {
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
+      }
+      if (_transient) {
+        mainCMP.show()
       }
     }
     let end_still = (d,t)=>{ 
       relpos.copy(center)
       txMAIN.update()
-      if (__trackcam) {
+      if (_trackcam && actually_trackcam) {
         tmp_camvec_main.sub(main_startpos)
         sviewCTL.camtarget.copy(tmp_camvec_main)
         sviewCTL.updateCamera()
+      }
+      if (_transient) {
+        mainCMP.hide()
       }
     }
     let init_ladder_exit = (d,t) => {  
@@ -343,8 +465,11 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       ladder_offset_start.add(down)
       relpos.copy(ladder_offset_start)
       main_startpos.copy(relpos)
-      if (__trackcam) {
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
+      }
+      if (_transient) {
+        mainCMP.show()
       }
     }    
     let init_ladder = (d,t) => {  
@@ -353,8 +478,11 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       ladder_offset_start.add(down)
       relpos.copy(ladder_offset_start)
       main_startpos.copy(relpos)
-      if (__trackcam) {
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
+      }
+      if (_transient) {
+        mainCMP.show()
       }
     }
     let init_ladder_high = (d,t) => {  
@@ -363,7 +491,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       ladder_offset_start.add(up)
       relpos.copy(ladder_offset_start)
       main_startpos.copy(relpos)
-      if (__trackcam) {
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
       }
     }
@@ -372,8 +500,11 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       //ladder_offset_start.addVectors(ladder_offset_end, down)
       relpos.copy(ladder_offset_end)
       main_startpos.copy(ladder_offset_end)
-      if (__trackcam) {
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
+      }
+      if (_transient) {
+        mainCMP.show()
       }
     }
     let init_flat_to_ladder = (d,t) => { 
@@ -381,70 +512,94 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       ladder_offset_end.lerpVectors(center, forward, 0.25)
       ladder_offset_start.addVectors(ladder_offset_end, down)
       main_startpos.copy(center)
-      if (__trackcam) {
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
+      }
+      if (_transient) {
+        mainCMP.show()
       }
     }
     let end_ladder = (d,t)=>{ 
       relpos.copy(ladder_offset_end)
       txMAIN.update()
       
-      if (__trackcam) {
+      if (_trackcam && actually_trackcam) {
         tmp_camvec_main.sub(main_startpos)
         sviewCTL.camtarget.copy(tmp_camvec_main)
         sviewCTL.camtarget.add(relpos)
         sviewCTL.updateCamera()
+      }
+      if (_transient) {
+        mainCMP.hide()
       }
     }
     
     let init_still_up = (d,t)=>{   
       relpos.set(0, 0.5, 0)
       main_startpos.set(0, 0.5, 0)
-      if (__trackcam) {
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
+      }
+      if (_transient) {
+        mainCMP.show()
       }
     }
     let end_still_up = (d,t)=>{ 
       relpos.set(0, 0.5, 0)
       txMAIN.update()
-      if (__trackcam) {
+      if (_trackcam && actually_trackcam) {
         sviewCTL.camtarget.copy(tmp_camvec_main)
         sviewCTL.updateCamera()
+      }
+      if (_transient) {
+        mainCMP.hide()
       }
     }
     
     let init_up = (d,t) =>{    
-      relpos.copy(backward)
+      relpos.copy(behind)
       relpos.y += 0.5
       main_startpos.copy(relpos)
-      if (__trackcam) {
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
+      }
+      if (_transient) {
+        mainCMP.show()
       }
     }
     
     let init_uphigh = (d,t) =>{   
-      relpos.copy(backward)
+      relpos.copy(behind)
       relpos.y += 1
       main_startpos.copy(relpos)
-      if (__trackcam) {
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
+      }
+      if (_transient) {
+        mainCMP.show()
       }
     }
     let init_uphigher = (d,t) =>{   
-      relpos.copy(backward)
+      relpos.copy(behind)
       relpos.y += 1.5
       main_startpos.copy(relpos)
-      if (__trackcam) {
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
+      }
+      if (_transient) {
+        mainCMP.show()
       }
     }
     
     let init_down = (d,t) =>{   
-      relpos.copy(backward)
+      relpos.copy(behind)
       relpos.y -= 0.5
       main_startpos.copy(relpos)
-      if (__trackcam) {
+      if (_trackcam) {
         tmp_camvec_main.copy(sviewCTL.camtarget)
+      }
+      if (_transient) {
+        mainCMP.show()
       }
     }
     
@@ -452,10 +607,26 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       relpos.copy(center)
       txMAIN.update()
       
-      if (__trackcam) {
+      if (_trackcam && actually_trackcam) {
         tmp_camvec_main.sub(main_startpos)
         sviewCTL.camtarget.copy(tmp_camvec_main)
         sviewCTL.updateCamera()
+      }
+      if (_transient) {
+        mainCMP.hide()
+      }
+    }   
+    
+    let end_generic = (d,t)=>{ 
+      txMAIN.update()
+      
+      if (_trackcam && actually_trackcam) {
+        tmp_camvec_main.sub(main_startpos)
+        sviewCTL.camtarget.copy(tmp_camvec_main)
+        sviewCTL.updateCamera()
+      }
+      if (_transient) {
+        mainCMP.hide()
       }
     }   
     
@@ -463,29 +634,31 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       relpos.set(0, 0.5, 0)
       txMAIN.update()
       
-      if (__trackcam) {
+      if (_trackcam && actually_trackcam) {
         tmp_camvec_main.sub(main_startpos)
         sviewCTL.camtarget.copy(tmp_camvec_main)
         sviewCTL.camtarget.add(relpos)
         sviewCTL.updateCamera()
       }
+      if (_transient) {
+        mainCMP.hide()
+      }
+    }    
+    /*  Animation component:  "lerprelpos"
+        This sets up a LERP of relpos from a specified start point to a specified end point over a specified time interval */
+    let lerprelpos_startpos = new THREE.Vector3()
+    let lerprelpos_endpos = new THREE.Vector3()
+    let lerprelpos_start, lerprelpos_len     
+    //let lerprelposTX = txMAIN 
+    let lerprelpos = function(d,t) {   
+      relpos.lerpVectors(lerprelpos_startpos, lerprelpos_endpos, (t-lerprelpos_start) / lerprelpos_len)
     }
     
-    /*  Animation component:  "longmove"
-        This sets up a LERP of relpos from the rearward position to the center position over the duration of the animation */
-    let longmove = (d,t)=>{ 
-      relpos.lerpVectors(backward, center, t)
-      txMAIN.update()      
-    } 
-    
-    /*  Animation component:  "shortmove"
-        This sets up a LERP of relpos from a specified start point to a specified end point over a specified time interval */
-    let shortmove_startpos = new THREE.Vector3()
-    let shortmove_endpos = new THREE.Vector3()
-    let shortmove_start, shortmove_len      
-    let shortmove = function(d,t) {   
-      relpos.lerpVectors(shortmove_startpos, shortmove_endpos, (t-shortmove_start) / shortmove_len)
-      txMAIN.update()      
+    let slerprelrot_start, slerprelrot_len     
+    let slerprelrot_startrot = new THREE.Quaternion()
+    let slerprelrot_endrot = new THREE.Quaternion()
+    let slerprelrot = function(d,t) {   
+      THREE.Quaternion.slerp(slerprelrot_startrot, slerprelrot_endrot, relrot, (t-slerprelrot_start) / slerprelrot_len)
     }
     
     // camera tracking logic
@@ -495,25 +668,35 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
         tmp_camvec.copy(relpos)
       } 
       end_trackCam = function() {
-        tmp_camvec.sub(relpos)    
-        sviewCTL.camtarget.sub(tmp_camvec)
-        sviewCTL.updateCamera()
+        if (actually_trackcam) {
+          tmp_camvec.sub(relpos)    
+          sviewCTL.camtarget.sub(tmp_camvec)
+          sviewCTL.updateCamera()
+        }
       } 
     }
     
-    
-    let show, hide
-    if (transient) {
-      show = mainCMP.show
-      hide = mainCMP.hide
-    }
-    console.log(begin_trackCam, end_trackCam, show, hide)
-    
     // Callback used to instantiate andpose the displayed object (must be called before any animations are triggered)
-    inst.ctl.ready = function() {
-      //console.log("READY")
+    ctl.ready = function() {
       mainCMP.setObject("creature", "stand")
       txMAIN.update()
+    }
+    
+    ctl.configure = function(_position, _heading, _forward, _up) {
+      if (_position) {
+        worldpos.copy(_position)
+      }
+      libek.direction.setOrientation(orientation, _forward, _up)
+      
+      forward.copy(libek.direction.vector[_forward])
+      backward.copy(libek.direction.vector[libek.direction.invert[_forward]])
+      up.copy(libek.direction.vector[_up])
+      down.copy(libek.direction.vector[libek.direction.invert[_up]])
+      let _right = libek.direction.cross(_forward, _up)
+      right.copy(libek.direction.vector[_right])
+      left.copy(libek.direction.vector[libek.direction.invert[_right]])
+      ahead.copy(libek.direction.vector[_heading])
+      behind.copy(libek.direction.vector[libek.direction.invert[_heading]])
     }
     
     // Procedural Animation controllers.  Each manages one animated action.
@@ -522,341 +705,434 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
         
     ctl.fallAnim = new libek.CommandSequence(
       init, end, 1,
-      begin_trackCam, show,
-      longmove,
-      end_trackCam, hide
+      begin_trackCam, 
+      [{time:0.00, at: d => {     
+        lerprelpos_startpos.copy(behind)
+        lerprelpos_endpos.set(0,0,0)   
+        lerprelpos_len = 1
+        lerprelpos_start = 0
+      }}],
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam, 
     )
     ctl.halfdownfallAnim = new libek.CommandSequence(
       init, end_up, 1,
-      begin_trackCam, show,
+      begin_trackCam, 
       [ {time:0.00, at: d => {     
-          shortmove_startpos.copy(up)
-          shortmove_endpos.set(0, 0.5, 0)   
-          shortmove_len = 0.5
-          shortmove_start = 0
+          lerprelpos_startpos.copy(up)
+          lerprelpos_endpos.set(0, 0.5, 0)   
+          lerprelpos_len = 0.5
+          lerprelpos_start = 0
         }},
-        shortmove,
+        lerprelpos,
         {time:0.10, at: d => { mainCMP.setObject("creature", "stand"); scale.x = 1; scale.y = 1; }},
-        shortmove,
+        lerprelpos,
         {time:0.50, at: d => {}}
+      ],
+      txMAIN.update,
+      end_trackCam
+    )
+    ctl.flopoutofportal = new libek.CommandSequence(
+      init, (d,t) => {
+        relpos.copy(lerprelpos_endpos)
+        end_generic(d,t)
+      }, 1,
+      begin_trackCam,
+      [{time:0.00, at: d => {     
+        lerprelpos_startpos.copy(behind)
+        lerprelpos_endpos.set(0,0,0)   
+        lerprelpos_len = 0.5
+        lerprelpos_start = 0
+      }},
+      lerprelpos,
+      {time:0.50, at: d => {     
+        lerprelpos_startpos.set(0,0,0)
+        lerprelpos_endpos.set(0,-0.4,0)   
+        lerprelpos_len = 0.5
+        lerprelpos_start = 0.5
+      }},
+      lerprelpos,
+      ],
+      txMAIN.update,
+      end_trackCam
+    )
+    
+    ctl.walk_flat_popupfromgroundportal = new libek.CommandSequence(
+      init, end, 1,
+      begin_trackCam,
+      [ 
+        lerprelpos,
+        txMAIN.update,
+        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        lerprelpos,
+        txMAIN.update,
+        {time:0.50, at: d => { 
+          mainCMP.setObject("creature", "stand")
+          scale.y = 1          
+          slerprelrot_startrot.setFromAxisAngle(right, 0)
+          slerprelrot_endrot.setFromAxisAngle(right, T/4)
+          slerprelrot_len = 0.5
+          slerprelrot_start = 0.5
+          
+          lerprelpos_startpos.copy(relpos)
+          lerprelpos_endpos.set(0,1,0)   
+          lerprelpos_endpos.sub(orientation.position)  
+          lerprelpos_len = 0.5
+          lerprelpos_start = 0.5
+        }},    
+        lerprelpos, slerprelrot, txMAIN_WITH_RELROT.update,
+        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        lerprelpos, slerprelrot, txMAIN_WITH_RELROT.update,
+        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       end_trackCam
     )
     
-    ctl.walk_flatflat_anim = new libek.CommandSequence(
+    ctl.walk_flatflat = new libek.CommandSequence(
       init, end, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
         {time:0.50, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
         {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
-      longmove,
-      hide,
+      lerprelpos,
+      txMAIN.update,
       end_trackCam
     )
     
-    ctl.walk_urampuramp_anim = new libek.CommandSequence(
-      init_up, end_up, 1,
-      begin_trackCam, show,
-      [ {time:0.00, at: d => {     
-          shortmove_startpos.copy(backward)
-          shortmove_endpos.copy(center)        
-          shortmove_startpos.y = 0.5
-          shortmove_endpos.y = 0.5
-          shortmove_len = 1
-          shortmove_start = 0
+    ctl.walk_flatuportal = new libek.CommandSequence(
+      init, end, 1,
+      begin_trackCam,
+      [ {time:0, at: d=> { 
+          lerprelpos_startpos.copy(down)
+          lerprelpos_endpos.copy(center)    
+          lerprelpos_len = 1
+          lerprelpos_start = 0  
         }},
         {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
         {time:0.50, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
         {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,  
+      txMAIN.update,   
+      end_trackCam
     )
     
-    ctl.walk_rampupdown_anim = new libek.CommandSequence(
+    ctl.walk_urampuramp = new libek.CommandSequence(
       init_up, end_up, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {     
-          shortmove_startpos.copy(backward)
-          shortmove_endpos.lerpVectors(backward, center, 0.5)    
-          shortmove_startpos.y = 0.5
-          shortmove_endpos.y = 1
-          shortmove_len = 0.5
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_endpos.copy(center)        
+          lerprelpos_startpos.y = 0.5
+          lerprelpos_endpos.y = 0.5
+          lerprelpos_len = 1
+          lerprelpos_start = 0
+        }},
+        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {time:0.50, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+      ],
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
+    )
+    
+    ctl.walk_rampupdown = new libek.CommandSequence(
+      init_up, end_up, 1,
+      begin_trackCam,
+      [ {time:0.00, at: d => {     
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_endpos.lerpVectors(behind, center, 0.5)    
+          lerprelpos_startpos.y = 0.5
+          lerprelpos_endpos.y = 1
+          lerprelpos_len = 0.5
+          lerprelpos_start = 0
         }},
         {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
         {time:0.50, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1;
-          shortmove_startpos.copy(shortmove_endpos)
-          shortmove_endpos.copy( center)
-          shortmove_endpos.y = 0.5
-          shortmove_len = 0.5
-          shortmove_start = 0.5
+          lerprelpos_startpos.copy(lerprelpos_endpos)
+          lerprelpos_endpos.copy( center)
+          lerprelpos_endpos.y = 0.5
+          lerprelpos_len = 0.5
+          lerprelpos_start = 0.5
         }},
         {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
     
-    ctl.walk_rampdownup_anim = new libek.CommandSequence(
+    ctl.walk_rampdownup = new libek.CommandSequence(
       init_up, end_up, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {     
-          shortmove_startpos.copy(backward)
-          shortmove_endpos.lerpVectors(backward, center, 0.5)    
-          shortmove_startpos.y = 0.5
-          shortmove_len = 0.5
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_endpos.lerpVectors(behind, center, 0.5)    
+          lerprelpos_startpos.y = 0.5
+          lerprelpos_len = 0.5
+          lerprelpos_start = 0
         }},
         {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
         {time:0.50, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1;
-          shortmove_startpos.copy(shortmove_endpos)
-          shortmove_endpos.copy( center)
-          shortmove_endpos.y = 0.5
-          shortmove_len = 0.5
-          shortmove_start = 0.5
+          lerprelpos_startpos.copy(lerprelpos_endpos)
+          lerprelpos_endpos.copy( center)
+          lerprelpos_endpos.y = 0.5
+          lerprelpos_len = 0.5
+          lerprelpos_start = 0.5
         }},
         {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
     
-    ctl.walk_flathop_anim = new libek.CommandSequence(
+    ctl.walk_flathop = new libek.CommandSequence(
       init, end, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {       
           mainCMP.setObject("creature", "leap")      
-          shortmove_startpos.copy(backward)
-          shortmove_endpos.lerpVectors(backward, center, 0.33)
-          shortmove_endpos.y = 0.25
-          shortmove_len = 0.33
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_endpos.lerpVectors(behind, center, 0.33)
+          lerprelpos_endpos.y = 0.25
+          lerprelpos_len = 0.33
+          lerprelpos_start = 0
         }},
         {time:0.33, at: d => {  
-          shortmove_startpos.copy(shortmove_endpos)
-          shortmove_endpos.lerpVectors(backward, center, 0.67)
-          shortmove_endpos.y = 0.25
-          shortmove_len = 0.34
-          shortmove_start = 0.33
+          lerprelpos_startpos.copy(lerprelpos_endpos)
+          lerprelpos_endpos.lerpVectors(behind, center, 0.67)
+          lerprelpos_endpos.y = 0.25
+          lerprelpos_len = 0.34
+          lerprelpos_start = 0.33
         }},
         {time:0.67, at: d => { 
-          shortmove_startpos.copy(shortmove_endpos)    
-          shortmove_endpos.copy(center)
-          shortmove_len = 0.33
-          shortmove_start = 0.67
+          lerprelpos_startpos.copy(lerprelpos_endpos)    
+          lerprelpos_endpos.copy(center)
+          lerprelpos_len = 0.33
+          lerprelpos_start = 0.67
         }},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
     
-    ctl.walk_urampup_anim = new libek.CommandSequence(
+    ctl.walk_urampup = new libek.CommandSequence(
       init_up, end_up, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {       
           mainCMP.setObject("creature", "leap")    
-          shortmove_startpos.copy(backward)
-          shortmove_startpos.y = 0.5
-          shortmove_endpos.lerpVectors(backward, center, 0.33)
-          shortmove_endpos.y = 0.75
-          shortmove_len = 0.33
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_startpos.y = 0.5
+          lerprelpos_endpos.lerpVectors(behind, center, 0.33)
+          lerprelpos_endpos.y = 0.75
+          lerprelpos_len = 0.33
+          lerprelpos_start = 0
         }},
         {time:0.33, at: d => {  
-          shortmove_startpos.copy(shortmove_endpos)
-          shortmove_endpos.lerpVectors(backward, center, 0.67)
-          shortmove_endpos.y = 0.75
-          shortmove_len = 0.34
-          shortmove_start = 0.33
+          lerprelpos_startpos.copy(lerprelpos_endpos)
+          lerprelpos_endpos.lerpVectors(behind, center, 0.67)
+          lerprelpos_endpos.y = 0.75
+          lerprelpos_len = 0.34
+          lerprelpos_start = 0.33
         }},
         {time:0.67, at: d => { 
-          shortmove_startpos.copy(shortmove_endpos)    
-          shortmove_endpos.set(0, 0.5, 0)
-          shortmove_len = 0.33
-          shortmove_start = 0.67
+          lerprelpos_startpos.copy(lerprelpos_endpos)    
+          lerprelpos_endpos.set(0, 0.5, 0)
+          lerprelpos_len = 0.33
+          lerprelpos_start = 0.67
         }},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
     
-    ctl.walk_urampgap_anim = new libek.CommandSequence(
+    ctl.walk_urampgap = new libek.CommandSequence(
       init_up, end, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {       
           mainCMP.setObject("creature", "leap");      
-          shortmove_startpos.copy(backward)
-          shortmove_startpos.y = 0.5
-          shortmove_endpos.lerpVectors(backward, center, 0.33)
-          shortmove_endpos.y = 0.75
-          shortmove_len = 0.33
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_startpos.y = 0.5
+          lerprelpos_endpos.lerpVectors(behind, center, 0.33)
+          lerprelpos_endpos.y = 0.75
+          lerprelpos_len = 0.33
+          lerprelpos_start = 0
         }},
         {time:0.33, at: d => {  
-          shortmove_startpos.copy(shortmove_endpos)
-          shortmove_endpos.lerpVectors(backward, center, 0.67)
-          shortmove_endpos.y = 0.50
-          shortmove_len = 0.34
-          shortmove_start = 0.33
+          lerprelpos_startpos.copy(lerprelpos_endpos)
+          lerprelpos_endpos.lerpVectors(behind, center, 0.67)
+          lerprelpos_endpos.y = 0.50
+          lerprelpos_len = 0.34
+          lerprelpos_start = 0.33
         }},
         {time:0.67, at: d => { 
-          shortmove_startpos.copy(shortmove_endpos)    
-          shortmove_endpos.copy(center)
-          shortmove_len = 0.33
-          shortmove_start = 0.67
+          lerprelpos_startpos.copy(lerprelpos_endpos)    
+          lerprelpos_endpos.copy(center)
+          lerprelpos_len = 0.33
+          lerprelpos_start = 0.67
         }},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
     
-    ctl.walk_flatup_anim = new libek.CommandSequence(
+    ctl.walk_flatup = new libek.CommandSequence(
       init, end_up, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {              
-          shortmove_startpos.copy(backward)
-          shortmove_endpos.lerpVectors(shortmove_startpos, center, 0.5)
-          shortmove_len = 0.50
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_endpos.lerpVectors(lerprelpos_startpos, center, 0.5)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0
         }},
         {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
         {time:0.50, at: d => { 
           mainCMP.setObject("creature", "stand");
           scale.y = 1 
-          shortmove_startpos.copy(shortmove_endpos)    
-          shortmove_endpos.set(0, 0.5, 0)
-          shortmove_len = 0.50
-          shortmove_start = 0.50
+          lerprelpos_startpos.copy(lerprelpos_endpos)    
+          lerprelpos_endpos.set(0, 0.5, 0)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0.50
         }},
         {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
     
-    ctl.walk_flatdown_anim = new libek.CommandSequence(
+    ctl.walk_flatdown = new libek.CommandSequence(
       init_uphigh, end_up, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {              
-          shortmove_startpos.copy(backward)
-          shortmove_startpos.y += 1
-          shortmove_endpos.lerpVectors(shortmove_startpos, up, 0.5)
-          shortmove_len = 0.50
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_startpos.y += 1
+          lerprelpos_endpos.lerpVectors(lerprelpos_startpos, up, 0.5)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0
         }},
         {time:0.10, at: d => { mainCMP.setObject("creature", "walk");scale.x = 1; scale.y = 0.97; }},
         {time:0.50, at: d => { 
           mainCMP.setObject("creature", "stand")
           scale.y = 1 
-          shortmove_startpos.copy(shortmove_endpos)    
-          shortmove_endpos.set(0, 0.5, 0)
-          shortmove_len = 0.50
-          shortmove_start = 0.50
+          lerprelpos_startpos.copy(lerprelpos_endpos)    
+          lerprelpos_endpos.set(0, 0.5, 0)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0.50
         }},
         {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
     
-    ctl.walk_rampdownflat_anim = new libek.CommandSequence(
+    ctl.walk_rampdownflat = new libek.CommandSequence(
       init_up, end, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {              
-          shortmove_startpos.copy(backward)
-          shortmove_startpos.y += 0.5
-          shortmove_endpos.lerpVectors(backward, center, 0.5)
-          shortmove_len = 0.50
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_startpos.y += 0.5
+          lerprelpos_endpos.lerpVectors(behind, center, 0.5)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0
         }},
         {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
         {time:0.50, at: d => { 
           mainCMP.setObject("creature", "stand")
           scale.y = 1 
-          shortmove_startpos.copy(shortmove_endpos)    
-          shortmove_endpos.copy(center)
-          shortmove_len = 0.50
-          shortmove_start = 0.50
+          lerprelpos_startpos.copy(lerprelpos_endpos)    
+          lerprelpos_endpos.copy(center)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0.50
         }},
         {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
     
-    ctl.walk_rampupflat_anim = new libek.CommandSequence(
+    ctl.walk_rampupflat = new libek.CommandSequence(
       init_down, end, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {              
-          shortmove_startpos.copy(backward)
-          shortmove_startpos.y -= 0.5
-          shortmove_endpos.lerpVectors(backward, center, 0.5)
-          shortmove_len = 0.50
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_startpos.y -= 0.5
+          lerprelpos_endpos.lerpVectors(behind, center, 0.5)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0
         }},
         {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
         {time:0.50, at: d => { 
           mainCMP.setObject("creature", "stand")
           scale.y = 1 
-          shortmove_startpos.copy(shortmove_endpos)    
-          shortmove_endpos.copy(center)
-          shortmove_len = 0.50
-          shortmove_start = 0.50
+          lerprelpos_startpos.copy(lerprelpos_endpos)    
+          lerprelpos_endpos.copy(center)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0.50
         }},
         {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
-    ctl.walk_rampuphop_anim = new libek.CommandSequence(
+    ctl.walk_rampuphop = new libek.CommandSequence(
       init_down, end, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {                
-          shortmove_startpos.copy(backward)
-          shortmove_startpos.y -= 0.5
-          shortmove_endpos.set(0, 0.5, 0)
-          shortmove_endpos.lerpVectors(shortmove_startpos, shortmove_endpos, 0.5)
-          shortmove_endpos.y = 1
-          shortmove_len = 0.50
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_startpos.y -= 0.5
+          lerprelpos_endpos.set(0, 0.5, 0)
+          lerprelpos_endpos.lerpVectors(lerprelpos_startpos, lerprelpos_endpos, 0.5)
+          lerprelpos_endpos.y = 1
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0
         }},
         {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
         {time:0.50, at: d => { 
           mainCMP.setObject("creature", "leap")
           scale.y = 1 
-          shortmove_startpos.copy(shortmove_endpos)    
-          shortmove_endpos.set(0, 0.5, 0)
-          shortmove_len = 0.50
-          shortmove_start = 0.50
+          lerprelpos_startpos.copy(lerprelpos_endpos)    
+          lerprelpos_endpos.set(0, 0.5, 0)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0.50
         }},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
     
-    ctl.walk_rampupup_anim = new libek.CommandSequence(
+    ctl.walk_rampupup = new libek.CommandSequence(
       init_down, end_up, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {                 
-          shortmove_startpos.copy(backward)
-          shortmove_startpos.y -= 0.5   
-          shortmove_endpos.set(0, 0.5, 0)
-          shortmove_len = 1
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_startpos.y -= 0.5   
+          lerprelpos_endpos.set(0, 0.5, 0)
+          lerprelpos_len = 1
+          lerprelpos_start = 0
         }},
         {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
         {time:0.50, at: d => { 
@@ -865,19 +1141,20 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
         {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
     
-    ctl.walk_rampdowndown_anim = new libek.CommandSequence(
+    ctl.walk_rampdowndown = new libek.CommandSequence(
       init_uphigher, end_up, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {              
-          shortmove_startpos.copy(backward) 
-          shortmove_startpos.y += 1.5
-          shortmove_endpos.set(0, 0.5, 0)
-          shortmove_len = 1
-          shortmove_start = 0
+          lerprelpos_startpos.copy(behind) 
+          lerprelpos_startpos.y += 1.5
+          lerprelpos_endpos.set(0, 0.5, 0)
+          lerprelpos_len = 1
+          lerprelpos_start = 0
         }},
         {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
         {time:0.50, at: d => { 
@@ -886,71 +1163,73 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
         {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
         {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      end_trackCam,
     )
     
     ctl.pushstandAnim = new libek.CommandSequence(
       init_still, end_still, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {
           mainCMP.setObject("creature", "walk"); 
           scale.x = 1; scale.y = 0.97; 
-          shortmove_startpos.copy(center); 
-          shortmove_endpos.lerpVectors(center, forward, 0.2)
-          shortmove_len = 0.25
-          shortmove_start = 0
+          lerprelpos_startpos.copy(center); 
+          lerprelpos_endpos.lerpVectors(center, ahead, 0.2)
+          lerprelpos_len = 0.25
+          lerprelpos_start = 0
         }},
-        shortmove,
-        {time:0.25, at: d => { mainCMP.setObject("creature", "pushwalk"); relpos.copy(shortmove_endpos); }},
+        lerprelpos,
+        {time:0.25, at: d => { mainCMP.setObject("creature", "pushwalk"); relpos.copy(lerprelpos_endpos); }},
         {time:0.75, at: d => { 
           mainCMP.setObject("creature", "walk"); 
           scale.x = -1; 
-          shortmove_startpos.copy(shortmove_endpos); 
-          shortmove_endpos.copy(center)
-          shortmove_len = 0.25
-          shortmove_start = 0.75
+          lerprelpos_startpos.copy(lerprelpos_endpos); 
+          lerprelpos_endpos.copy(center)
+          lerprelpos_len = 0.25
+          lerprelpos_start = 0.75
         }},
-        shortmove,
+        lerprelpos,
         {time:1.00, at: d => { 
           mainCMP.setObject("creature", "stand"); 
           scale.y = 1; 
           relpos.copy(center)
         }},
       ],
-      end_trackCam, hide
+      txMAIN.update,
+      end_trackCam
     )
     ctl.halfuppushstandAnim = new libek.CommandSequence(
       init_still_up, end_still_up, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {
           mainCMP.setObject("creature", "walk") 
           scale.x = 1; scale.y = 0.97; 
-          shortmove_startpos.set(0, 0.5, 0); 
-          shortmove_endpos.copy(forward)
-          shortmove_endpos.y += 0.5          
-          shortmove_endpos.lerpVectors(shortmove_startpos, shortmove_endpos, 0.2)
-          shortmove_len = 0.25
-          shortmove_start = 0
+          lerprelpos_startpos.set(0, 0.5, 0); 
+          lerprelpos_endpos.copy(ahead)
+          lerprelpos_endpos.y += 0.5          
+          lerprelpos_endpos.lerpVectors(lerprelpos_startpos, lerprelpos_endpos, 0.2)
+          lerprelpos_len = 0.25
+          lerprelpos_start = 0
         }},
-        shortmove,
-        {time:0.25, at: d => { mainCMP.setObject("creature", "pushwalk"); relpos.copy(shortmove_endpos); }},
+        lerprelpos,
+        {time:0.25, at: d => { mainCMP.setObject("creature", "pushwalk"); relpos.copy(lerprelpos_endpos); }},
         {time:0.75, at: d => { 
           mainCMP.setObject("creature", "walk")
           scale.x = -1; 
-          shortmove_startpos.copy(shortmove_endpos); 
-          shortmove_endpos.set(0, 0.5, 0)
-          shortmove_len = 0.25
-          shortmove_start = 0.75
+          lerprelpos_startpos.copy(lerprelpos_endpos); 
+          lerprelpos_endpos.set(0, 0.5, 0)
+          lerprelpos_len = 0.25
+          lerprelpos_start = 0.75
         }},
-        shortmove,
+        lerprelpos,
         {time:1.00, at: d => { 
           mainCMP.setObject("creature", "stand") 
           scale.y = 1; 
           relpos.set(0, 0.5, 0)
         }},
       ],
-      end_trackCam, hide
+      txMAIN.update,
+      end_trackCam
     )
     
     // ladder_offset_start
@@ -958,122 +1237,121 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     
     ctl.grabladder_flat = new libek.CommandSequence(
       init_flat_to_ladder, end_ladder, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {
           mainCMP.setObject("creature", "walk"); 
           scale.y = 0.97; 
-          shortmove_startpos.copy(center); 
-          shortmove_endpos.copy(ladder_offset_end)
-          shortmove_len = 0.25
-          shortmove_start = 0
+          lerprelpos_startpos.copy(center); 
+          lerprelpos_endpos.copy(ladder_offset_end)
+          lerprelpos_len = 0.25
+          lerprelpos_start = 0
         }},
-        shortmove,
+        lerprelpos,
         {time:0.25, at: d => { mainCMP.setObject("creature", "push"); scale.y = 1; }},
       ],
-      end_trackCam, hide
+      txMAIN.update,
+      end_trackCam
     )
     
     ctl.hopoffladder = new libek.CommandSequence(
       init_ladder_still, end_still, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {
-          shortmove_startpos.copy(ladder_offset_end); 
-          shortmove_endpos.lerpVectors(ladder_offset_end, center, 1/3)
-          shortmove_endpos.y = 0.3
-          shortmove_len = 1/6
-          shortmove_start = 0
+          lerprelpos_startpos.copy(ladder_offset_end); 
+          lerprelpos_endpos.lerpVectors(ladder_offset_end, center, 1/3)
+          lerprelpos_endpos.y = 0.3
+          lerprelpos_len = 1/6
+          lerprelpos_start = 0
         }},
-        shortmove,
+        lerprelpos,
         {time:1/6, at: d => { 
           mainCMP.setObject("creature", "stand");
-          shortmove_startpos.copy(shortmove_endpos); 
-          shortmove_endpos.lerpVectors(ladder_offset_end, center, 2/3)
-          shortmove_endpos.y = 0.4
-          shortmove_len = 1/6
-          shortmove_start = 1/6
+          lerprelpos_startpos.copy(lerprelpos_endpos); 
+          lerprelpos_endpos.lerpVectors(ladder_offset_end, center, 2/3)
+          lerprelpos_endpos.y = 0.4
+          lerprelpos_len = 1/6
+          lerprelpos_start = 1/6
         }},
-        shortmove,
+        lerprelpos,
         {time:2/6, at: d => {
-          shortmove_startpos.copy(shortmove_endpos); 
-          shortmove_endpos.copy(center)
-          shortmove_endpos.y = 0.3
-          shortmove_len = 1/6
-          shortmove_start = 2/6
+          lerprelpos_startpos.copy(lerprelpos_endpos); 
+          lerprelpos_endpos.copy(center)
+          lerprelpos_endpos.y = 0.3
+          lerprelpos_len = 1/6
+          lerprelpos_start = 2/6
         }},
-        shortmove,
+        lerprelpos,
         {time:0.5, at: d => {
-          shortmove_startpos.copy(shortmove_endpos); 
-          shortmove_endpos.copy(center)
-          shortmove_len = 0.5
-          shortmove_start = 0.5
+          lerprelpos_startpos.copy(lerprelpos_endpos); 
+          lerprelpos_endpos.copy(center)
+          lerprelpos_len = 0.5
+          lerprelpos_start = 0.5
         }},
-        shortmove
+        lerprelpos
       ],
-      //txMAIN.update,
-      end_trackCam, hide
+      txMAIN.update,
+      end_trackCam
     )
     
     ctl.exitladder = new libek.CommandSequence(
       init_ladder_exit, end, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {
-          shortmove_startpos.copy(ladder_offset_start); 
-          shortmove_endpos.copy(ladder_offset_end)
-          shortmove_len = 3/6
-          shortmove_start = 0
-        }},
-        
-        shortmove,
+          lerprelpos_startpos.copy(ladder_offset_start); 
+          lerprelpos_endpos.copy(ladder_offset_end)
+          lerprelpos_len = 3/6
+          lerprelpos_start = 0
+        }},        
+        lerprelpos, txMAIN.update,
         {time:1/6, at: d => {
           mainCMP.setObject("creature", "pushwalk");
         }},
-        shortmove,
-        {time:1/3, at: d => {
+        lerprelpos, txMAIN.update,
+        {time:2/6, at: d => {
           mainCMP.setObject("creature", "pushleap");
-          right.crossVectors(forward, up)
+          slerprelrot_startrot.setFromAxisAngle(right, 0)
+          slerprelrot_endrot.setFromAxisAngle(right, T/4)
+          slerprelrot_len = 1/6
+          slerprelrot_start = 2/6
         }},
-        (d,t) => {
-          rot.setFromAxisAngle(right, (t-1/3)*6*T*0.25)
-          relpos.lerpVectors(shortmove_startpos, shortmove_endpos, (t-shortmove_start) / shortmove_len)
-          txMAIN_QROT.update()
-        },
+        lerprelpos, slerprelrot, txMAIN_WITH_RELROT.update,
         {time:3/6, at: d => {
           mainCMP.setObject("creature", "leap");
-          shortmove_startpos.copy(ladder_offset_end); 
-          shortmove_endpos.lerpVectors(ladder_offset_end, center, 1/3)
-          shortmove_endpos.y += 0.3
-          shortmove_len = 1/6
-          shortmove_start = 3/6
+          lerprelpos_startpos.copy(ladder_offset_end); 
+          lerprelpos_endpos.lerpVectors(ladder_offset_end, center, 1/3)
+          lerprelpos_endpos.y += 0.3
+          lerprelpos_len = 1/6
+          lerprelpos_start = 3/6
         }},
-        shortmove,
+        lerprelpos, txMAIN.update,
         {time:4/6, at: d => {
-          shortmove_startpos.copy(shortmove_endpos); 
-          shortmove_endpos.lerpVectors(ladder_offset_end, center, 2/3)
-          shortmove_endpos.y += 0.2
-          shortmove_len = 1/6
-          shortmove_start = 4/6
+          lerprelpos_startpos.copy(lerprelpos_endpos); 
+          lerprelpos_endpos.lerpVectors(ladder_offset_end, center, 2/3)
+          lerprelpos_endpos.y += 0.2
+          lerprelpos_len = 1/6
+          lerprelpos_start = 4/6
         }},
-        shortmove,
+        lerprelpos, txMAIN.update,
         {time:5/6, at: d => {
           mainCMP.setObject("creature", "stand");
-          shortmove_startpos.copy(shortmove_endpos); 
-          shortmove_endpos.copy(center)
-          shortmove_len = 1/6
-          shortmove_start = 5/6
+          lerprelpos_startpos.copy(lerprelpos_endpos); 
+          lerprelpos_endpos.copy(center)
+          lerprelpos_len = 1/6
+          lerprelpos_start = 5/6
         }},
-        shortmove,
+        lerprelpos, txMAIN.update,
       ],
-      end_trackCam, hide
+      end_trackCam
     )
     
     ctl.climbupladder = new libek.CommandSequence(
       init_ladder, end_ladder, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {
-          shortmove_startpos.copy(ladder_offset_start); 
-          shortmove_endpos.copy(ladder_offset_end)
-          shortmove_len = 1
-          shortmove_start = 0
+          lerprelpos_startpos.copy(ladder_offset_start); 
+          lerprelpos_endpos.copy(ladder_offset_end)
+          lerprelpos_len = 1
+          lerprelpos_start = 0
         }},
         {time:0.125, at: d => {
           mainCMP.setObject("creature", "pushwalk");
@@ -1090,18 +1368,19 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           scale.x = 1
         }},        
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
     
     ctl.climbdownladder = new libek.CommandSequence(
       init_ladder_high, end_ladder, 1,
-      begin_trackCam, show,
+      begin_trackCam,
       [ {time:0.00, at: d => {
-          shortmove_startpos.copy(ladder_offset_start); 
-          shortmove_endpos.copy(ladder_offset_end)
-          shortmove_len = 1
-          shortmove_start = 0
+          lerprelpos_startpos.copy(ladder_offset_start); 
+          lerprelpos_endpos.copy(ladder_offset_end)
+          lerprelpos_len = 1
+          lerprelpos_start = 0
         }},
         {time:0.125, at: d => {
           mainCMP.setObject("creature", "pushwalk");
@@ -1118,8 +1397,9 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           scale.x = 1
         }},        
       ],
-      shortmove,
-      end_trackCam, hide
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
     )
   }
   
@@ -1138,10 +1418,22 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     mainINST.ctl.ready()
   }
   
+  let configurecam = function(refocus) {
+    if (trackcam) {
+      if (refocus) {
+        inputCTL.EventManager.dispatch_libek_event("quickrefocus")
+        actually_trackcam = false
+      }
+      else {
+        actually_trackcam = true
+      }
+    }
+  }
+  
   //The high-level animation controller.
   //In general, these select an animation, then configure the animation, then trigger it.
   //If a portal is involved, these will also enable dummy objects for each portal crossed and configure and trigger animations for the dummy objects
-  cr.animCTL = {
+  let mCTL = cr.animCTL = {
     orientation:mainINST.ctl.orientation,
     setNMAP:function(nmap) {
       MDL.nmap = nmap
@@ -1149,33 +1441,43 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     destroy:function() {
       MDL.destroy()
     },
-    fall:function(force) {            
-      libek.direction.setOrientation(mainINST.ctl.orientation, force.toFORWARD, force.toUP)  
-      mainINST.ctl.worldpos.set(force.toCTN.x, force.toCTN.y, force.toCTN.z)  
-      mainINST.ctl.up.copy(libek.direction.vector[force.toUP])    
-      mainINST.ctl.down.copy(libek.direction.vector[libek.direction.invert[force.toUP]])
-      mainINST.ctl.forward.copy(libek.direction.vector[force.toHEADING])    
-      mainINST.ctl.backward.copy(libek.direction.vector[libek.direction.invert[force.toHEADING]])
-      if (force.toCTN.getObject_bytype("ramp")) { 
-        zone.addCommandsequence_short(mainINST.ctl.halfdownfallAnim)
+    
+    fall:function(force) {   
+      configurecam(force.isPortaljump)      
+      mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP)   
+           
+      switch(force.toHEADING) {      
+        case libek.direction.code.UP:  
+            zone.addCommandsequence_short(mainINST.ctl.fallAnim)       
+          break
+          
+        case libek.direction.code.DOWN:   
+          if (force.toCTN.getObject_bytype("ramp")) { 
+            zone.addCommandsequence_short(mainINST.ctl.halfdownfallAnim)
+          }
+          else {
+            zone.addCommandsequence_short(mainINST.ctl.fallAnim)
+          }
+          break 
+          
+        default:        
+          zone.addCommandsequence_short(mainINST.ctl.flopoutofportal)   
+          break
       }
-      else {
-        zone.addCommandsequence_short(mainINST.ctl.fallAnim)
+      
+      if (force.isPortaljump) {        
+        let hop = force.path[0]
+        minorINST1.ctl.configure(hop.adjCTN, hop.fromHEADING, hop.fromFORWARD, hop.fromUP)        
+        zone.addCommandsequence_short(minorINST1.ctl.fallAnim)   
       }
     },
     defeat:function() {
       orthot.VanishAnim(zone, mainINST.ctl.mainCMP.getObject("creature"), {scale:mainINST.ctl.scale, orientation:mainINST.ctl.orientation, pos:mainINST.ctl.worldpos})
     },
       
-    pushfixedobjectAnim:function(force) {            
-      libek.direction.setOrientation(mainINST.ctl.orientation, force.toHEADING, force.toUP)
-      //mainINST.ctl.backward.copy(force.inputDIR.inv)    
-      //mainINST.ctl.forward.copy(force.inputDIR.vector)
-      mainINST.ctl.up.copy(libek.direction.vector[force.toUP])    
-      mainINST.ctl.down.copy(libek.direction.vector[libek.direction.invert[force.toUP]])
-      mainINST.ctl.forward.copy(libek.direction.vector[force.toHEADING])    
-      mainINST.ctl.backward.copy(libek.direction.vector[libek.direction.invert[force.toHEADING]])
-      
+    pushfixedobjectAnim:function(force) {   
+      configurecam(force.isPortaljump)       
+      mainINST.ctl.configure(force.fromCTN, force.toHEADING, force.toFORWARD, force.toUP)  
       if (force.fromCTN.getObject_bytype("ramp")) { 
         zone.addCommandsequence_short(mainINST.ctl.halfuppushstandAnim)
       }    
@@ -1185,8 +1487,11 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       }
     },
     
+    
+    
     walk:function(force) {  
-      //console.log("WALK", mainINST, force)
+      configurecam(force.isPortaljump)
+      
       let animName
       if (force.fromUPRAMP) {
         if (force.toUPRAMP) {
@@ -1237,40 +1542,32 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
         
         }
         else if (force.hopOUT) {
-          animName = "flathop"      
+          //animName = "flathop"      
+          mCTL.walk_flathop(force) 
         }
         else {  //flat ground
-          animName = "flatflat"      
+          //animName = "flatflat"   
+          mCTL.walk_flatflat(force)   
         }
       }
+      
+      
       if (animName) {
+        console.log("trigger-animation:  ", animName)
         animName = "walk_" + animName
         if (force.isPUSH) {
           animName = "push" + animName
         }
-        animName += "_anim"
+        //animName += "_anim"
         
+          
         if (mainINST.ctl[animName]) {
-          //console.log(animName, force)
-          //this.startAnimation(this.animCTL[animName])
-          //console.log(main)
-          libek.direction.setOrientation(mainINST.ctl.orientation, force.toHEADING, force.toUP)
-          mainINST.ctl.worldpos.set(force.toCTN.x, force.toCTN.y, force.toCTN.z)      
-          mainINST.ctl.forward.copy(libek.direction.vector[force.toHEADING])    
-          mainINST.ctl.backward.copy(libek.direction.vector[libek.direction.invert[force.toHEADING]])
-          if (force.isPortaljump) {
-            if (trackcam) {
-              inputCTL.EventManager.dispatch_libek_event("quickrefocus")
-            }
-            //console.log("maybe-animate-portaljump?", force)
-            
+          mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP) 
+          
+          if (force.isPortaljump) {   
             let hop = force.path[0]
-            libek.direction.setOrientation(minorINST1.ctl.orientation, hop.fromHEADING, hop.toUP)
-            minorINST1.ctl.worldpos.set(hop.adjCTN.x, hop.adjCTN.y, hop.adjCTN.z)      
-            minorINST1.ctl.forward.copy(libek.direction.vector[hop.fromHEADING])    
-            minorINST1.ctl.backward.copy(libek.direction.vector[libek.direction.invert[hop.fromHEADING]])
-            
-            zone.addCommandsequence_short(minorINST1.ctl[animName])
+            minorINST1.ctl.configure(hop.adjCTN, hop.fromHEADING, hop.fromFORWARD, hop.fromUP)                        
+            zone.addCommandsequence_short(minorINST1.ctl[animName])            
             zone.addCommandsequence_short(mainINST.ctl[animName])
           }
           else {
@@ -1279,41 +1576,76 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
         }
       }
     },
-    grabLadder:function(force) {
-      let animName = "grabladder_flat"
-      if (mainINST.ctl[animName]) {
-        libek.direction.setOrientation(mainINST.ctl.orientation, force.fromHEADING, force.toUP) 
-        mainINST.ctl.forward.copy(libek.direction.vector[force.toHEADING])    
-        mainINST.ctl.backward.copy(libek.direction.vector[libek.direction.invert[force.toHEADING]])
-        zone.addCommandsequence_short(mainINST.ctl[animName])
+    
+    walk_flatflat:function(force) {    
+      mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP)        
+      switch(force.toHEADING) {
+        //walk through a vertical portal -> pop up out of a horizontal/ground portal
+        case libek.direction.code.UP:
+          zone.addCommandsequence_short(mainINST.ctl.walk_flat_popupfromgroundportal)   
+          break     
+        //walk through a vertical portal -> fall out of a horizontal/ceiling portal
+        case libek.direction.code.DOWN:
+          zone.addCommandsequence_short(mainINST.ctl.walk_flat_falloutofceilingportal) 
+          break 
+        default:
+          //libek.direction.setOrientation(mainINST.ctl.orientation, force.toHEADING, force.toUP)
+          zone.addCommandsequence_short(mainINST.ctl.walk_flatflat)   
+          break
+      }
+      if (force.isPortaljump) {        
+        let hop = force.path[0]
+        minorINST1.ctl.configure(hop.adjCTN, hop.fromHEADING, hop.fromFORWARD, hop.fromUP)        
+        zone.addCommandsequence_short(minorINST1.ctl.walk_flatflat)   
       }
     },
+    
+    walk_flathop:function(force) {    
+      mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP)        
+      switch(force.toHEADING) {
+        //walk through a vertical portal -> pop up out of a horizontal/ground portal
+        case libek.direction.code.UP:
+          zone.addCommandsequence_short(mainINST.ctl.walk_flat_popupfromgroundportal)   
+          break     
+        //walk through a vertical portal -> fall out of a horizontal/ceiling portal
+        case libek.direction.code.DOWN:
+          zone.addCommandsequence_short(mainINST.ctl.walk_flat_falloutofceilingportal) 
+          break 
+        default:
+          //libek.direction.setOrientation(mainINST.ctl.orientation, force.toHEADING, force.toUP)
+          zone.addCommandsequence_short(mainINST.ctl.walk_flathop)   
+          break
+      }
+      if (force.isPortaljump) {        
+        let hop = force.path[0]
+        minorINST1.ctl.configure(hop.adjCTN, hop.fromHEADING, hop.fromFORWARD, hop.fromUP)        
+        zone.addCommandsequence_short(minorINST1.ctl.walk_flathop)   
+      }
+    },
+    
+    grabLadder:function(force) {
+      configurecam(false)
+      mainINST.ctl.configure(force.fromCTN, force.toHEADING, force.toFORWARD, force.toUP) 
+      zone.addCommandsequence_short(mainINST.ctl.grabladder_flat)
+    },
     hopoffLadder:function(forward, up) {
-      console.log(forward, up)
-      libek.direction.setOrientation(mainINST.ctl.orientation, forward, up) 
-      mainINST.ctl.forward.copy(libek.direction.vector[forward])    
-      mainINST.ctl.backward.copy(libek.direction.vector[libek.direction.invert[forward]])
+      configurecam(false)
+      mainINST.ctl.configure(undefined, forward, forward, up) 
       zone.addCommandsequence_short(mainINST.ctl.hopoffladder)
     },
     exitLadder:function(force) {
-      libek.direction.setOrientation(mainINST.ctl.orientation, force.toFORWARD, force.toUP)  
-      mainINST.ctl.worldpos.set(force.toCTN.x, force.toCTN.y, force.toCTN.z)      
-      mainINST.ctl.forward.copy(libek.direction.vector[force.toFORWARD])    
-      mainINST.ctl.backward.copy(libek.direction.vector[libek.direction.invert[force.toFORWARD]])
+      configurecam(force.isPortaljump)
+      mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP) 
       zone.addCommandsequence_short(mainINST.ctl.exitladder)
     },
     climbupLadder:function(force) {
-      libek.direction.setOrientation(mainINST.ctl.orientation, force.toFORWARD, force.toUP)  
-      mainINST.ctl.worldpos.set(force.toCTN.x, force.toCTN.y, force.toCTN.z)      
-      mainINST.ctl.forward.copy(libek.direction.vector[force.toFORWARD])    
-      mainINST.ctl.backward.copy(libek.direction.vector[libek.direction.invert[force.toFORWARD]])
+      configurecam(force.isPortaljump)
+      mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP) 
       zone.addCommandsequence_short(mainINST.ctl.climbupladder)
     },
     climbdownLadder:function(force) {
-      libek.direction.setOrientation(mainINST.ctl.orientation, force.toFORWARD, force.toUP)  
-      mainINST.ctl.worldpos.set(force.toCTN.x, force.toCTN.y, force.toCTN.z)      
-      mainINST.ctl.forward.copy(libek.direction.vector[force.toFORWARD])    
-      mainINST.ctl.backward.copy(libek.direction.vector[libek.direction.invert[force.toFORWARD]])
+      configurecam(force.isPortaljump)
+      mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP) 
       zone.addCommandsequence_short(mainINST.ctl.climbdownladder)
     },
   }
@@ -1455,7 +1787,6 @@ orthot.VanishAnim = function(zone, obj, params = {}) {
         
         for (let i = 0; i < mdl.children.length; i++) {
           let child = mdl.children[i]
-          console.log(child)
           let _mat = child.material
           let mat = _mat.clone()
           instA_mats.push(mat)

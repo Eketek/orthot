@@ -27,17 +27,14 @@ libek.control = {
       let btn_evt
       let configure = function() {
         btn_evt = libek.event.policy(`read ${btns} reconfigure exit`)
-        console.log(btn_evt)
         hld_mask = []
         for (let btnname in btn_evt) {
           if (btnname.indexOf('_') != -1) {
-            console.log(btnname)
             if ( (btnname != "reconfigure") && (btnname != "exit") ) {
               hld_mask.push(btnname.substring(0, btnname.indexOf('_')))
             }
           } 
         }
-        console.log(hld_mask)
       }
       configure()
       let rdr = new libek.event.Reader(evtman)
@@ -52,7 +49,6 @@ libek.control = {
             return
           break
           default:
-            //console.log(evt)
             let code = evt.code
             let _ = code.indexOf('_')
             if ( _ != -1) {
@@ -63,7 +59,6 @@ libek.control = {
               inpCallback()
             }
         }
-        //console.log(evtman.DownKeys.ArrowDown)
       }
       
     }).bind(this)
@@ -199,8 +194,6 @@ libek.control = {
           // manage arrow keys.  This is a little complex due to logic to match arrow keys with the current 3d perspective
           let processArrow = (function(k) {               
             d = this.subunit
-            //console.log("shift-amt:" + d)
-            //console.log(_this.evtman.DownKeys)
             if (this.evtman.DownKeys.Shift) {
               d *= this.high_subunit_scale
             }
@@ -217,11 +210,9 @@ libek.control = {
             else {
               let quad = libek.rad_tosector(this.campos.theta, 4)              
               if (this.pickplane.normal.equals(libek.direction.vector.SOUTH)) {
-                //console.log("NORTH  ... quad="+quad + " k="+k)
                 this.camtarget.z += nktbl[quad|k]*d          
               }
               else {
-                //console.log("EAST  ... quad="+quad + " k="+k)
                 this.camtarget.x += ektbl[quad|k]*d        
               }
             }
@@ -246,7 +237,6 @@ libek.control = {
                 processArrow(L)
               break
               case "ArrowRight_down":
-                //console.log(R)
                 processArrow(R)
               break
             }
@@ -289,7 +279,6 @@ libek.control = {
                 this.updateCamera(false)
               break
               case "mousewheel_neg":
-                //console.log(evt.data)
                 this.campos.radius -= this.radstep
                 if (this.campos.radius < this.radmin) {
                   this.campos.radius = this.radmin
@@ -301,7 +290,6 @@ libek.control = {
                 orbit:
                 while (true) {
                   evt = await rdr.next(orbit_evt) 
-                  //console.log(evt.data)
                   switch(evt.code) {
                     case "reconfigure": 
                       configure() 
@@ -334,8 +322,8 @@ libek.control = {
       //    This is a simple way to allow transient camera targets
       if (params.RefocusTargetMBTN) {
         (async function Refocus_Controller() {          
-          let len = params.RefocusLen ? params.RefocusLen : 5000  //milliseconds
-          let quicklen = len * 0.5
+          let len = params.RefocusLen ? params.RefocusLen : 1000  //milliseconds
+          let quicklen = params.QuickRefocusLen ? params.QuickRefocusLen : 500
           let qrefocus = false
           if (!this.refocustarget) {
             this.refocustarget = new THREE.Vector3()
@@ -365,8 +353,6 @@ libek.control = {
                 qrefocus = true
               case btndown:
                 let start = this.camtarget.clone()
-                                
-                //console.log("refocus", start, this.refocustarget)
                 
                 let starttime = Date.now()
                 while (true) {
@@ -417,16 +403,13 @@ libek.control = {
             follow_evt = libek.event.policy(`read ${btnup} frame reconfigure finalize`)
           }
           configure()
-          //console.log(main_evt)
           
           let rdr = new libek.event.Reader(this.evtman)
           rdr.returnType = libek.event.ReadReturnType.Object
           
           let chase = (function() {
             let mpos3d = libek.pick.planepos(this.disp, this.evtman.mpos, this.pickplane)
-            let pos = mpos3d.clone()
-            //console.log(pickplane)
-            //console.log(pos)
+            let pos = mpos3d.clone()            
             pos.sub(this.camtarget)
             pos.normalize()
             pos.multiplyScalar(this.followspeed*this.campos.radius)
@@ -477,18 +460,7 @@ libek.control = {
         }).bind(this)()
       } 
         
-      this.updateCamera(true)      
-      
-      //console.log(main_evt)
-      //console.log(orbit_evt)
-      //console.log(follow_evt)
-      
-      //let rdr = new libek.event.Reader(this.evtman)
-      //rdr.returnType = libek.event.ReadReturnType.Object
-      
-      //let evt, prev_mpos, mpos, dx, dy, mpos3d
-      
-         
+      this.updateCamera(true)          
     }
   }
 }

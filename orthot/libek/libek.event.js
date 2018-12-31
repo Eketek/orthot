@@ -7,9 +7,6 @@ libek.event = {
   
   
     this.EventReaders = []
-    //this.DownKeys = {}   
-    
-      //console.log(this)
     
     this.addReader = function(reader) {
       this.EventReaders.push(reader)
@@ -45,8 +42,6 @@ libek.event = {
       let kname = evt.code
       _this.DownKeys[kname] = true
       _this.dispatch_libek_event( kname + "_down", evt.key )
-      
-      //console.log(evt)
     }
     let recv_keyup = function(evt) {
       let kname = evt.code
@@ -77,10 +72,6 @@ libek.event = {
     }
     
     let recv_mousewheel = function(evt) {
-      //console.log(evt)
-      //mpos.x =  ((evt.pageX - evt.target.offsetLeft) / evt.target.clientWidth) * 2 - 1
-      //mpos.y = -((evt.pageY - evt.target.offsetTop)  / evt.target.clientHeight) * 2 + 1   
-              
       _this.dispatch_libek_event( evt.deltaY > 0 ? "mousewheel_pos" :"mousewheel_neg")
       _this.dispatch_libek_event("mousewheel", new THREE.Vector3(evt.deltaX, evt.deltaY, evt.deltaZ) )
     }
@@ -133,12 +124,8 @@ libek.event = {
     }      
     
     this.dispatch_libek_event = function(code, data) {
-      //console.log("DISP-" + code)
       for (let reader of _this.EventReaders) {
         if (reader.receiveEvent(code, data)) {
-          if (code == "lmb_down") {
-            console.log("lmbdown-handler", reader)
-          }
           return
         }
       }
@@ -260,8 +247,6 @@ libek.event = {
           action = toAction(parts[0])
         break
       }
-      
-      //console.log(action)
       
       // Each subsequent word is a minor command
       for (let i = 1; i < parts.length; i++) {

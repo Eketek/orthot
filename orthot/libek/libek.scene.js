@@ -32,8 +32,6 @@ libek.VxScene = function(params={}) {
   
   Object.defineProperty(this, 'default', {set: val => { space.default = val}})
   
-  //space.default = function() { return { terrain:0 } }  
-  
   this.scene = new THREE.Object3D()
   
   this.dispose = function() {
@@ -52,7 +50,6 @@ libek.VxScene = function(params={}) {
   //  Non-integer or fractional amounts will work
   this.buildChunks = function() {
     if (invalidChunks.length > 0) {
-      //console.log("tick-w-invalidchk", invalidChunks)
       buildChunks_amt += chunks_per_tick
       while (buildChunks_amt > 0) {
         let chk = invalidChunks.shift()
@@ -64,16 +61,12 @@ libek.VxScene = function(params={}) {
         obj = boxterrain.build(space, {min:chk, max:{x:chk.x+chunksize,y:chk.y+chunksize,z:chk.z+chunksize}})
         this.scene.add(obj)
         chk.obj = obj
-        //console.log(obj)
         buildChunks_amt--
         if (invalidChunks.length == 0) {
           buildChunks_amt = 0
           break
         }
       }
-    }
-    else {
-      //console.log("all valid")
     }
   }
   
@@ -92,7 +85,6 @@ libek.VxScene = function(params={}) {
     }
     let chk = getChunk(x,y,z)
     if (invalidChunks.indexOf(chk) == -1) {
-      //console.log("add", chk)
       invalidChunks.push(chk)
     }
   }
@@ -160,7 +152,6 @@ libek.VxScene = function(params={}) {
   let updateChunk = function(x,y,z) {
     let addr = `CHK|${x},${y},${z}`
     let chk = chunks[addr]
-    //console.log("...", addr, chk)
     if (chk && (invalidChunks.indexOf(chk) == -1)) {
       invalidChunks.push(chk)
     }
@@ -179,8 +170,6 @@ libek.VxScene = function(params={}) {
     ny--
     nz--
     
-    //console.log(nx, ny, nz)
-    
     if (nx>0) {
       nx = (nx!=chunksize) ? 0 : 1
     }
@@ -190,9 +179,6 @@ libek.VxScene = function(params={}) {
     if (nz>0) {
       nz = (nz!=chunksize) ? 0 : 1
     }
-    
-    //console.log(nx, ny, nz)
-    //console.log(((nx!=0)) | ((ny!=0)<<1) | ((nz!=0)<<2))
     
     switch(((nx!=0)) | ((ny!=0)<<1) | ((nz!=0)<<2)) {
       case 0:      // 

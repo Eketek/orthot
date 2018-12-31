@@ -32,7 +32,6 @@ libek.EkvxLoader = function (data_ab) {
   let EDIT_VERSION = 5.0;	//Version number to use when writing editor data
   
   let header = data.readString(1024)
-  //console.log(header)
   let parts = header.split('-')
   let format_name_1 = parts[0]
   let format_name_2 = parts[1]
@@ -48,11 +47,10 @@ libek.EkvxLoader = function (data_ab) {
   
   let num_templates = data.readSInt()
 	let editorDataStripped = data.readBool()
-  //console.log(num_templates, editorDataStripped)
+	
 	for (let i = 0; i < num_templates; i++) {
 	  let id = data.readSInt()
 	  let tooldata = data.readString()
-	  //console.log(id, tooldata)
 	  
 	  let defaultinfo = "ekvx_import:"+tooldata;
 	  let vs = {
@@ -117,14 +115,12 @@ libek.EkvxLoader = function (data_ab) {
 		  }
 		}
 	  
-	  //console.log(vs)
 	  raw_templates[id] = vs
 	}
 	
 	//If lightmap data is present, parse through and ignore it.  For now.
 	if (this.data_version >= 5) {
 	  if (data.readBool()) {
-	    //console.log("lightmap data")
 	    let num_colors = data.readSInt()		    
 			for (let i = 0; i < num_colors; i++) {
 				data.readString()					
@@ -138,7 +134,6 @@ libek.EkvxLoader = function (data_ab) {
 		  }
 		  let lmtw = data.readSInt()
 		  let lmth = data.readSint()
-		  console.log(lmtw, lmth)
 		  if (lmtw != -1) {			    
 				for (let ci = 0; ci < lmtw * lmth; ci++) {
 				  data.readUByte()
@@ -149,33 +144,23 @@ libek.EkvxLoader = function (data_ab) {
 		  }
 	  }			
 	}
-	//let sp = new libek.dvol.Space()
-	//console.log(sp)
 	let num_buckets = data.readSInt()
-	//console.log(num_buckets)
 	for (let i = 0; i < num_buckets; i++) {
 	  let ox = data.readSInt()
 	  let oy = data.readSInt()
 	  let oz = data.readSInt()
 	  
-	  //console.log("ofs: ", ox, oy, oz)
-	  
 	  let num_voxels = data.readSInt()
-	  //console.log(num_voxels)
 	  for (let j = 0; j < num_voxels; j++) {
 	    let binpos = data.readUShort()
 	    let typeid = data.readSInt()
 	    let x = ((binpos&0x001f)    ) + ox
 	    let y = ((binpos&0x07e0)>>5 ) + oy
 	    let z = ((binpos&0xf800)>>11) + oz
-	    //console.log(x,y,z, "|", binpos)
-	    //sp.get(x,y,z).t = typeid
 	    raw_objects.push( {x:x,y:y,z:z, type:typeid} )
-	    //console.log(ekvx.importedSwatches[typeid])
 	  }
 	  
 	  num_voxels = data.readSInt()
-	  //console.log(num_voxels)
 	  for (let j = 0; j < num_voxels; j++) {
 	    let binpos = data.readUShort()
 	    let typeid = data.readSInt()
@@ -183,22 +168,18 @@ libek.EkvxLoader = function (data_ab) {
 	    let x = ((binpos&0x001f)    ) + ox
 	    let y = ((binpos&0x07e0)>>5 ) + oy
 	    let z = ((binpos&0xf800)>>11) + oz
-	    //sp.get(x,y,z).t = typeid
 	    raw_objects.push( {x:x,y:y,z:z, type:typeid, data:objdata } )
-	    //console.log(specialdata)
 	  }
 	  
 	  // Skip lightmap data... for now.  Maybe will remain skipped.
 	  if (this.data_version >= 5) {
 	    let numLightEntries = data.readSInt()
-	    //console.log(numLightEntries)
 			for (let j = 0; j < numLightEntries; j++) {
 				let binpos = data.readUShort();
 				let colorID = data.readSInt();
 			}
 			
 			numLightEntries = data.readSInt()
-	    //console.log(numLightEntries)
 			for (let j = 0; j < numLightEntries; j++) {
 				let binpos = data.readUShort();
 				data.readSInt()
@@ -210,7 +191,6 @@ libek.EkvxLoader = function (data_ab) {
 			}
 			
 		  numLightEntries = data.readSInt();
-      //console.log(numLightEntries)
 		  for (let j = 0; j < numLightEntries; j++) {
 			  let binpos = data.readUShort();
 			  data.readSInt()
@@ -229,9 +209,6 @@ libek.EkvxLoader = function (data_ab) {
 		  }
 		}
   }
-  //console.log("OBJECT NAME", name)
-  //console.log("TEMPLATES", raw_templates)
-  //console.log("DATA", raw_objects)
     
   let templates = {}
   

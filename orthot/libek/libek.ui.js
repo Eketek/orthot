@@ -190,9 +190,7 @@ libek.ui = function(Control) {
       control.init(_params)
       elems.push(control)
     }
-    
-    //console.log(elems)
-    
+        
     return {
       dispose:function() {
         for (let elem of elems) {

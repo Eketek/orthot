@@ -12,7 +12,6 @@ libek.primitive = {
   // Generate a renderable line grid.
   //  The generated grid is aligned with one of three major axes and uses absolute space (no transformations)
   Grid:function(params={}) {
-    //console.log(params)
     let orientation = params.orientation ? params.orientation : libek.AXIS.Y
     let spacewidth = params.spacewidth ? params.spacewidth : 2
     let major_spacewidth = params.major_spacewidth ? params.major_spacewidth : 8
@@ -224,7 +223,6 @@ libek.primitive = {
   },
   
   Wfcube:function(params = {}) {
-    //console.log(params)
     let size = params.size ? params.size : 40
     
     let color = new THREE.Color(params.major_color ? params.major_color : 'hsl(0, 0%, 100%)')

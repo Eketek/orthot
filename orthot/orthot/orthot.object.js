@@ -83,7 +83,6 @@ orthot.OrthotObject = {
       this.animCTL.destroy()
     }
     else if (this.obj) {
-      //console.log("destroy ... ", this)
       if (this.obj.parent) {
         this.obj.parent.remove(this.obj)
       }

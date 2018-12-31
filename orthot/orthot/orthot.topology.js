@@ -11,7 +11,7 @@ orthot.topology = {
     let fromHEADING = heading
     let fromFORWARD = forward
     let fromUP = up
-    
+            
     let [adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
         
     // If down but a floor-type entity obstructing, clear the traversable flag
@@ -37,13 +37,26 @@ orthot.topology = {
       isPortaljump:isPortaljump,
     }
     
-    return Object.assign( {
+    
+    let r = Object.assign( {
       path:[hop],
       isPortaljump:isPortaljump,
       isTraversable:function() {
         return zone.isTraversable(fromCTN, fromHEADING, toCTN, toHEADING, obj)
       },
     }, hop )
+    
+    let _
+    
+    // Check for open space under destination, so that creatures popping out of portals can decide whether to right themselves mid-air 
+    // or whether to flop over on the ground.  
+    // If you want a reasonable explanation, Eketek isn't going to give it..  Maybe your quandary could be exacerbated by accosting a random physics professor!
+    [_, _, _, _, _, _, isTraversable] = zone.getLocalTopology(obj, toCTN, libek.direction.code.DOWN, toFORWARD, toUP)
+    if (isTraversable) {
+      r.isOVERHOLE = true
+    }
+    
+    return r
   },
   
   /*  topological scan that checks spaces needed by ramp-enabled movers
@@ -104,7 +117,6 @@ orthot.topology = {
         //  handling objects which have a split-location.
         
         ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, toCTN, fromHEADING, fromFORWARD, fromUP)
-        //;[adjCTN, toCTN, toDIR, toUPDIR, isPortaljump, isTraversable] = zone.getLocalTopology(obj, toCTN, fromDIR, toUPDIR)
         _isTraversable &= isTraversable
         _isPortaljump |= isPortaljump
         appendHop()
@@ -123,7 +135,6 @@ orthot.topology = {
       else if (ramp.descendDIR != fromHEADING) {
         ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
         //;[adjCTN, toCTN, toDIR, toUPDIR, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromDIR, fromUPDIR)
-        //console.log([toCTN, toDIR, toUPDIR, isPortaljump, isTraversable])
         _isTraversable &= isTraversable
         _isPortaljump |= isPortaljump
         
@@ -147,10 +158,8 @@ orthot.topology = {
               
         // ... If there just happens to be a pair of portals ahead, these should obviously be stepped through ...
         ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, upperCTN, fromHEADING, fromFORWARD, fromUP)
-        //;[adjCTN, toCTN, toDIR, toUPDIR, isPortaljump, isTraversable] = zone.getLocalTopology(obj, upperCTN, fromDIR, fromUPDIR)
         _isTraversable &= isTraversable
         _isPortaljump |= isPortaljump
-        //appendHop()
         
         r.upper_toCTN = toCTN
         r.upper_toHEADING = toHEADING
@@ -201,8 +210,6 @@ orthot.topology = {
     if (downramp_or_flat) {
       
       ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
-      //;[adjCTN, toCTN, toDIR, toUPDIR, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromDIR, fromUPDIR)
-      //console.log([toCTN, toDIR, toUPDIR, isPortaljump, isTraversable])
       _isTraversable &= isTraversable
       _isPortaljump |= isPortaljump
       
@@ -224,7 +231,6 @@ orthot.topology = {
             _isTraversable &= isTraversable
             _isPortaljump |= isPortaljump
             r.toUPRAMP = true
-            //appendHop()
             // Here also needs adjusted if intend down-facing-portal on top of stairs
           }
           else {
@@ -240,7 +246,6 @@ orthot.topology = {
           fromUP = toUP
           ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, libek.direction.invert[toUP], fromFORWARD, fromUP)
           if (isTraversable) {
-            //_isTraversable &= isTraversable
             ramp = toCTN.getObject_bytype("ramp")
             if (ramp) {              
               if (ramp.descendDIR == fromHEADING) {
@@ -304,7 +309,6 @@ orthot.topology = {
       return true
     }
     r.isPortaljump = _isPortaljump
-    //console.log(r)
     return r
   },
   

@@ -54,12 +54,10 @@ var libek = {
     }
     
     let disp = new libek.__Display()
-    //var disp = new libek.Display()
     
     elem.dataset.display = disp
     disp.renderer.setSize( elem.clientWidth, elem.clientHeight )
     disp.camera.aspect = elem.clientWidth / elem.clientHeight
-    console.log( disp.camera )
     disp.scene.add(disp.camera)
     disp.camera.updateProjectionMatrix()
     elem.appendChild( disp.renderer.domElement )
@@ -68,11 +66,8 @@ var libek = {
   
   pick:{      
     // Compute 3D position by picking against a defined picking plane
-    planepos:function(disp, pos, plane) {
-      //Display coordinates at mouse position
-      //let disp_x =  ((evt.pageX - evt.target.offsetLeft) / evt.target.clientWidth) * 2 - 1
-      //let disp_y = -((evt.pageY - evt.target.offsetTop)  / evt.target.clientHeight) * 2 + 1      
-      
+    planepos:function(disp, pos, plane) {  
+    
       //Convert to a Ray pointing from the mouse position
       let mray = new THREE.Ray()
 	    if ( disp.camera.isPerspectiveCamera ) {
@@ -380,7 +375,6 @@ var libek = {
       let fr = new FileReader()
       
       fr.readAsArrayBuffer(await resp.blob())
-      //console.log(fr)
       
       fr.onloadend = function() {
         resolve(fr.result)
@@ -463,10 +457,8 @@ var libek = {
   loadZIP:async function(url) { 
        
 	  let buf = await libek.load_to_ArrayBuffer(url)
-	  console.log(buf)
 	  let jz = new JSZip()    
     let archive = await jz.loadAsync(buf)
-    console.log(archive)
     let aliastable = {}
     for (let fname in archive.files) {
       if (fname.endsWith(".mf")) {
@@ -475,7 +467,6 @@ var libek = {
         let strings = txt.split('\n')
         for (let line of strings) {
           line = line.trim()
-          console.log(line)
           if (line.startsWith("#")) {
             continue
           }
@@ -509,15 +500,11 @@ var libek = {
       else {
         name = name.substring(0,i)
       }
-      console.log(name, ext)
       switch(ext) {
         case 'ekvx':
           let ab = await entry.async("arraybuffer")
           try {
             assets[name] = new libek.EkvxLoader(ab)
-            if (name == "Key Tutorial") {
-              console.log("--------", name, ab, assets[name])
-            }
           }
           catch(err) {
             console.log(`ERROR parsing ${fname}: `, err)
@@ -542,25 +529,7 @@ var libek = {
         break
       }
       
-      //if (i != -1) {
-      //  loader = libek.loader[url.substr(i+1)]
-      //}
-      
-      //let ab = await entry.async("arraybuffer")
-      //if (name.endsWith("ekvx")) {
-        
-      //}      
-      //let ekvx = new libek.EkvxLoader(ab)
     }
-    /*
-    let ab = await arch.file("ekvxdat/MainArea.ekvx").async("arraybuffer")
-    
-    let ekvx = new libek.EkvxLoader(ab)
-
-    zone = new orthot.Zone(ekvx)
-    console.log(ab, ekvx, zone)
-    window.zn = zone
-    renderCTL.display.scene.add(zone.scene)*/
   },
   
   delay:async function(ms) {

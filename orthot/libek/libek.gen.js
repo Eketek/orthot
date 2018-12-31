@@ -291,10 +291,7 @@ libek.gen = {
               let nrows = uv2info.lut.num_rows ? uv2info.lut.num_rows : 16
               let tctbl = libek.gen.build_texcoordLUT(uv2info.lut.texcoord_ul, uv2info.lut.texcoord_br, ncols, nrows)
               tile = tctbl[uv2info.lut.entry]
-              //console.log(uv2info)
-              //console.log(tile)
             }
-            //else if (uv2info.
             else {
               tile = Float32Array.from([ 0,0, 1,0, 1,1, 0,1 ])
             }
@@ -491,7 +488,6 @@ libek.gen = {
         up:Object.assign( {}, surface[up], libek.gen._BoxTerrain_MeshData.up ),
         down:Object.assign( {}, surface[down], libek.gen._BoxTerrain_MeshData.down ),
       }
-      //console.log(terrain[id])
       return terrain[id]
     }
     
@@ -522,8 +518,6 @@ libek.gen = {
       let x,y,z, terr, sfc, dir, pos
       let query = function(ctn) {
         if (ctn && ctn.terrain && ctn.terrain.id) {
-          //console.log(ctn)
-          //console.log(dir)
           let adjsfc = terrain[ctn.terrain.id][dir]
           if (sfc.mergeWith.indexOf(adjsfc.id) != -1) {
             return 2
@@ -735,8 +729,6 @@ libek.gen = {
     let indices, vertices, normals, uvs, colors
     
     let num_indices, num_verts
-    
-    //let _tmpl
   
     //  Add an object to a given location
     //  loc:  position to place the object
@@ -745,7 +737,6 @@ libek.gen = {
       let p = loc
       
       _tmpl = template
-      //console.log(loc)
       
       let _vertices = Float32Array.from(template.vertices)
       for (let i = 0; i < _vertices.length;) {
@@ -765,9 +756,7 @@ libek.gen = {
         uvs:template.uvs,
         uv2s:template.uv2s,
         colors:template.colors
-        //mesh_indices:undefined,
       }
-//      console.log(sm.uvs2)
       
       submeshes.push(sm)
     }
@@ -790,7 +779,6 @@ libek.gen = {
       num_verts = 0
       
       for (let sm of submeshes) {
-        //console.log(sm)
         num_indices += sm.indices.length
         num_verts += sm.vertices.length
       }
@@ -807,18 +795,15 @@ libek.gen = {
         let i = 0
         let j = 0
         for (let sm of submeshes) {
-          //indices.set(sm.indices, i)
           sm.index = i
           let k = j/3
           for (let ii = 0; ii < sm.indices.length; ii++) {
             indices[i+ii] = sm.indices[ii]+k
           }
-          //console.log(i)
           vertices.set(sm.vertices, j)
           normals.set(sm.normals, j)
           i += sm.indices.length
           j += sm.vertices.length
-          //uvs.set(sm.uvs, j)
         }
       }
       
@@ -828,24 +813,20 @@ libek.gen = {
       geom.addAttribute( 'normal', new THREE.BufferAttribute( normals, 3 ) );
       
       if (use_colors) {
-        //console.log("use-colors???")
         colors = new Float32Array(num_verts)
         let j = 0
         for (let sm of submeshes) {        
           colors.set(sm.colors, j)
           j += sm.vertices.length
-          //uvs.set(sm.uvs, j)
         }
         geom.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
       }
       if (use_uvs) {
         uvs = new Float32Array(num_verts)
         let j = 0
-        for (let sm of submeshes) {     
-          //console.log(sm)   
+        for (let sm of submeshes) {    
           uvs.set(sm.uvs, j)
           j += sm.uvs.length
-          //uvs.set(sm.uvs, j)
         }
         geom.addAttribute( 'uv', new THREE.BufferAttribute( uvs, 2 ) );
       }
@@ -860,18 +841,13 @@ libek.gen = {
           attrname = libek.shader.UV_ATTRIBUTE_PREFIX + uv2spec
         }
         
-        //console.log(uv2name)
         uvs = new Float32Array(num_verts)
         let j = 0
-        for (let sm of submeshes) {     
-          //console.log(sm)
-          //console.log(sm)   
+        for (let sm of submeshes) {   
           uvs.set(sm.uv2s, j)
           j += sm.uv2s.length
-          //uvs.set(sm.uvs, j)
         }
         geom.addAttribute( attrname, new THREE.BufferAttribute( uvs, 2 ) );
-        //geom.addAttribute( libek.shader.UV_ATTRIBUTE_PREFIX + uv2name, new THREE.BufferAttribute( uvs, 2 ) );
       }
       
       return new THREE.Mesh(geom, mat)

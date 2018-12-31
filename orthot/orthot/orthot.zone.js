@@ -123,6 +123,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     let reltime = (t-prevtick) / this.ticklen  
     let d = reltime-prevreltime
     prevreltime = reltime
+    //console.log(reltime)
     
     for (let i = 0; i < cmdSequences_long.length; i++) {
       let seq = cmdSequences_long[i]
@@ -488,7 +489,6 @@ orthot.Zone = function(ekvx, override_startloc) {
         //outUP = dportal.forward
         let sv = (portal.up == libek.direction.code.UP) || (portal.up == libek.direction.code.DOWN)
         let dv = (dportal.up == libek.direction.code.UP) || (dportal.up == libek.direction.code.DOWN)
-        
         if (sv && dv) {
           outFORWARD = dportal.up
           outUP = libek.direction.invert[fromUP]

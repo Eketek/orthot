@@ -126,7 +126,6 @@ orthot.Player = function(zone) {
         }
         else {
           this.animCTL.setNMAP(nmap_walk)
-          //this.animCTL.nmap = walk_nmap
           this.ready()
           this.state = orthot.ObjectState.IDLE
         }
@@ -153,7 +152,6 @@ orthot.Player = function(zone) {
           force.inputDIR = dir
           force.strength = orthot.Strength.NORMAL
           zone.addForce(force)
-          //this.animCTL.setNMAP(zone.addForce(force) ? nmap_push : nmap_walk)
         }  
       break
       case orthot.ObjectState.SLIDING:
@@ -235,6 +233,7 @@ orthot.Player = function(zone) {
         if (force.isTraversable()) {
           if (this.state != orthot.ObjectState.DEFEATED) {        
             zone.putGameobject(force.toCTN, this)
+            console.log("fall")
             this.animCTL.fall(force)
           }
           return trit.TRUE

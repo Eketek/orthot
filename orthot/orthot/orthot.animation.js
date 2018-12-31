@@ -180,7 +180,7 @@ orthot.AnimateBlock = function(zone, blk) {
       
       //  For now, orientation property is omitted because all blocks didn't do any rotating in Orthot II.  Orientation should probably be re-added,
       //  because portals in Orthot III do end up rotating things
-      //libek.direction.setOrientation(orientation, _forward, _up)or portal-related animations
+      //libek.direction.setOrientation(orientation, _forward, _up)
       
       forward.copy(libek.direction.vector[_forward])
       backward.copy(libek.direction.vector[libek.direction.invert[_forward]])
@@ -1630,7 +1630,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     },
     hopoffLadder:function(forward, up) {
       configurecam(false)
-      mainINST.ctl.configure(undefined, forward, forward, up) 
+      mainINST.ctl.configure(undefined, forward, forward, up)
       zone.addCommandsequence_short(mainINST.ctl.hopoffladder)
     },
     exitLadder:function(force) {

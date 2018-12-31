@@ -11,7 +11,7 @@ orthot.topology = {
     let fromHEADING = heading
     let fromFORWARD = forward
     let fromUP = up
-    
+            
     let [adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
         
     // If down but a floor-type entity obstructing, clear the traversable flag
@@ -37,13 +37,26 @@ orthot.topology = {
       isPortaljump:isPortaljump,
     }
     
-    return Object.assign( {
+    
+    let r = Object.assign( {
       path:[hop],
       isPortaljump:isPortaljump,
       isTraversable:function() {
         return zone.isTraversable(fromCTN, fromHEADING, toCTN, toHEADING, obj)
       },
     }, hop )
+    
+    let _
+    
+    // Check for open space under destination, so that creatures popping out of portals can decide whether to right themselves mid-air 
+    // or whether to flop over on the ground.  
+    // If you want a reasonable explanation, Eketek isn't going to give it..  Maybe your quandary could be exacerbated by accosting a random physics professor!
+    [_, _, _, _, _, _, isTraversable] = zone.getLocalTopology(obj, toCTN, libek.direction.code.DOWN, toFORWARD, toUP)
+    if (isTraversable) {
+      r.isOVERHOLE = true
+    }
+    
+    return r
   },
   
   /*  topological scan that checks spaces needed by ramp-enabled movers

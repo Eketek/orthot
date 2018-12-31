@@ -184,7 +184,7 @@ orthot.PushBlock = function(zone, color) {
     else if (force.action == "fall") {
       if (this.state == orthot.ObjectState.FALLING) {
         this.state = orthot.ObjectState.IDLE
-        this.animCTL.impactDown()
+        this.animCTL.impactDown(force)
       }
       
       this.state = orthot.ObjectState.IDLE

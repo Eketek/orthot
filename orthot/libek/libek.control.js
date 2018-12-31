@@ -334,8 +334,8 @@ libek.control = {
       //    This is a simple way to allow transient camera targets
       if (params.RefocusTargetMBTN) {
         (async function Refocus_Controller() {          
-          let len = params.RefocusLen ? params.RefocusLen : 5000  //milliseconds
-          let quicklen = len * 0.5
+          let len = params.RefocusLen ? params.RefocusLen : 1000  //milliseconds
+          let quicklen = params.QuickRefocusLen ? params.QuickRefocusLen : 500
           let qrefocus = false
           if (!this.refocustarget) {
             this.refocustarget = new THREE.Vector3()

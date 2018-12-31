@@ -58,14 +58,16 @@ libek.Model = function(params) {
       }
       
       this.show = (function() {
+        console.log("show", model.obj.children.indexOf(this.obj), this)
         if (model.obj.children.indexOf(this.obj) == -1) {
           model.obj.add(this.obj)
         }
       }).bind(this);
       
       this.hide = (function() {
+        console.log("hide", model.obj.children.indexOf(this.obj), this)
         if (model.obj.children.indexOf(this.obj) != -1) {
-          model.obj.add(this.obj)
+          model.obj.remove(this.obj)
         }
       }).bind(this);
       

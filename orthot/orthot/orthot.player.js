@@ -53,11 +53,13 @@ orthot.Player = function(zone) {
   }
     
   this.OnUpdateCTN = function() {
+    console.log("updatectn", this.ctn)
     sviewCTL.refocustarget.set(this.ctn.x, this.ctn.y + (this.ctn.getObject_bytype("ramp") ? 1 : 0.5), this.ctn.z)
   }
   
   this.recvInput = function(inputs) {
     let force_gravity
+    //console.log(this.state)
     switch(this.state) {
       case orthot.ObjectState.DEFEATED:
         return
@@ -210,7 +212,9 @@ orthot.Player = function(zone) {
     //}
     switch(force.action) {
       case "walk":
-        this.forward = force.toHEADING
+        if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) {        
+          this.forward = force.toHEADING
+        }
         //this.up = force.toUP
         if (force.isTraversable()) {
           if (force.toBLOCKINGRAMP) {
@@ -246,6 +250,7 @@ orthot.Player = function(zone) {
         if (force.isTraversable()) {
           if (this.state != orthot.ObjectState.DEFEATED) {        
             zone.putGameobject(force.toCTN, this)
+            console.log("fall")
             this.animCTL.fall(force)
           }
           return trit.TRUE
@@ -260,8 +265,13 @@ orthot.Player = function(zone) {
       break
       case "climbup":
         console.log("CLIMB:", force)
-        this.forward = force.toFORWARD
-        //this.up = force.toUP
+        if ( (force.toFORWARD != libek.direction.code.UP) && (force.toFORWARD != libek.direction.code.DOWN) ) {  
+          this.forward = force.toFORWARD
+        }
+        //else {
+        //  this.forward = force.toFORWARD
+        //  this.up = force.toUP
+        //}
         if (force.isTraversable()) {
           if (force.isLADDEREXIT) {
             zone.putGameobject(force.toCTN, this)
@@ -283,8 +293,13 @@ orthot.Player = function(zone) {
       break
       case "climbdown":
         console.log("CLIMB:", force)
-        this.forward = force.toFORWARD
-        //this.up = force.toUP
+        if ( (force.toFORWARD != libek.direction.UP) && (force.toFORWARD != libek.direction.DOWN) ) {  
+          this.forward = force.toFORWARD
+        }
+        //else {
+        //  this.forward = force.toFORWARD
+        //  this.up = force.toUP
+        //}
         if (force.isTraversable()) {
           if (force.isLADDER) {
             zone.putGameobject(force.toCTN, this)
@@ -308,7 +323,7 @@ orthot.Player = function(zone) {
   }
   
   this.stackFall = function(force) {
-    let gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN)
+    let gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
     gravity.OBJ = this
     gravity.initiator = force.initiator
     gravity.action = "fall"

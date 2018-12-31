@@ -37,6 +37,21 @@ libek.direction = {
   
   opposite:   [0, 2, 1, 5, 6, 3, 4],
   invert:     [0, 2, 1, 5, 6, 3, 4],
+  
+  cross:(function() {
+    let r = [
+      0,
+      [ 0, 0, 0, 4, 5, 6, 3 ],
+      [ 0, 0, 0, 6, 3, 4, 5 ],
+      [ 0, 6, 4, 0, 2, 0, 1 ],
+      [ 0, 3, 5, 1, 0, 2, 0 ],
+      [ 0, 4, 6, 0, 1, 0, 2 ],
+      [ 0, 5, 3, 2, 0, 1, 0 ]
+    ]
+    return function(forward, up) {
+      return r[up][forward]
+    }
+  })(),
     
   //  Rotate a "heading" vector by a relational rotation ("from-to") derived from two sets of basis vectors
   //  This should probably be made somewhat more performant (possibly with a 7776 entry lookup table)

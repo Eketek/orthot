@@ -37,7 +37,7 @@ orthot.Zone = function(ekvx, override_startloc) {
   let prevtick = Date.now()
   let prevtime = prevtick
   let prevreltime = 0
-  let ticklen = 200
+  this.ticklen = 200
   
   let player
   let startloc = vxc.get(0,1,0)
@@ -111,6 +111,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     let t = Date.now()
     let dt = t-prevtime
     prevtime = t
+    
         
     for (let i = 0; i < cmdSequences_realtime.length; i++) {
       let seq = cmdSequences_realtime[i]
@@ -120,9 +121,10 @@ orthot.Zone = function(ekvx, override_startloc) {
       }
     }
     
-    let reltime = (t-prevtick) / ticklen  
+    let reltime = (t-prevtick) / this.ticklen  
     let d = reltime-prevreltime
     prevreltime = reltime
+    //console.log(reltime)
     
     for (let i = 0; i < cmdSequences_long.length; i++) {
       let seq = cmdSequences_long[i]
@@ -258,7 +260,7 @@ orthot.Zone = function(ekvx, override_startloc) {
   
   this.inputAvailable = function() {
     if ( (cmdSequences_short.length == 0) && (cmdSequences_long.length == 0)) {
-      prevtick = Date.now() - ticklen
+      prevtick = Date.now() - this.ticklen
     }
   }
   
@@ -487,8 +489,36 @@ orthot.Zone = function(ekvx, override_startloc) {
       if (dportal) {
         isPortaljump = true 
         outHEADING = dportal.up
-        outFORWARD = dportal.up
-        outUP = dportal.forward
+        //outFORWARD = dportal.up
+        //outUP = dportal.forward
+        let sv = (portal.up == libek.direction.code.UP) || (portal.up == libek.direction.code.DOWN)
+        let dv = (dportal.up == libek.direction.code.UP) || (dportal.up == libek.direction.code.DOWN)
+        //console.log(portal, dportal, sv, dv)
+        console.log("toposcan vectors:", fromHEADING, fromFORWARD, fromUP)
+        if (sv && dv) {
+          console.log("HH")
+          outFORWARD = dportal.up
+          outUP = libek.direction.invert[fromUP]
+        }
+        else if (!sv && !dv) {
+          console.log("VV")
+          outFORWARD = dportal.up
+          outUP = fromUP
+        }        
+        else if (sv && !dv) {
+          console.log("HV")
+          //outFORWARD = dportal.up
+          //outUP = dportal.forward
+          outFORWARD = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromFORWARD, portal.up, portal.forward, dportal.up, dportal.forward)]
+          outUP = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromUP, libek.direction.invert[portal.up], portal.forward, dportal.up, dportal.forward)]
+        }
+        else {
+          console.log("VH")
+          //outFORWARD = dportal.up
+          //outUP = dportal.forward
+          outFORWARD = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromFORWARD, portal.up, portal.forward, dportal.up, dportal.forward)]
+          outUP = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromUP, libek.direction.invert[portal.up], portal.forward, dportal.up, dportal.forward)]
+        }
         outCTN = this.getAdjacentCTN(dportal.host.ctn, outHEADING)
       }
     }
@@ -1122,7 +1152,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     prevtick = Date.now()
     prevtime = prevtick
     prevreltime = 0
-    ticklen = 200
+    this.ticklen = 200
     startloc = vxc.get(0,1,0) 
     player = undefined
 

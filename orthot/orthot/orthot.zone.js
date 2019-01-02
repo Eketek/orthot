@@ -45,9 +45,11 @@ orthot.Zone = function(ekvx, override_startloc) {
   let tickListeners = []
   let tmp_tickListeners = [] 
   
+  //set up "reticles" that can show which keys will work with which locks
   let keys = []
   let locks = []
   let reticlemat
+  let activeReticle
   let baseReticleOBJ = assets.cubereticle
   if (baseReticleOBJ) {
     reticlemat = baseReticleOBJ.children[0].material
@@ -64,7 +66,6 @@ orthot.Zone = function(ekvx, override_startloc) {
   this.scene.add(keyReticle.obj)
   this.scene.add(lockReticle.obj)
   
-  let activeReticle = null
   let setReticle = function(reticle, objs, code, color) {
     if (activeReticle) {
       activeReticle.clear()
@@ -79,16 +80,13 @@ orthot.Zone = function(ekvx, override_startloc) {
       if (obj.code == code) {
         reticle.add(obj.ctn)
       }
-      else {
-        console.log(`"${obj.code}" neq "${code}"`)
-      }
     }
   }
   this.clearReticle = function() {
     if (activeReticle) {
       activeReticle.clear()
     }
-  }
+  }  
   
   this.showKeys = function(code, color="green") {
     setReticle(keyReticle, keys, code, color)
@@ -96,8 +94,6 @@ orthot.Zone = function(ekvx, override_startloc) {
   this.showLocks = function(code, color="green") {
     setReticle(lockReticle, locks, code, color)
   }
-  
-  
   
   /*  Rules for determining which objects can enter space occupied by other objects
       These rules are assymetric (liquid objects can not enter space occupied by solid objects, but solid objects can enter space occupied by liquid)

@@ -8,7 +8,7 @@
     
   Heirarchy
     Ability to name specific points to bind child objects to.
-    Unlike conventional scenegraphs, the child's transofrm belongs to the Instance/Parent controller.
+    Unlike conventional scenegraphs, the child's transform belongs to the Instance/Parent controller.
     
   Animation/Progammable Controls
     Animation controller which uses actual code [as opposed to animation data].  Executes guaranteed keyframe events and non-guaranteed per-frame events.

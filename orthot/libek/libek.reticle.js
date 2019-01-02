@@ -1,9 +1,5 @@
 libek.Reticle = function(baseModel) {
-  let MDL = new libek.Model()
-  let INST = new MDL.Instance()
-  let CMP = new INST.Component()
-  this.obj = MDL.obj
-  
+  this.obj = new THREE.Object3D()  
   let targets = {}
   let clear = function() {}
   
@@ -12,8 +8,10 @@ libek.Reticle = function(baseModel) {
     for (let arg of args) {    
       let id = `${arg.x}|${arg.y}|${arg.z}`
       if (!targets[id]) {
-        targets[id] = true
-        CMP.setObject(id, baseModel).position.copy(arg)
+        let t = libek.getAsset(baseModel)
+        this.obj.add(t)
+        t.position.copy(arg)
+        targets[id] = t
       }
     }  
   }
@@ -21,14 +19,17 @@ libek.Reticle = function(baseModel) {
     args = libek.util.flatten(args)
     for (let arg of args) {    
       let id = `${arg.x}|${arg.y}|${arg.z}`
-      if (targets[id]) {
-        CMP.removeObject(id)
+      let t = targets[id]
+      if (t) {
+        this.obj.remove(t)
         delete targets[id]
       }
     }  
   }
   this.clear = function() {
-    CMP.clear()
+    for (let t of Object.values(targets)) {
+      libek.releaseAsset(t)
+    }
     targets = {}
   }
 }

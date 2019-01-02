@@ -39,6 +39,7 @@ orthot.topology = {
     
     
     let r = Object.assign( {
+      OBJ:obj,
       path:[hop],
       isPortaljump:isPortaljump,
       isTraversable:function() {
@@ -79,6 +80,7 @@ orthot.topology = {
     let adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable, ramp
     
     let r = { 
+      OBJ:obj,
       path:[],      //Used by animation system for handling portals.  Eventually, the movement engine will need this for certain special cases
       fromCTN:loc,
       fromHEADING:heading,
@@ -117,6 +119,7 @@ orthot.topology = {
         //  handling objects which have a split-location.
         
         ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, toCTN, fromHEADING, fromFORWARD, fromUP)
+        //;[adjCTN, toCTN, toDIR, toUPDIR, isPortaljump, isTraversable] = zone.getLocalTopology(obj, toCTN, fromDIR, toUPDIR)
         _isTraversable &= isTraversable
         _isPortaljump |= isPortaljump
         appendHop()
@@ -135,6 +138,7 @@ orthot.topology = {
       else if (ramp.descendDIR != fromHEADING) {
         ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
         //;[adjCTN, toCTN, toDIR, toUPDIR, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromDIR, fromUPDIR)
+        //console.log([toCTN, toDIR, toUPDIR, isPortaljump, isTraversable])
         _isTraversable &= isTraversable
         _isPortaljump |= isPortaljump
         
@@ -158,8 +162,10 @@ orthot.topology = {
               
         // ... If there just happens to be a pair of portals ahead, these should obviously be stepped through ...
         ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, upperCTN, fromHEADING, fromFORWARD, fromUP)
+        //;[adjCTN, toCTN, toDIR, toUPDIR, isPortaljump, isTraversable] = zone.getLocalTopology(obj, upperCTN, fromDIR, fromUPDIR)
         _isTraversable &= isTraversable
         _isPortaljump |= isPortaljump
+        //appendHop()
         
         r.upper_toCTN = toCTN
         r.upper_toHEADING = toHEADING
@@ -210,6 +216,8 @@ orthot.topology = {
     if (downramp_or_flat) {
       
       ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
+      //;[adjCTN, toCTN, toDIR, toUPDIR, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromDIR, fromUPDIR)
+      //console.log([toCTN, toDIR, toUPDIR, isPortaljump, isTraversable])
       _isTraversable &= isTraversable
       _isPortaljump |= isPortaljump
       
@@ -231,6 +239,7 @@ orthot.topology = {
             _isTraversable &= isTraversable
             _isPortaljump |= isPortaljump
             r.toUPRAMP = true
+            //appendHop()
             // Here also needs adjusted if intend down-facing-portal on top of stairs
           }
           else {
@@ -246,6 +255,7 @@ orthot.topology = {
           fromUP = toUP
           ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, libek.direction.invert[toUP], fromFORWARD, fromUP)
           if (isTraversable) {
+            //_isTraversable &= isTraversable
             ramp = toCTN.getObject_bytype("ramp")
             if (ramp) {              
               if (ramp.descendDIR == fromHEADING) {
@@ -309,6 +319,7 @@ orthot.topology = {
       return true
     }
     r.isPortaljump = _isPortaljump
+    //console.log(r)
     return r
   },
   
@@ -325,6 +336,7 @@ orthot.topology = {
     let adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable, ramp
     
     let r = { 
+      OBJ:obj,
       path:[],      //Used by animation system for handling portals.  Eventually, the movement engine will need this for certain special cases
       fromCTN:loc,
       fromHEADING:fromHEADING,
@@ -424,6 +436,7 @@ orthot.topology = {
     let adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable, ramp
     
     let r = { 
+      OBJ:obj,
       path:[],      //Used by animation system for handling portals.  Eventually, the movement engine will need this for certain special cases
       fromCTN:loc,
       fromHEADING:fromHEADING,

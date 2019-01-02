@@ -1,6 +1,7 @@
-orthot.Wall = function(zone) {
-  this.__init__(zone)
-  this.SpatialClass = "solid"
+orthot.Wall = function(zone) { 
+  orthot.OrthotObject(this, zone)
+  this.SpatialClass = "solid"  
+  this.hasSides = true
   
   this.isTraversableBy = function(otherOBJ) {return false}
   this.struck = function(force, otherOBJ, collision) { console.log("WALL-struck", force, collision) }
@@ -22,27 +23,28 @@ orthot.Wall = function(zone) {
     this.zone.scene.add(sideobj.obj)
   }
 }
-orthot.Wall.prototype = orthot.OrthotObject
+//orthot.Wall.prototype = orthot.OrthotObject
 
-orthot.ScenePortal = function(zone) {
-  this.__init__(zone)
+orthot.ScenePortal = function(zone) {  
+  orthot.OrthotObject(this, zone)
   this.initGraphics = (function() {
     this.obj = libek.getAsset("scene_portal")
     return true
   }).bind(this)
   this.intruded = function(other) {
     if (other.isPlayer) {
+      //console.log("sceneportal-data", this._ekvxdata_)
       orthot.loadScene(this.destination, this.target)
     }
   }
 }
-orthot.ScenePortal.prototype = orthot.OrthotObject
+//orthot.ScenePortal.prototype = orthot.OrthotObject
 
 /*  Object thta allows movement up and down along a diagonal vector.
     Stairs are regarded as "ramps" for every purpose other than graphical representation
 */
 orthot.Stair = function(zone, color, align) {
-  this.__init__()
+  orthot.OrthotObject(this, zone)
   this.SpatialClass = "ramp" 
   
   //set up some boundaries
@@ -64,150 +66,35 @@ orthot.Stair = function(zone, color, align) {
   this.ascendDIR = align.forward
   this.descendDIR = libek.direction.invert[align.forward]
 }
-orthot.Stair.prototype = orthot.OrthotObject
+//orthot.Stair.prototype = orthot.OrthotObject
 
 // I still don't know what to call a pushblock.  A pushblock is a pushblock.
 // Please don't upload this comment somewhere embarassing, such as the Internet.
 orthot.PushBlock = function(zone, color) {
-  this.__init__(zone)
+  orthot.StandardObject(this, zone)
+  this.hasSides = true
   this.AutoGravity = true
-  zone.activate(this)
+  zone.addTickListener(this.update)
   
   this.SpatialClass = "solid"    
   this.state = orthot.ObjectState.IDLE
   
   this.mdlgen = function() {
     let mdl = libek.getAsset("pushblock")
-    if (this.color) {
-      mdl.children[1].material = libek.Material(this.color)
+    if (color) {
+      mdl.children[1].material = libek.Material(color)
     }
     return mdl
   }
   
-  this.initGraphics = function() {
-    orthot.AnimateBlock(zone, this)
-    return true
-  }
+  this.update.bind(this)
   
-  this.attach = function(sideobj) {
-    sideobj.host = this
-    this.sides[sideobj.up].push(sideobj)
-  }
-  
-  this.update = function() {
-    if (this.defeated) {
-      zone.deactivate(this)
-      return
-    }
-    let gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, libek.direction.code.NORTH, libek.direction.code.UP)
-    gravity.OBJ = this
-    gravity.initiator = this
-    gravity.action = "fall"
-    gravity.strength = orthot.Strength.NORMAL
-    
-    switch(this.state) {
-      case orthot.ObjectState.FALLING:
-        zone.addForce(gravity)
-        break
-      case orthot.ObjectState.IDLE:
-      case orthot.ObjectState.WALKING:
-        if (gravity.isTraversable()) {
-          this.state = orthot.ObjectState.FALLING
-          let uctn = this.zone.getAdjacentCTN(this.ctn, libek.direction.code.UP)
-          zone.addForce(gravity)
-          uctn.stackFall(gravity)
-        }
-        else {
-          zone.deactivate(this)
-        }
-        break
-      default:
-        zone.deactivate(this)
-        break
-    }
-  }
-  
-  this.stackFall = function(force) {
-    let gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN)
-    gravity.OBJ = this
-    gravity.initiator = force.initiator
-    gravity.action = "fall"
-    gravity.puller = force.OBJ
-    gravity.strength = orthot.Strength.NORMAL
-    this.state = orthot.ObjectState.FALLING
-    zone.addForce(gravity)
-    zone.activate(this)
-    return gravity
-  }
-  
-  this.struck = function(force) {
-    
-  }
-  this.strike = function(force) {
-  
-  }
-  
-  this.push = function(force) { 
-    
-  }
-  
-  let prev_ticknum = -10
-  this.move = function(force) { 
-    if (force.isTraversable()) {
-      if (force.action == "fall") {
-        this.state = orthot.ObjectState.FALLING
-      }
-      else {        
-        zone.activate(this)
-      }
-      if (force.pusher) {
-        force.pusher.notify_ForcePropagationClearedObstruction(force, this)
-      }
-      zone.putGameobject(force.toCTN, this)
-      if ( (force.initiator == force.pusher) && ( zone.ticknum > (prev_ticknum+1) ) ) {
-        this.animCTL.impulseShift(force)
-        this.state = orthot.ObjectState.WALKING
-      }
-      else {
-        this.animCTL.shift(force)
-      }
-      prev_ticknum = zone.ticknum
-      return trit.TRUE
-    }
-    else if ((!force.deferred) && (force.strength > orthot.Strength.NONE)) {
-      //force.action = "pushwalk"
-      force.toCTN.push(force)      
-      return trit.MAYBE
-    }
-    else if (force.action == "fall") {
-      if (this.state == orthot.ObjectState.FALLING) {
-        this.state = orthot.ObjectState.IDLE
-        this.animCTL.impactDown(force)
-      }
-      
-      this.state = orthot.ObjectState.IDLE
-      zone.deactivate(this)   
-      return trit.FALSE
-    }
-    else if (force.action == "crushed") {
-      this.defeat()
-      if (force.pusher) {
-        force.pusher.notify_ForcePropagationClearedObstruction(force, this)
-      }
-      return trit.TRUE
-    }
-    else {
-      return trit.FALSE
-    }
-  }
-  
-  this.propagateForce = (function(force){ 
-  
+  this.propagateForce = (function(force){
     if (this.state == orthot.ObjectState.DEFEATED) {
       return
     }
     if (force.strength >= orthot.Strength.NORMAL) {
-      let pbf = orthot.topology.scan_simple(zone, this.ctn, this, force.toHEADING, force.toFORWARD)
+      let pbf = orthot.topology.scan_simple(zone, this.ctn, this, force.toHEADING, libek.direction.code.SOUTH, libek.direction.code.UP)
       pbf.OBJ = this
       pbf.pusher = force.OBJ
       pbf.initiator = force.initiator
@@ -219,10 +106,112 @@ orthot.PushBlock = function(zone, color) {
     return false
   }).bind(this)
 }
-orthot.PushBlock.prototype = orthot.OrthotObject
+//orthot.PushBlock.prototype = Object.assign({}, orthot.OrthotObject, orthot.StandardObject)
 
 
+orthot.Key = function(zone, color, code) {
+  orthot.StandardObject(this, zone)
+  this.AutoGravity = true
+  zone.addTickListener(this.update)
+  
+  this.itemType = "key"
+  this.SpatialClass = "item"  
+  
+  if (!color) {
+    color = "white"
+  }
+  if (!code) {
+    code = color
+  }    
+  if (code.isColor) {
+    code = color.getHexString()
+  }
+  if (!color.isColor) {
+    color = libek.util.color.parse(color)
+  }
+  this.color = color
+  this.code = code
+  
+  this.description = "Key-[" + code + "]"
+  
+  this.initGraphics = function() {
+    orthot.AnimateBlock(this.zone, this)
+    let axes = [ new THREE.Vector3(-0.5,1,0).normalize(), new THREE.Vector3(0,1,0) ]
+    let speed = [0.4*Math.random() + 1, (-0.25)*Math.random()]
+    this.animCTL.startContinuousMultiaxialRotator(speed, axes, new THREE.Vector3(0,0.5,0))
+    return true
+  }
+  
+  this.mdlgen = function() {
+    let mdl = libek.getAsset("key")
+    mdl.children[0].material = libek.Material(color)
+    return mdl
+  }
+  
+  this.intruded = function(other) {
+    if (other.isPlayer) {
+      this.animCTL.pickedup(other.forward)
+    
+      zone.addTickListener_temp( () => {
+        zone.removeGameobject(this)
+        other.pickupItem(this)
+      })      
+    }
+  }
+}
+//orthot.Key.prototype = Object.assign({}, orthot.OrthotObject, orthot.StandardObject)
 
+orthot.Lock = function(zone, color, code) {
+  orthot.StandardObject(this, zone)
+  this.hasSides = true
+  this.AutoGravity = true
+  zone.addTickListener(this.update)
+  
+  this.SpatialClass = "solid"  
+  
+  if (!color) {
+    color = "white"
+  }
+  if (!code) {
+    code = color
+  }    
+  if (code.isColor) {
+    code = color.getHexString()
+  }
+  if (!color.isColor) {
+    color = libek.util.color.parse(color)
+  }
+  this.color = color
+  this.code = code
+  
+  this.mdlgen = function() {
+    let mdl = libek.getAsset("lock")
+    mdl.children[0].material = libek.Material(color)    
+    return mdl
+  }
+  
+  this.push = function(force) {
+    if (force.OBJ.isPlayer) {
+      let player = force.OBJ
+      let inv = player.inventory
+      let i = 0
+      for (; i < inv.length; i++) {
+        let key = inv[i]
+        if ((key.itemType == "key") && (key.code == this.code)) {
+          player.removeItem(key)
+          this.defeat()
+          return true
+        }
+      }
+    }
+  }
+  
+  this.initGraphics = function() {
+    orthot.AnimateBlock(zone, this)
+    return true
+  }
+}
+//orthot.Lock.prototype = Object.assign({}, orthot.OrthotObject, orthot.StandardObject)
 
 
 

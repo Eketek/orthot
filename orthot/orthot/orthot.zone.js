@@ -42,8 +42,8 @@ orthot.Zone = function(ekvx, override_startloc) {
   let player
   let startloc = vxc.get(0,1,0)
   
-  let activeObjects = []
-  let tmp_activeObjects = [] 
+  let tickListeners = []
+  let tmp_tickListeners = [] 
   
   /*  Rules for determining which objects can enter space occupied by other objects
       These rules are assymetric (liquid objects can not enter space occupied by solid objects, but solid objects can enter space occupied by liquid)
@@ -54,7 +54,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     wall:[],
     
     //basic classes
-    solid:["liquid", "gas"],
+    solid:["liquid", "gas", "item"],
     liquid:["solid"],
     gas:[],
     
@@ -65,7 +65,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     float:["gas"],    // (ice, wood, or any other bouyant solid objects)
     creature:["player", "item", "liquid", "gas", "ramp"],
     player:["creature", "item", "liquid", "gas", "ramp"],
-    item:["player", "creature", "liquid", "gas"],
+    item:["player", "creature", "liquid", "gas"]
   }
 	
   
@@ -123,7 +123,6 @@ orthot.Zone = function(ekvx, override_startloc) {
     let reltime = (t-prevtick) / this.ticklen  
     let d = reltime-prevreltime
     prevreltime = reltime
-    //console.log(reltime)
     
     for (let i = 0; i < cmdSequences_long.length; i++) {
       let seq = cmdSequences_long[i]
@@ -161,17 +160,17 @@ orthot.Zone = function(ekvx, override_startloc) {
     
     if (this.ticknum > 0) {   
       
-      if (tmp_activeObjects.length > 0) {
-        for (let obj of tmp_activeObjects) {
-          obj.update()
+      if (tmp_tickListeners.length > 0) {
+        for (let f of tmp_tickListeners) {
+          f()
         }
-        tmp_activeObjects = []
+        tmp_tickListeners = []
       }
       
-      for (let i = activeObjects.length; i >= 0; i--) {
-        let obj = activeObjects[i]
-        if (obj) {
-          obj.update()
+      for (let i = tickListeners.length; i >= 0; i--) {
+        let f = tickListeners[i]
+        if (f) {
+          f()
         }
       } 
       
@@ -240,19 +239,19 @@ orthot.Zone = function(ekvx, override_startloc) {
     return r
   }
   
-  this.activate = function(obj) {
-    if (activeObjects.indexOf(this) == -1) {
-      activeObjects.push(obj)
+  this.addTickListener = function(f) {
+    if (tickListeners.indexOf(f) == -1) {
+      tickListeners.push(f)
     }
   }
-  this.deactivate = function(obj) {
-    let i = activeObjects.indexOf(obj)
+  this.removeTickListener = function(f) {
+    let i = tickListeners.indexOf(f)
     if (i != -1) {
-      activeObjects.splice(i,1)
+      tickListeners.splice(i,1)
     }
   }
-  this.acivate_temp = function(obj) {
-    tmp_activeObjects.push(obj)
+  this.addTickListener_temp = function(f) {
+    tmp_tickListeners.push(f)
   } 
   
   this.inputAvailable = function() {
@@ -274,7 +273,7 @@ orthot.Zone = function(ekvx, override_startloc) {
   this.attach = function(...args) {
     let [x,y,z,ctn, o] = unpack_LOC_ARGS(args)   
     for (let obj of ctn.content) {
-      if (obj.attach) {
+      if (obj.hasSides) {
         obj.attach(o)
         return true
       }
@@ -732,7 +731,7 @@ orthot.Zone = function(ekvx, override_startloc) {
                       force.OBJ.strike(force, incForce.OBJ, orthot.Collision.PRIORITY_RAM)
                       incForce.OBJ.struck(force, force.OBJ, orthot.Collision.PRIORITY_RAM)
                       incForce.resolved = true
-                    break 
+                    break
                     case orthot.Collision.CORNER_RAM:
                       //incCollision.type = orthot.collision.PRIORITY_STEAL     
                       force.OBJ.strike(force, incForce.OBJ, orthot.Collision.PRIORITY_STEAL)
@@ -846,8 +845,6 @@ orthot.Zone = function(ekvx, override_startloc) {
   	  }
   	  break
     }
-    //switch(rawtemplate.name)
-    console.log(template)
     return template
   })
   
@@ -909,6 +906,18 @@ orthot.Zone = function(ekvx, override_startloc) {
             vxc.setTerrainKnockout(adjctn, align.forward)
             
           }
+          break          
+          case 'key': {
+            color = libek.util.property("color", datas, "white") 
+            let code = libek.util.property("code", datas)                  
+            gobj = new orthot.Key(this, color, code)            
+          }
+          break          
+          case 'lock': {
+            color = libek.util.property("color", datas, "white") 
+            let code = libek.util.property("code", datas)                  
+            gobj = new orthot.Lock(this, color, code)            
+          }
           break
           case 'target': {
             let campos = libek.util.property("camPos", datas, undefined, libek.util.parseVec3)
@@ -948,6 +957,7 @@ orthot.Zone = function(ekvx, override_startloc) {
             light.position.set( x,y,z );
             this.scene.add( light );
             
+            console.log(light)
             */
           break
           default:
@@ -1014,7 +1024,7 @@ orthot.Zone = function(ekvx, override_startloc) {
         }
       }
       
-      if (gobj) {     
+      if (gobj) {    
         loaded_objects.push(gobj)  
         this.putGameobject(x,y,z, gobj)  
       }
@@ -1025,8 +1035,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     })
     
     // graphics & insertion is deferred until after data loading to allow for attached objects
-    for (let ld_gobj of loaded_objects) {      
-      //ld_gobj._ekvxdata_ = datas 
+    for (let ld_gobj of loaded_objects) {  
       if (ld_gobj.initGraphics()) {
         this.scene.add(ld_gobj.obj)
         if (!ld_gobj.worldpos) {
@@ -1049,6 +1058,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     sviewCTL.updateCamera(true)
     
     player = new orthot.Player(this)    
+    
     player.initGraphics()
     this.putGameobject(start_target.loc, player) 
     this.scene.add(player.obj)
@@ -1086,7 +1096,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     this.destroyObjects()
     this.destroyTerrain()
     if (this.scene.children.length > 0) {
-      console.log("Objects remaining in-scene on unload:", this.scene.children)
+      console.log("Objects remaining on scene unload:", this.scene.children)
     }
     
   }
@@ -1119,8 +1129,8 @@ orthot.Zone = function(ekvx, override_startloc) {
     cmdSequences_short = []
     cmdSequences_long = []
     cmdSequences_realtime = [] 
-    tmp_activeObjects = []
-    activeObjects = []
+    tmp_tickListeners = []
+    tickListeners = []
     
     vxc.resetData()
     vxc.default = orthot.Container

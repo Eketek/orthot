@@ -19,9 +19,17 @@ orthot.Container = function(x,y,z) {
       return falltriggered
     },
     push:function(force) {
-      for (let internalOBJ of r.content) {
-        internalOBJ.push(force)
+      let internalOBJ_moved
+      for (let internalOBJ of r.content) {        
+        if (internalOBJ.push(force)) {
+          internalOBJ_moved = internalOBJ
+        }
       }
+      if (internalOBJ_moved) {
+        force.OBJ.notify_PushClearedObstruction(force, internalOBJ_moved)
+        return true
+      }
+      return false
     },
     
     addObject:function(obj) {

@@ -16,11 +16,13 @@ var sviewCTL
 //Level data, high-level state, and "Orthot" functions
 var orthot = {
   zones:{},
+  tiles:{},  
 }
 
 $(async function() {
 
   libek.init() 
+  
   let disp_elem = $("#test").attr("tabindex", "0").get(0)
   disp_elem.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )  
   disp_elem.focus()
@@ -36,9 +38,21 @@ $(async function() {
   await libek.loadMuch( 
     {url:"orthot/textures/patterns.png", properties:TextureProps},
     {url:"orthot/textures/wall_8bit_fg.png", properties:TextureProps},
+    {url:"orthot/textures/symbols.png", properties:TextureProps},
   )
   await libek.loadZIP('orthot/models.zip')
   await libek.loadZIP('orthot/ekvxdat.zip')
+    
+  orthot.tiles.key = {
+    source:assets.symbols.image,
+    x:0, y:0, w:64, h:64
+  }
+    
+  let UI_TILEGRAPHIC_SIZE = [32,32]
+  let UI_TILEGRAPHIC_OFFSET = [0, 0]
+  let UI_TILESHADOW_SIZE = 8
+  let UI_TILESHADOW_OFFSET = [5,3]
+  let UI_TILE_SIZE = [37,35]
     
   renderCTL.fg = new libek.shader.ManagedColor("yellow")
   renderCTL.bg1 = new libek.shader.ManagedColor("orange")
@@ -78,6 +92,7 @@ $(async function() {
   libek.assignMaterials(assets.scene_portal, {color:"white", emissive:"white", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
   libek.assignMaterials(assets.portal_pane, "white", "yellow", {color:"blue", transparent:true, opacity:0.25}, "white" )
   libek.assignMaterials(assets.pushblock, ["white", "red", "black"])
+  libek.assignMaterials(assets.lock, ["white", "black"])
   
   var evtman = new libek.event.Manager( disp_elem )
   inputCTL.EventManager = evtman
@@ -118,7 +133,7 @@ $(async function() {
     if (typeof(arg) == "string") {    
       ekvx = assets[arg]
       if (ekvx == undefined) {  
-        console.log(`No puzzle named "${arg}" to load ...   :P`)
+        console.log(`No puzzle named "${arg}" to load...  Loading the default (MainArea)`)
         ekvx = assets.MainArea
       }
     }
@@ -135,6 +150,98 @@ $(async function() {
   
   orthot.loadScene("MainArea")
   
+  renderCTL.build_domOBJ = function(tile, color, location, css_class, event_handlers) {
+    if (typeof(tile) == "string") {
+      tile = orthot.tiles[tile]
+    }
+    if (!tile) {
+      return
+    }    
+    if (!color) {
+      color = new THREE.Color("white")
+    }
+    else if (!color.isColor) {
+      color = new THREE.Color(color)
+    }    
+    if (!location) {
+      location = "#leftside"
+    }
+    
+    let cnv = document.createElement("canvas")
+    let elem = $(cnv)
+    if (css_class) {
+      elem.addClass(css_class)
+    }
+    if (event_handlers) {
+      for (let k in event_handlers) {
+        elem.on(k, event_handlers[k])
+      }
+    }
+    
+    $(location).append(elem)
+  
+    cnv.width = UI_TILE_SIZE[0]
+    cnv.height = UI_TILE_SIZE[1]
+    
+    //console.log(sz)
+    let ctx = cnv.getContext('2d');
+    ctx.shadowColor = 'rgba(0, 0, 0, .33333)';
+    ctx.shadowOffsetX = UI_TILESHADOW_OFFSET[0]
+    ctx.shadowOffsetY = UI_TILESHADOW_OFFSET[1]
+    ctx.drawImage(tile.source, tile.x, tile.y, tile.w, tile.h, UI_TILEGRAPHIC_OFFSET[0], UI_TILEGRAPHIC_OFFSET[1], UI_TILEGRAPHIC_SIZE[0], UI_TILEGRAPHIC_SIZE[1]);
+    
+    let imgd = ctx.getImageData(0,0, UI_TILE_SIZE[0], UI_TILE_SIZE[1])
+    let buf = imgd.data
+    
+    let r = color.r
+    let g = color.g
+    let b = color.b
+    
+    for (let i = 0; i < buf.length; i+= 4) {
+      buf[i] =   buf[i]   * r
+      buf[i+1] = buf[i+1] * g
+      buf[i+2] = buf[i+2] * b
+    }
+    ctx.putImageData(imgd, 0, 0);
+    return elem
+  }
+    
+  // Item description display
+  // These functions (orthot.showDescription and orthot.updateDescription and orthot.hideDescription) are used to allow items to show tooltips and run graphical 
+  // visualizarion routines.  These are called as objects or interface-elements are moused-over and moused-out
+  let shownItem
+  let tiptext = ""
+  orthot.showDescription = function(item) {
+    if (shownItem && shownItem != item) {
+      orthot.hideDescription(shownItem)
+    }
+    shownItem = item
+    tiptext = item.description ? item.description : ""
+    if (item.visualizer) {
+      item.visualizer(true)
+    }
+  }
+  orthot.updateDescription = function(item) {
+    if (item != shownItem) {
+      return
+    }
+    tiptext = item.description ? item.description : ""
+    if (item.visualizer) {
+      item.visualizer(true)
+    }
+  }
+  
+  orthot.hideDescription = function(item) {
+    if (item != shownItem) {
+      return
+    }
+    shownItem = null
+    tiptext = ""
+    if (item.visualizer) {
+      item.visualizer(false)
+    }
+  }
+  
 	var run = function run () {
 		requestAnimationFrame( run );
 		evtman.dispatch_libek_event("frame")
@@ -144,13 +251,15 @@ $(async function() {
   	}  	
 	  renderCTL.display.render()
 	  
-	 let mpos3d = libek.pick.planepos(renderCTL.display, evtman.mpos, sviewCTL.pickplane)
-		libek.debug_tip("Mouse position:  x=" + mpos3d.x + ", y=" + mpos3d.y + ", z=" + mpos3d.z)
+	  let mpos3d = libek.pick.planepos(renderCTL.display, evtman.mpos, sviewCTL.pickplane)
+		libek.debug_tip(`${tiptext}<br>
+		Mouse position:  x=${mpos3d.x}, y=${mpos3d.y}, z=${mpos3d.z}`)
 	}	
 	run()
   
   //console.log(assets)
 })
+
 
 
 

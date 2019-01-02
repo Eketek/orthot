@@ -8,27 +8,43 @@
 
 orthot.AnimateBlock = function(zone, blk) {
   let MDL = new libek.Model({default:blk.mdlgen})
-  blk.obj = MDL.obj  
+  blk.obj = MDL.obj
+  blk.mdl = MDL
     
   let transient = false
+  let activeAnim 
   
   blk.worldpos = new THREE.Vector3()
     
   let CFG = function(inst) {  
-    
   
     let ctl = inst.ctl
     let mainCMP = ctl.mainCMP = new inst.Component()
     
     let matrix = mainCMP.matrix
-    let relpos = new THREE.Vector3()
-    
+    let relpos = new THREE.Vector3()    
     let scale = new THREE.Vector3(1,1,1)  
-    let center = new THREE.Vector3()
     let worldpos = new THREE.Vector3()  
     
-    let _transient = transient  
+    // offset and rotation to position object 
+    let orientation = ctl.orientation = {}
+    libek.direction.setOrientation(orientation,  "south", "up")
     
+    // heading vectors
+    let behind = new THREE.Vector3()
+    let ahead = new THREE.Vector3()
+    
+    // Local coordinate vectors
+    let up = new THREE.Vector3()
+    let down =  new THREE.Vector3()
+    let forward = new THREE.Vector3()
+    let backward = new THREE.Vector3()
+    let left = new THREE.Vector3()
+    let right = new THREE.Vector3()        
+    let center = new THREE.Vector3()
+    
+    let _transient = transient 
+        
     let main_txSHIFT = new libek.Transform(matrix)
         main_txSHIFT.translate(relpos)
         main_txSHIFT.translate(worldpos)
@@ -55,7 +71,8 @@ orthot.AnimateBlock = function(zone, blk) {
         let sidegrp = blk.sides[i]
         
         if (sidegrp.length > 0) {
-          let orientation = libek.direction.sideorientations[i]   
+          let side_orientation = libek.direction.sideorientations[i]   
+          //console.log("ORIENT", i, orientation)
           let sideCMP = new inst.Component()
           let txmat = sideCMP.matrix
           for (let sobj of sidegrp) {
@@ -63,20 +80,19 @@ orthot.AnimateBlock = function(zone, blk) {
           }                 
           
           let txSIDE_SHIFT = new libek.Transform(txmat)
-              txSIDE_SHIFT.orient(orientation)
+              txSIDE_SHIFT.orient(side_orientation)
               txSIDE_SHIFT.translate(relpos)
               txSIDE_SHIFT.translate(worldpos)
           
           let txSIDE_IMPULSESHIFT = new libek.Transform(txmat)
               //txSIDE_IMPULSESHIFT.orient(orientation)
-              txSIDE_IMPULSESHIFT.rotate(orientation.rotation)
-              txSIDE_IMPULSESHIFT.translate(orientation.position)
+              txSIDE_IMPULSESHIFT.orient(side_orientation)
               txSIDE_IMPULSESHIFT.scalePosition(scale)
               txSIDE_IMPULSESHIFT.translate(relpos)
               txSIDE_IMPULSESHIFT.translate(worldpos)
               
           let txSIDE_IMPACTDOWN = new libek.Transform(txmat)
-              txSIDE_IMPACTDOWN.orient(orientation)
+              txSIDE_IMPACTDOWN.orient(side_orientation)
               txSIDE_IMPACTDOWN.scale(scale)
               txSIDE_IMPACTDOWN.translate(worldpos)
               
@@ -102,16 +118,7 @@ orthot.AnimateBlock = function(zone, blk) {
       for (let tx of _txIMPACTDOWN) {
         tx.update()
       }
-    }or portal-related animations
-            
-    let behind = new THREE.Vector3()
-    let ahead = new THREE.Vector3()
-    let up = new THREE.Vector3()
-    let down = new THREE.Vector3()
-    let forward = new THREE.Vector3()
-    let backward = new THREE.Vector3()
-    let left = new THREE.Vector3()
-    let right = new THREE.Vector3()
+    } 
     
     ctl.txMAIN = txSHIFT
     
@@ -140,7 +147,6 @@ orthot.AnimateBlock = function(zone, blk) {
         mainCMP.hide()
       }
     }
-    
     
     /*  Animation component:  "lerprelpos"
         This sets up a LERP of relpos from a specified start point to a specified end point over a specified time interval */
@@ -174,14 +180,15 @@ orthot.AnimateBlock = function(zone, blk) {
     }
     
     ctl.configure = function(_position, _heading, _forward, _up) {
+      if (activeAnim) {
+        activeAnim.stop()
+        activeAnim = null
+      }
       if (_position) {
         worldpos.copy(_position)
       }
       
-      //  For now, orientation property is omitted because all blocks didn't do any rotating in Orthot II.  Orientation should probably be re-added,
-      //  because portals in Orthot III do end up rotating things
-      //libek.direction.setOrientation(orientation, _forward, _up)
-      
+      libek.direction.setOrientation(orientation, _forward, _up)      
       forward.copy(libek.direction.vector[_forward])
       backward.copy(libek.direction.vector[libek.direction.invert[_forward]])
       up.copy(libek.direction.vector[_up])
@@ -207,7 +214,7 @@ orthot.AnimateBlock = function(zone, blk) {
     // Orthot III blocks are ... "high-tech"
     ctl.impulseShift = new libek.CommandSequence(
       init, end, 1, 
-      [ {time:0.00, at: d => {
+      [ {at:0.00, cmd: d => {
           vec2.set(1,1,1)
           vec3.set(1+exg-Math.abs(ahead.x)*exg*2, 1+exg-Math.abs(ahead.y)*exg*2, 1+exg-Math.abs(ahead.z)*exg*2)
           vec.copy(ahead)
@@ -218,11 +225,11 @@ orthot.AnimateBlock = function(zone, blk) {
         (d,t) => {          
           scale.lerpVectors(vec2, vec3, t*3)    
         },
-        {time:0.333, at: d => {  }},
+        {at:0.333, cmd:doNothing},
         (d,t) => {          
           scale.lerpVectors(vec2, vec3, 2-(t*3))    
         },
-        {time:0.667, at: d => {  }},  
+        {at:0.667, cmd:doNothing},  
       ],     
       (d,t) => {
         relpos.lerpVectors( vec, center, t)  
@@ -232,7 +239,7 @@ orthot.AnimateBlock = function(zone, blk) {
     
     ctl.squeezethroughportal = new libek.CommandSequence(
       init, end, 1, 
-      [ {time:0.00, at: d => {
+      [ {at:0.00, cmd: d => {
           lerpscale_startscale.set(1,1,1)
           vec.set(1,1,1)
           vec2.copy(ahead)
@@ -245,16 +252,16 @@ orthot.AnimateBlock = function(zone, blk) {
           lerpscale_len = 0.25          
         }},
         lerpscale,
-        {time:0.25, at: d => { 
+        {at:0.25, cmd: d => { 
         }},
-        {time:0.75, at: d => {
+        {at:0.75, cmd: d => {
           lerpscale_startscale.copy(lerpscale_endscale)
           lerpscale_endscale.set(1,1,1)
           lerpscale_start = 0.75
           lerpscale_len = 0.25          
         }},
         lerpscale,
-        {time:1, at: d => { scale.set(1,1,1) }},
+        {at:1, cmd: d => { scale.set(1,1,1) }},
       ],     
       lerprelpos,
       txIMPULSESHIFT
@@ -262,7 +269,7 @@ orthot.AnimateBlock = function(zone, blk) {
     
     ctl.impactDown = new libek.CommandSequence(
       init, end, 1,
-      [ {time:0.00, at: d => {  
+      [ {at:0.00, cmd: d => {  
           vec.set(1,1,1)
           vec2.set(1.25, 0.75, 1.25)
         }},
@@ -270,18 +277,89 @@ orthot.AnimateBlock = function(zone, blk) {
           scale.lerpVectors(vec, vec2, t*3)        
           txIMPACTDOWN()
         },
-        {time:0.333, at: d => { }},
+        {at:0.333, cmd: d => { }},
         (d,t) => {          
           scale.lerpVectors(vec, vec2, 2-(t*3))        
           txIMPACTDOWN()
         },
-        {time:0.667, at: d => { }},
+        {at:0.667, cmd: d => { }},
         (d,t) => {          
           scale.set(1,1,1)        
           txIMPACTDOWN()
         }
       ]
     )
+    
+    ctl.pickedup = new libek.CommandSequence(      
+      (d,t) => {
+        relpos.set(0,0,0)
+        scale.set(1,1,1)
+      }, 
+      doNothing, 1,
+      (d,t) => {
+        scale.y -= (d*0.5)
+        relpos.y += d*0.5
+        txIMPULSESHIFT()
+      },
+      { at:0.5, cmd:doNothing },
+      (d,t) => {
+        relpos.y -= (d*0.125)
+        vec.x = Math.abs(ahead.x)
+        vec.y = Math.abs(ahead.y)
+        vec.z = Math.abs(ahead.z)
+        vec.multiplyScalar( d )
+        scale.sub(vec)
+        vec.copy(ahead)
+        vec.multiplyScalar(d*0.125)
+        relpos.add(vec)
+        //scale.z -= d
+        txIMPULSESHIFT()
+      }
+    )
+    
+    // A multi-axail rotation animator.
+    // This composes any number of angle-axis rotations, incrementing them in proportion to a per-rotation specified speed on each frame
+    // All rotations are centered around the specified pivot point.  If no pivot is specified, it will pivot around (0,0,0)
+    ctl.continuousmultiaxialrotator = function(speed, axis, pivot) {
+      if (!Array.isArray(speed)) {
+        speed = [speed]
+        axis = [axis]
+      }
+      
+      let rots = []
+      let state = []
+      for (let i = 0; i < speed.length; i++) {
+        rots.push(new THREE.Quaternion())
+        state.push(0)
+        speed[i] /= 1000
+      }
+      
+      let invpivot      
+      let tx = new libek.Transform(matrix)
+      
+      if (pivot) {
+        invpivot = pivot.clone().negate()
+        tx.translate(invpivot)
+      }
+      for (let i = 0; i < speed.length; i++) {
+        tx.rotate(rots[i])
+      }  
+      if (pivot) {
+        tx.translate(pivot)
+      }
+      tx.translate(worldpos)
+      
+      return new libek.CommandSequence(
+        doNothing, doNothing, Number.MAX_VALUE,
+        (d,t) => {
+          for (let i = 0; i < speed.length; i++) {
+            state[i] = (state[i] + d*speed[i]) % T
+            rots[i].setFromAxisAngle(axis[i], state[i])
+          }
+          tx.update()
+        }
+      )
+    }
   }  
   
   let mainINST = new MDL.Instance("main", CFG)  
@@ -340,6 +418,15 @@ orthot.AnimateBlock = function(zone, blk) {
         zone.addCommandsequence_short(mainINST.ctl.impactDown)
       }
     },
+    startContinuousMultiaxialRotator:function(speed, axis, pivot) {
+      let rotator = mainINST.ctl.continuousmultiaxialrotator(speed, axis, pivot)
+      zone.addCommandsequence_realtime(rotator)
+      activeAnim = rotator
+    },
+    pickedup(grabber_heading) {
+      mainINST.ctl.configure(blk.worldpos, grabber_heading,  libek.direction.code.SOUTH,  libek.direction.code.UP)
+      zone.addCommandsequence_short(mainINST.ctl.pickedup)
+    }
   }
 }
 
@@ -364,18 +451,24 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     //  orientation is used to orient the model  (this might later be combined with other orientation vectors for a general-purpose orientation data structure)
     let scale = ctl.scale = new THREE.Vector3(1,1,1)    
     let worldpos = ctl.worldpos = new THREE.Vector3()
-    let forward = new THREE.Vector3()
-    let backward = new THREE.Vector3()
+    
+    // offset and rotation to position object
+    let orientation = ctl.orientation = {}
+    libek.direction.setOrientation(orientation,  "south", "up")
+    
+    // heading vectors
     let behind = new THREE.Vector3()
     let ahead = new THREE.Vector3()
-    let up = new THREE.Vector3(0,1,0)
-    let down =  new THREE.Vector3(0,-1,0)
+    
+    // Local coordinate vectors
+    let up = new THREE.Vector3()
+    let down =  new THREE.Vector3()
+    let forward = new THREE.Vector3()
+    let backward = new THREE.Vector3()
     let left = new THREE.Vector3()
-    let right = new THREE.Vector3()
-    let orientation = ctl.orientation = {}
-        
-    //start point positioning vectors
+    let right = new THREE.Vector3()        
     let center = new THREE.Vector3()
+    
     let ladder_offset_start = new THREE.Vector3()
     let ladder_offset_end = new THREE.Vector3()
     
@@ -390,7 +483,6 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     let tmp_camvec_main = new THREE.Vector3()  
     let main_startpos = new THREE.Vector3()
     
-    libek.direction.setOrientation(orientation,  "south", "up")
     
     // Posing functions.
     // These are libek.Transform (parameterized transformations) which pose the animated object
@@ -678,6 +770,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     
     // Callback used to instantiate andpose the displayed object (must be called before any animations are triggered)
     ctl.ready = function() {
+      //console.log("READY")
       mainCMP.setObject("creature", "stand")
       txMAIN.update()
     }
@@ -706,7 +799,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.fallAnim = new libek.CommandSequence(
       init, end, 1,
       begin_trackCam, 
-      [{time:0.00, at: d => {     
+      [{at:0.00, cmd: d => {     
         lerprelpos_startpos.copy(behind)
         lerprelpos_endpos.set(0,0,0)   
         lerprelpos_len = 1
@@ -719,16 +812,16 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.halfdownfallAnim = new libek.CommandSequence(
       init, end_up, 1,
       begin_trackCam, 
-      [ {time:0.00, at: d => {     
+      [ {at:0.00, cmd: d => {     
           lerprelpos_startpos.copy(up)
           lerprelpos_endpos.set(0, 0.5, 0)   
           lerprelpos_len = 0.5
           lerprelpos_start = 0
         }},
         lerprelpos,
-        {time:0.10, at: d => { mainCMP.setObject("creature", "stand"); scale.x = 1; scale.y = 1; }},
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "stand"); scale.x = 1; scale.y = 1; }},
         lerprelpos,
-        {time:0.50, at: d => {}}
+        {at:0.50, cmd:doNothing}
       ],
       txMAIN.update,
       end_trackCam
@@ -739,14 +832,14 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
         end_generic(d,t)
       }, 1,
       begin_trackCam,
-      [{time:0.00, at: d => {     
+      [{at:0.00, cmd: d => {     
         lerprelpos_startpos.copy(behind)
         lerprelpos_endpos.set(0,0,0)   
         lerprelpos_len = 0.5
         lerprelpos_start = 0
       }},
       lerprelpos,
-      {time:0.50, at: d => {     
+      {at:0.50, cmd: d => {     
         lerprelpos_startpos.set(0,0,0)
         lerprelpos_endpos.set(0,-0.4,0)   
         lerprelpos_len = 0.5
@@ -764,10 +857,10 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       [ 
         lerprelpos,
         txMAIN.update,
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
         lerprelpos,
         txMAIN.update,
-        {time:0.50, at: d => { 
+        {at:0.50, cmd: d => { 
           mainCMP.setObject("creature", "stand")
           scale.y = 1          
           slerprelrot_startrot.setFromAxisAngle(right, 0)
@@ -782,9 +875,9 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_start = 0.5
         }},    
         lerprelpos, slerprelrot, txMAIN_WITH_RELROT.update,
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
         lerprelpos, slerprelrot, txMAIN_WITH_RELROT.update,
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       end_trackCam
     )
@@ -792,10 +885,10 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_flatflat = new libek.CommandSequence(
       init, end, 1,
       begin_trackCam,
-      [ {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+      [ {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -805,16 +898,16 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_flatuportal = new libek.CommandSequence(
       init, end, 1,
       begin_trackCam,
-      [ {time:0, at: d=> { 
+      [ {at:0, cmd: d=> { 
           lerprelpos_startpos.copy(down)
           lerprelpos_endpos.copy(center)    
           lerprelpos_len = 1
           lerprelpos_start = 0  
         }},
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,  
       txMAIN.update,   
@@ -824,7 +917,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_urampuramp = new libek.CommandSequence(
       init_up, end_up, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {     
+      [ {at:0.00, cmd: d => {     
           lerprelpos_startpos.copy(behind)
           lerprelpos_endpos.copy(center)        
           lerprelpos_startpos.y = 0.5
@@ -832,10 +925,10 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_len = 1
           lerprelpos_start = 0
         }},
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -845,7 +938,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_rampupdown = new libek.CommandSequence(
       init_up, end_up, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {     
+      [ {at:0.00, cmd: d => {     
           lerprelpos_startpos.copy(behind)
           lerprelpos_endpos.lerpVectors(behind, center, 0.5)    
           lerprelpos_startpos.y = 0.5
@@ -853,16 +946,16 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_len = 0.5
           lerprelpos_start = 0
         }},
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1;
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1;
           lerprelpos_startpos.copy(lerprelpos_endpos)
           lerprelpos_endpos.copy( center)
           lerprelpos_endpos.y = 0.5
           lerprelpos_len = 0.5
           lerprelpos_start = 0.5
         }},
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -872,23 +965,23 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_rampdownup = new libek.CommandSequence(
       init_up, end_up, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {     
+      [ {at:0.00, cmd: d => {     
           lerprelpos_startpos.copy(behind)
           lerprelpos_endpos.lerpVectors(behind, center, 0.5)    
           lerprelpos_startpos.y = 0.5
           lerprelpos_len = 0.5
           lerprelpos_start = 0
         }},
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1;
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1;
           lerprelpos_startpos.copy(lerprelpos_endpos)
           lerprelpos_endpos.copy( center)
           lerprelpos_endpos.y = 0.5
           lerprelpos_len = 0.5
           lerprelpos_start = 0.5
         }},
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -898,7 +991,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_flathop = new libek.CommandSequence(
       init, end, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {       
+      [ {at:0.00, cmd: d => {       
           mainCMP.setObject("creature", "leap")      
           lerprelpos_startpos.copy(behind)
           lerprelpos_endpos.lerpVectors(behind, center, 0.33)
@@ -906,20 +999,20 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_len = 0.33
           lerprelpos_start = 0
         }},
-        {time:0.33, at: d => {  
+        {at:0.33, cmd: d => {  
           lerprelpos_startpos.copy(lerprelpos_endpos)
           lerprelpos_endpos.lerpVectors(behind, center, 0.67)
           lerprelpos_endpos.y = 0.25
           lerprelpos_len = 0.34
           lerprelpos_start = 0.33
         }},
-        {time:0.67, at: d => { 
+        {at:0.67, cmd: d => { 
           lerprelpos_startpos.copy(lerprelpos_endpos)    
           lerprelpos_endpos.copy(center)
           lerprelpos_len = 0.33
           lerprelpos_start = 0.67
         }},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); }},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -929,7 +1022,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_urampup = new libek.CommandSequence(
       init_up, end_up, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {       
+      [ {at:0.00, cmd: d => {       
           mainCMP.setObject("creature", "leap")    
           lerprelpos_startpos.copy(behind)
           lerprelpos_startpos.y = 0.5
@@ -938,20 +1031,20 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_len = 0.33
           lerprelpos_start = 0
         }},
-        {time:0.33, at: d => {  
+        {at:0.33, cmd: d => {  
           lerprelpos_startpos.copy(lerprelpos_endpos)
           lerprelpos_endpos.lerpVectors(behind, center, 0.67)
           lerprelpos_endpos.y = 0.75
           lerprelpos_len = 0.34
           lerprelpos_start = 0.33
         }},
-        {time:0.67, at: d => { 
+        {at:0.67, cmd: d => { 
           lerprelpos_startpos.copy(lerprelpos_endpos)    
           lerprelpos_endpos.set(0, 0.5, 0)
           lerprelpos_len = 0.33
           lerprelpos_start = 0.67
         }},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); }},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -961,7 +1054,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_urampgap = new libek.CommandSequence(
       init_up, end, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {       
+      [ {at:0.00, cmd: d => {       
           mainCMP.setObject("creature", "leap");      
           lerprelpos_startpos.copy(behind)
           lerprelpos_startpos.y = 0.5
@@ -970,20 +1063,20 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_len = 0.33
           lerprelpos_start = 0
         }},
-        {time:0.33, at: d => {  
+        {at:0.33, cmd: d => {  
           lerprelpos_startpos.copy(lerprelpos_endpos)
           lerprelpos_endpos.lerpVectors(behind, center, 0.67)
           lerprelpos_endpos.y = 0.50
           lerprelpos_len = 0.34
           lerprelpos_start = 0.33
         }},
-        {time:0.67, at: d => { 
+        {at:0.67, cmd: d => { 
           lerprelpos_startpos.copy(lerprelpos_endpos)    
           lerprelpos_endpos.copy(center)
           lerprelpos_len = 0.33
           lerprelpos_start = 0.67
         }},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); }},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -993,14 +1086,14 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_flatup = new libek.CommandSequence(
       init, end_up, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {              
+      [ {at:0.00, cmd: d => {              
           lerprelpos_startpos.copy(behind)
           lerprelpos_endpos.lerpVectors(lerprelpos_startpos, center, 0.5)
           lerprelpos_len = 0.50
           lerprelpos_start = 0
         }},
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { 
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { 
           mainCMP.setObject("creature", "stand");
           scale.y = 1 
           lerprelpos_startpos.copy(lerprelpos_endpos)    
@@ -1008,8 +1101,8 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_len = 0.50
           lerprelpos_start = 0.50
         }},
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -1019,15 +1112,15 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_flatdown = new libek.CommandSequence(
       init_uphigh, end_up, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {              
+      [ {at:0.00, cmd: d => {              
           lerprelpos_startpos.copy(behind)
           lerprelpos_startpos.y += 1
           lerprelpos_endpos.lerpVectors(lerprelpos_startpos, up, 0.5)
           lerprelpos_len = 0.50
           lerprelpos_start = 0
         }},
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk");scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { 
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk");scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { 
           mainCMP.setObject("creature", "stand")
           scale.y = 1 
           lerprelpos_startpos.copy(lerprelpos_endpos)    
@@ -1035,8 +1128,8 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_len = 0.50
           lerprelpos_start = 0.50
         }},
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -1046,15 +1139,15 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_rampdownflat = new libek.CommandSequence(
       init_up, end, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {              
+      [ {at:0.00, cmd: d => {              
           lerprelpos_startpos.copy(behind)
           lerprelpos_startpos.y += 0.5
           lerprelpos_endpos.lerpVectors(behind, center, 0.5)
           lerprelpos_len = 0.50
           lerprelpos_start = 0
         }},
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { 
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { 
           mainCMP.setObject("creature", "stand")
           scale.y = 1 
           lerprelpos_startpos.copy(lerprelpos_endpos)    
@@ -1062,8 +1155,8 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_len = 0.50
           lerprelpos_start = 0.50
         }},
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -1073,15 +1166,15 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_rampupflat = new libek.CommandSequence(
       init_down, end, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {              
+      [ {at:0.00, cmd: d => {              
           lerprelpos_startpos.copy(behind)
           lerprelpos_startpos.y -= 0.5
           lerprelpos_endpos.lerpVectors(behind, center, 0.5)
           lerprelpos_len = 0.50
           lerprelpos_start = 0
         }},
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { 
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { 
           mainCMP.setObject("creature", "stand")
           scale.y = 1 
           lerprelpos_startpos.copy(lerprelpos_endpos)    
@@ -1089,8 +1182,8 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_len = 0.50
           lerprelpos_start = 0.50
         }},
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -1099,7 +1192,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_rampuphop = new libek.CommandSequence(
       init_down, end, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {                
+      [ {at:0.00, cmd: d => {                
           lerprelpos_startpos.copy(behind)
           lerprelpos_startpos.y -= 0.5
           lerprelpos_endpos.set(0, 0.5, 0)
@@ -1108,8 +1201,8 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_len = 0.50
           lerprelpos_start = 0
         }},
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { 
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { 
           mainCMP.setObject("creature", "leap")
           scale.y = 1 
           lerprelpos_startpos.copy(lerprelpos_endpos)    
@@ -1117,7 +1210,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_len = 0.50
           lerprelpos_start = 0.50
         }},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); }},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -1127,19 +1220,19 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_rampupup = new libek.CommandSequence(
       init_down, end_up, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {                 
+      [ {at:0.00, cmd: d => {                 
           lerprelpos_startpos.copy(behind)
           lerprelpos_startpos.y -= 0.5   
           lerprelpos_endpos.set(0, 0.5, 0)
           lerprelpos_len = 1
           lerprelpos_start = 0
         }},
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { 
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { 
           mainCMP.setObject("creature", "stand")
         }},
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,
       txMAIN.update,
@@ -1149,19 +1242,19 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.walk_rampdowndown = new libek.CommandSequence(
       init_uphigher, end_up, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {              
+      [ {at:0.00, cmd: d => {              
           lerprelpos_startpos.copy(behind) 
           lerprelpos_startpos.y += 1.5
           lerprelpos_endpos.set(0, 0.5, 0)
           lerprelpos_len = 1
           lerprelpos_start = 0
         }},
-        {time:0.10, at: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
-        {time:0.50, at: d => { 
+        {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
+        {at:0.50, cmd: d => { 
           mainCMP.setObject("creature", "stand")
         }},
-        {time:0.60, at: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
-        {time:1.00, at: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,
       end_trackCam,
@@ -1170,7 +1263,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.pushstandAnim = new libek.CommandSequence(
       init_still, end_still, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {
+      [ {at:0.00, cmd: d => {
           mainCMP.setObject("creature", "walk"); 
           scale.x = 1; scale.y = 0.97; 
           lerprelpos_startpos.copy(center); 
@@ -1179,8 +1272,8 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_start = 0
         }},
         lerprelpos,
-        {time:0.25, at: d => { mainCMP.setObject("creature", "pushwalk"); relpos.copy(lerprelpos_endpos); }},
-        {time:0.75, at: d => { 
+        {at:0.25, cmd: d => { mainCMP.setObject("creature", "pushwalk"); relpos.copy(lerprelpos_endpos); }},
+        {at:0.75, cmd: d => { 
           mainCMP.setObject("creature", "walk"); 
           scale.x = -1; 
           lerprelpos_startpos.copy(lerprelpos_endpos); 
@@ -1189,7 +1282,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_start = 0.75
         }},
         lerprelpos,
-        {time:1.00, at: d => { 
+        {at:1.00, cmd: d => { 
           mainCMP.setObject("creature", "stand"); 
           scale.y = 1; 
           relpos.copy(center)
@@ -1201,7 +1294,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.halfuppushstandAnim = new libek.CommandSequence(
       init_still_up, end_still_up, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {
+      [ {at:0.00, cmd: d => {
           mainCMP.setObject("creature", "walk") 
           scale.x = 1; scale.y = 0.97; 
           lerprelpos_startpos.set(0, 0.5, 0); 
@@ -1212,8 +1305,8 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_start = 0
         }},
         lerprelpos,
-        {time:0.25, at: d => { mainCMP.setObject("creature", "pushwalk"); relpos.copy(lerprelpos_endpos); }},
-        {time:0.75, at: d => { 
+        {at:0.25, cmd: d => { mainCMP.setObject("creature", "pushwalk"); relpos.copy(lerprelpos_endpos); }},
+        {at:0.75, cmd: d => { 
           mainCMP.setObject("creature", "walk")
           scale.x = -1; 
           lerprelpos_startpos.copy(lerprelpos_endpos); 
@@ -1222,7 +1315,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_start = 0.75
         }},
         lerprelpos,
-        {time:1.00, at: d => { 
+        {at:1.00, cmd: d => { 
           mainCMP.setObject("creature", "stand") 
           scale.y = 1; 
           relpos.set(0, 0.5, 0)
@@ -1238,7 +1331,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.grabladder_flat = new libek.CommandSequence(
       init_flat_to_ladder, end_ladder, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {
+      [ {at:0.00, cmd: d => {
           mainCMP.setObject("creature", "walk"); 
           scale.y = 0.97; 
           lerprelpos_startpos.copy(center); 
@@ -1247,7 +1340,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_start = 0
         }},
         lerprelpos,
-        {time:0.25, at: d => { mainCMP.setObject("creature", "push"); scale.y = 1; }},
+        {at:0.25, cmd: d => { mainCMP.setObject("creature", "push"); scale.y = 1; }},
       ],
       txMAIN.update,
       end_trackCam
@@ -1256,7 +1349,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.hopoffladder = new libek.CommandSequence(
       init_ladder_still, end_still, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {
+      [ {at:0.00, cmd: d => {
           lerprelpos_startpos.copy(ladder_offset_end); 
           lerprelpos_endpos.lerpVectors(ladder_offset_end, center, 1/3)
           lerprelpos_endpos.y = 0.3
@@ -1264,7 +1357,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_start = 0
         }},
         lerprelpos,
-        {time:1/6, at: d => { 
+        {at:1/6, cmd: d => { 
           mainCMP.setObject("creature", "stand");
           lerprelpos_startpos.copy(lerprelpos_endpos); 
           lerprelpos_endpos.lerpVectors(ladder_offset_end, center, 2/3)
@@ -1273,7 +1366,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_start = 1/6
         }},
         lerprelpos,
-        {time:2/6, at: d => {
+        {at:2/6, cmd: d => {
           lerprelpos_startpos.copy(lerprelpos_endpos); 
           lerprelpos_endpos.copy(center)
           lerprelpos_endpos.y = 0.3
@@ -1281,7 +1374,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_start = 2/6
         }},
         lerprelpos,
-        {time:0.5, at: d => {
+        {at:0.5, cmd: d => {
           lerprelpos_startpos.copy(lerprelpos_endpos); 
           lerprelpos_endpos.copy(center)
           lerprelpos_len = 0.5
@@ -1296,18 +1389,18 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.exitladder = new libek.CommandSequence(
       init_ladder_exit, end, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {
+      [ {at:0.00, cmd: d => {
           lerprelpos_startpos.copy(ladder_offset_start); 
           lerprelpos_endpos.copy(ladder_offset_end)
           lerprelpos_len = 3/6
           lerprelpos_start = 0
         }},        
         lerprelpos, txMAIN.update,
-        {time:1/6, at: d => {
+        {at:1/6, cmd: d => {
           mainCMP.setObject("creature", "pushwalk");
         }},
         lerprelpos, txMAIN.update,
-        {time:2/6, at: d => {
+        {at:2/6, cmd: d => {
           mainCMP.setObject("creature", "pushleap");
           slerprelrot_startrot.setFromAxisAngle(right, 0)
           slerprelrot_endrot.setFromAxisAngle(right, T/4)
@@ -1315,7 +1408,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           slerprelrot_start = 2/6
         }},
         lerprelpos, slerprelrot, txMAIN_WITH_RELROT.update,
-        {time:3/6, at: d => {
+        {at:3/6, cmd: d => {
           mainCMP.setObject("creature", "leap");
           lerprelpos_startpos.copy(ladder_offset_end); 
           lerprelpos_endpos.lerpVectors(ladder_offset_end, center, 1/3)
@@ -1324,7 +1417,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_start = 3/6
         }},
         lerprelpos, txMAIN.update,
-        {time:4/6, at: d => {
+        {at:4/6, cmd: d => {
           lerprelpos_startpos.copy(lerprelpos_endpos); 
           lerprelpos_endpos.lerpVectors(ladder_offset_end, center, 2/3)
           lerprelpos_endpos.y += 0.2
@@ -1332,7 +1425,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           lerprelpos_start = 4/6
         }},
         lerprelpos, txMAIN.update,
-        {time:5/6, at: d => {
+        {at:5/6, cmd: d => {
           mainCMP.setObject("creature", "stand");
           lerprelpos_startpos.copy(lerprelpos_endpos); 
           lerprelpos_endpos.copy(center)
@@ -1347,23 +1440,23 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.climbupladder = new libek.CommandSequence(
       init_ladder, end_ladder, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {
+      [ {at:0.00, cmd: d => {
           lerprelpos_startpos.copy(ladder_offset_start); 
           lerprelpos_endpos.copy(ladder_offset_end)
           lerprelpos_len = 1
           lerprelpos_start = 0
         }},
-        {time:0.125, at: d => {
+        {at:0.125, cmd: d => {
           mainCMP.setObject("creature", "pushwalk");
         }},
-        {time:0.375, at: d => {
+        {at:0.375, cmd: d => {
           mainCMP.setObject("creature", "stand");
         }},
-        {time:0.625, at: d => {
+        {at:0.625, cmd: d => {
           mainCMP.setObject("creature", "pushwalk");
           scale.x = -1
         }},
-        {time:0.875, at: d => {
+        {at:0.875, cmd: d => {
           mainCMP.setObject("creature", "stand");
           scale.x = 1
         }},        
@@ -1376,23 +1469,23 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     ctl.climbdownladder = new libek.CommandSequence(
       init_ladder_high, end_ladder, 1,
       begin_trackCam,
-      [ {time:0.00, at: d => {
+      [ {at:0.00, cmd: d => {
           lerprelpos_startpos.copy(ladder_offset_start); 
           lerprelpos_endpos.copy(ladder_offset_end)
           lerprelpos_len = 1
           lerprelpos_start = 0
         }},
-        {time:0.125, at: d => {
+        {at:0.125, cmd: d => {
           mainCMP.setObject("creature", "pushwalk");
         }},
-        {time:0.375, at: d => {
+        {at:0.375, cmd: d => {
           mainCMP.setObject("creature", "stand");
         }},
-        {time:0.625, at: d => {
+        {at:0.625, cmd: d => {
           mainCMP.setObject("creature", "pushwalk");
           scale.x = -1
         }},
-        {time:0.875, at: d => {
+        {at:0.875, cmd: d => {
           mainCMP.setObject("creature", "stand");
           scale.x = 1
         }},        
@@ -1490,6 +1583,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     
     
     walk:function(force) {  
+      //console.log("WALK", mainINST, force)
       configurecam(force.isPortaljump)
       
       let animName
@@ -1541,19 +1635,17 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           animName = "flatdown"
         
         }
-        else if (force.hopOUT) {
-          //animName = "flathop"      
+        else if (force.hopOUT) {    
           mCTL.walk_flathop(force) 
         }
-        else {  //flat ground
-          //animName = "flatflat"   
+        else {  //flat ground 
           mCTL.walk_flatflat(force)   
         }
       }
       
       
       if (animName) {
-        console.log("trigger-animation:  ", animName)
+        //console.log("run animation:  ", animName)
         animName = "walk_" + animName
         if (force.isPUSH) {
           animName = "push" + animName
@@ -1630,7 +1722,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     },
     hopoffLadder:function(forward, up) {
       configurecam(false)
-      mainINST.ctl.configure(undefined, forward, forward, up)
+      mainINST.ctl.configure(undefined, forward, forward, up) 
       zone.addCommandsequence_short(mainINST.ctl.hopoffladder)
     },
     exitLadder:function(force) {
@@ -1832,20 +1924,20 @@ orthot.VanishAnim = function(zone, obj, params = {}) {
         }
       },
       animlen,
-      [ {time:animlen*0.1, at: (d,t) => { adjustColors(t/animlen) }},
-        {time:animlen*0.2, at: (d,t) => { adjustColors(t/animlen) }},
-        {time:animlen*0.25, at: (d,t) => { setOpacity(0.75, instB_mats, instC_mats,  instD_mats) }},
-        {time:animlen*0.3, at: (d,t) => { adjustColors(t/animlen) }},
-        {time:animlen*0.35, at: (d,t) => { setOpacity(0.5, instB_mats) }},
-        {time:animlen*0.4, at: (d,t) => { adjustColors(t/animlen) }},
-        {time:animlen*0.5, at: (d,t) => { adjustColors(t/animlen); setOpacity(0.75, instA_mats); setOpacity(0.5, instC_mats,  instD_mats) }},
-        {time:animlen*0.6, at: (d,t) => { adjustColors(t/animlen) }},
-        {time:animlen*0.65, at: (d,t) => { setOpacity(0.25, instC_mats); }},
-        {time:animlen*0.7, at: (d,t) => { adjustColors(t/animlen) }},
-        {time:animlen*0.75, at: (d,t) => { setOpacity(0.4, instA_mats); setOpacity(0.25, instD_mats);  }},
-        {time:animlen*0.8, at: (d,t) => { adjustColors(t/animlen) }},
-        {time:animlen*0.85, at: (d,t) => { setOpacity(0.25, instA_mats, instB_mats) }},
-        {time:animlen*0.9, at: (d,t) => { adjustColors(t/animlen);  }},
+      [ {at:animlen*0.1, cmd: (d,t) => { adjustColors(t/animlen) }},
+        {at:animlen*0.2, cmd: (d,t) => { adjustColors(t/animlen) }},
+        {at:animlen*0.25, cmd: (d,t) => { setOpacity(0.75, instB_mats, instC_mats,  instD_mats) }},
+        {at:animlen*0.3, cmd: (d,t) => { adjustColors(t/animlen) }},
+        {at:animlen*0.35, cmd: (d,t) => { setOpacity(0.5, instB_mats) }},
+        {at:animlen*0.4, cmd: (d,t) => { adjustColors(t/animlen) }},
+        {at:animlen*0.5, cmd: (d,t) => { adjustColors(t/animlen); setOpacity(0.75, instA_mats); setOpacity(0.5, instC_mats,  instD_mats) }},
+        {at:animlen*0.6, cmd: (d,t) => { adjustColors(t/animlen) }},
+        {at:animlen*0.65, cmd: (d,t) => { setOpacity(0.25, instC_mats); }},
+        {at:animlen*0.7, cmd: (d,t) => { adjustColors(t/animlen) }},
+        {at:animlen*0.75, cmd: (d,t) => { setOpacity(0.4, instA_mats); setOpacity(0.25, instD_mats);  }},
+        {at:animlen*0.8, cmd: (d,t) => { adjustColors(t/animlen) }},
+        {at:animlen*0.85, cmd: (d,t) => { setOpacity(0.25, instA_mats, instB_mats) }},
+        {at:animlen*0.9, cmd: (d,t) => { adjustColors(t/animlen);  }},
       ],
       (d,t) => {
         t /= animlen

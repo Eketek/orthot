@@ -22,7 +22,8 @@ orthot.ObjectState = {
   WALKING:1,
   FALLING:2,
   SLIDING:3,
-  DEFEATED:4
+  DEFEATED:4,
+  PICKEDUP:5,
 }
 
 orthot.Strength = {

@@ -1,7 +1,5 @@
-orthot.Player = function(zone) {    
-  //this.ctn = startctn
-  
-  this.__init__(zone)
+orthot.Player = function(zone) {   
+  orthot.StandardObject(this, zone)
   this.isPlayer = true
   this.types.push("creature")
   this.types.push("player")
@@ -16,6 +14,7 @@ orthot.Player = function(zone) {
   this.forward = libek.direction.code.SOUTH
   this.up = libek.direction.code.UP
     
+  let inventory = this.inventory = []
   
   let nmap_walk = {
     stand:"man",
@@ -64,17 +63,36 @@ orthot.Player = function(zone) {
       case orthot.ObjectState.FALLING:
         force_gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
         if (!force_gravity.isTraversable()) {
-          this.state = orthot.ObjectState.IDLE
+          if (force_gravity.toCTN.push(force_gravity)) {
+            if (!force_gravity.isTraversable()) {
+              this.state = orthot.ObjectState.IDLE
+            }
+          }
+          else {
+            this.state = orthot.ObjectState.IDLE
+          }
         }
         break
       case orthot.ObjectState.IDLE:
-      case orthot.ObjectState.WALKING:
         force_gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
         if (force_gravity.isTraversable()) {
           this.animCTL.setNMAP(nmap_walk)
           this.state = orthot.ObjectState.FALLING
         }
         break
+      case orthot.ObjectState.WALKING:
+        force_gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
+        if (force_gravity.isTraversable()) {
+          this.animCTL.setNMAP(nmap_walk)
+          this.state = orthot.ObjectState.FALLING
+        }
+        else if (force_gravity.toCTN.push(force_gravity)) {
+          if (force_gravity.isTraversable()) {
+            this.animCTL.setNMAP(nmap_walk)
+            this.state = orthot.ObjectState.FALLING
+          }
+        }
+        break      
       case orthot.ObjectState.CLIMBING:
         break
       
@@ -99,9 +117,10 @@ orthot.Player = function(zone) {
     switch(this.state) {
       case orthot.ObjectState.IDLE:
         if (dir) {    
+          //console.log("try-walk")
+          //console.log(dir)
           this.forward = dir.code
           let force = orthot.topology.scan_ramp(zone, this.ctn, this, dir.code, this.forward, this.up)
-          force.OBJ = this
           force.initiator = this
           force.action = "walk"
           force.inputDIR = dir
@@ -116,7 +135,6 @@ orthot.Player = function(zone) {
         if (dir) {    
           this.forward = dir.code
           let force = orthot.topology.scan_ramp(zone, this.ctn, this, dir.code, this.forward, this.up)
-          force.OBJ = this
           force.initiator = this
           force.action = "walk"
           force.inputDIR = dir
@@ -137,7 +155,6 @@ orthot.Player = function(zone) {
         }
         else if (inputs.ArrowDown) {
           let force = orthot.topology.scan_downladder(zone, this.ctn, this, this.forward, this.up)
-          force.OBJ = this
           force.initiator = this
           force.action = "climbdown"
           force.inputDIR = dir
@@ -146,7 +163,6 @@ orthot.Player = function(zone) {
         }    
         else if (inputs.ArrowUp || inputs.ArrowLeft || inputs.ArrowRight) {
           let force = orthot.topology.scan_upladder(zone, this.ctn, this, this.forward, this.up)
-          force.OBJ = this
           force.initiator = this
           force.action = "climbup"
           force.inputDIR = dir
@@ -162,7 +178,6 @@ orthot.Player = function(zone) {
           this.ready()
         }        
         
-        force_gravity.OBJ = this
         force_gravity.initiator = this
         force_gravity.action = "fall"
         force_gravity.inputDIR = dir
@@ -170,10 +185,65 @@ orthot.Player = function(zone) {
         zone.addForce(force_gravity)
         
       break
-    }
-    
+    }    
   }
   
+  this.pickupItem = function(item) {
+    let idx = inventory.length
+    inventory.push(item)
+    let itype = item.itemType
+    let color = item.color ? item.color : new THREE.Color("white")
+    let callbacks = {
+      mouseenter: evt => {
+        orthot.showDescription(item)
+      },
+      mouseleave: evt => {
+        orthot.hideDescription(item)
+      },
+      click: evt => {
+        if (item.activate) {
+          item.activate()
+        }
+      }
+    }
+    item.domELEM = renderCTL.build_domOBJ(orthot.tiles[itype], color, "#leftside", "btn_item", callbacks)
+  }
+  
+  this.removeItem = function(item) {    
+    let doRemove = true
+    
+    // If the item has quantity, decrement quantity and only remove the item if quantity reaches 0
+    if (typeof(item.quantity) == "number") {
+      item.quanity--
+      if (item.quantity > 0) {
+        orthot.updateDescription(item)
+        doRemove = false
+      }
+    }
+        
+    if (doRemove) {      
+      orthot.hideDescription(item)
+      let idx = inventory.indexOf(item)
+      inventory.splice(idx,1)
+      item.domELEM.remove()
+    }    
+  }
+  
+  let _destroy = this.destroy
+  this.destroy = function() {
+    if (!_destroy()) {
+      return false
+    }
+    
+    for (let item of inventory) {
+      item.destroy()
+      if (item.domELEM) {
+        item.domELEM.remove()
+      }
+    }
+    
+    return true
+  }
   
   this.defeat = async function() {
     if (this.state != orthot.ObjectState.DEFEATED) {
@@ -182,11 +252,16 @@ orthot.Player = function(zone) {
     }
     await libek.delay(4000)
     zone.reset()
+    
   }
   
   this.notify_ForcePropagationClearedObstruction = function(force, other) { 
     this.animCTL.setNMAP(nmap_push)
-  },
+  }
+  
+  this.notify_PushClearedObstruction = function(force, other) { 
+    this.animCTL.setNMAP(nmap_push)
+  }
   
   this.propagate = function(force) { }  
   this.struck = function(force, collision) { 
@@ -201,7 +276,6 @@ orthot.Player = function(zone) {
         if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) {        
           this.forward = force.toHEADING
         }
-        //this.up = force.toUP
         if (force.isTraversable()) {
           if (force.toBLOCKINGRAMP) {
             this.animCTL.pushfixedobjectAnim(force)
@@ -233,7 +307,6 @@ orthot.Player = function(zone) {
         if (force.isTraversable()) {
           if (this.state != orthot.ObjectState.DEFEATED) {        
             zone.putGameobject(force.toCTN, this)
-            console.log("fall")
             this.animCTL.fall(force)
           }
           return trit.TRUE
@@ -305,18 +378,17 @@ orthot.Player = function(zone) {
   
   this.stackFall = function(force) {
     let gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
-    gravity.OBJ = this
     gravity.initiator = force.initiator
     gravity.action = "fall"
     gravity.puller = force.OBJ
     gravity.strength = orthot.Strength.NORMAL
     this.state = orthot.ObjectState.FALLING
     zone.addForce(gravity)
-    zone.activate(this)
+    zone.addTickListener(this.update)
     return gravity
   }
 }
-orthot.Player.prototype = orthot.OrthotObject
+//orthot.Player.prototype = orthot.OrthotObject
 
 
 

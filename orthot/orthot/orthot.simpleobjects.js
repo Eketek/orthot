@@ -23,7 +23,6 @@ orthot.Wall = function(zone) {
     this.zone.scene.add(sideobj.obj)
   }
 }
-//orthot.Wall.prototype = orthot.OrthotObject
 
 orthot.ScenePortal = function(zone) {  
   orthot.OrthotObject(this, zone)
@@ -38,7 +37,6 @@ orthot.ScenePortal = function(zone) {
     }
   }
 }
-//orthot.ScenePortal.prototype = orthot.OrthotObject
 
 /*  Object thta allows movement up and down along a diagonal vector.
     Stairs are regarded as "ramps" for every purpose other than graphical representation
@@ -66,7 +64,6 @@ orthot.Stair = function(zone, color, align) {
   this.ascendDIR = align.forward
   this.descendDIR = libek.direction.invert[align.forward]
 }
-//orthot.Stair.prototype = orthot.OrthotObject
 
 // I still don't know what to call a pushblock.  A pushblock is a pushblock.
 // Please don't upload this comment somewhere embarassing, such as the Internet.
@@ -87,9 +84,7 @@ orthot.PushBlock = function(zone, color) {
     return mdl
   }
   
-  this.update.bind(this)
-  
-  this.propagateForce = (function(force){
+  this.propagateForce = function(force){
     if (this.state == orthot.ObjectState.DEFEATED) {
       return
     }
@@ -104,9 +99,40 @@ orthot.PushBlock = function(zone, color) {
       return true
     }
     return false
+  }
+}
+
+orthot.Crate = function(zone) {
+  orthot.StandardObject(this, zone)
+  this.hasSides = true
+  this.AutoGravity = true
+  zone.addTickListener(this.update)
+  
+  this.SpatialClass = "solid"    
+  this.state = orthot.ObjectState.IDLE
+  
+  this.mdlgen = function() {
+    let mdl = libek.getAsset("crate")
+    return mdl
+  }
+  
+  this.propagateForce = (function(force){
+    if (this.state == orthot.ObjectState.DEFEATED) {
+      return
+    }
+    if (force.strength >= orthot.Strength.NORMAL) {
+      let pbf = orthot.topology.scan_simple(zone, this.ctn, this, force.toHEADING, libek.direction.code.SOUTH, libek.direction.code.UP)
+      pbf.OBJ = this
+      pbf.pusher = force.OBJ
+      pbf.initiator = force.initiator
+      pbf.action = force.strength >= orthot.Strength.CRUSHING ? "crushed" : "pushed"
+      pbf.strength = force.strength   //crates propagate the input force completely
+      zone.addForce(pbf)
+      return true
+    }
+    return false
   }).bind(this)
 }
-//orthot.PushBlock.prototype = Object.assign({}, orthot.OrthotObject, orthot.StandardObject)
 
 
 orthot.Key = function(zone, color, code) {
@@ -168,12 +194,10 @@ orthot.Key = function(zone, color, code) {
     }
   }
 }
-//orthot.Key.prototype = Object.assign({}, orthot.OrthotObject, orthot.StandardObject)
 
 orthot.Lock = function(zone, color, code) {
   orthot.StandardObject(this, zone)
   this.hasSides = true
-  this.AutoGravity = true
   zone.addTickListener(this.update)
   
   this.SpatialClass = "solid"  
@@ -220,7 +244,6 @@ orthot.Lock = function(zone, color, code) {
     return true
   }
 }
-//orthot.Lock.prototype = Object.assign({}, orthot.OrthotObject, orthot.StandardObject)
 
 
 

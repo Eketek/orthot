@@ -893,7 +893,7 @@ orthot.Zone = function(ekvx, override_startloc) {
         
         template.id = id      
   	  }
-  	  break
+  	  break  	  
     }
     return template
   })
@@ -986,7 +986,11 @@ orthot.Zone = function(ekvx, override_startloc) {
           }
           break
           case 'pblock':
-            gobj = new orthot.PushBlock(this)
+            color = libek.util.property("color", datas, "red", libek.util.color.parse) 
+            gobj = new orthot.PushBlock(this, color)
+          break
+          case 'crate':
+            gobj = new orthot.Crate(this)
           break
           case 'sceneportal':
             gobj = new orthot.ScenePortal(this)

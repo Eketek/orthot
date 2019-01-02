@@ -94,6 +94,7 @@ $(async function() {
   libek.assignMaterials(assets.portal_pane, "white", "yellow", {color:"blue", transparent:true, opacity:0.25}, "white" )
   libek.assignMaterials(assets.pushblock, ["white", "red", "black"])
   libek.assignMaterials(assets.lock, ["white", "black"])
+  libek.assignMaterials(assets.crate, ["hsl(20, 100%, 50%)", "black", "hsl(25, 90%, 25%)", "hsl(22, 100%, 55%)" ])
   
   let markmats = [{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
   let cursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]

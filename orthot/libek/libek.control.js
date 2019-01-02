@@ -59,6 +59,7 @@ libek.control = {
               inpCallback()
             }
         }
+        //console.log(evtman.DownKeys.ArrowDown)
       }
       
     }).bind(this)
@@ -194,6 +195,8 @@ libek.control = {
           // manage arrow keys.  This is a little complex due to logic to match arrow keys with the current 3d perspective
           let processArrow = (function(k) {               
             d = this.subunit
+            //console.log("shift-amt:" + d)
+            //console.log(_this.evtman.DownKeys)
             if (this.evtman.DownKeys.Shift) {
               d *= this.high_subunit_scale
             }
@@ -210,9 +213,11 @@ libek.control = {
             else {
               let quad = libek.rad_tosector(this.campos.theta, 4)              
               if (this.pickplane.normal.equals(libek.direction.vector.SOUTH)) {
+                //console.log("NORTH  ... quad="+quad + " k="+k)
                 this.camtarget.z += nktbl[quad|k]*d          
               }
               else {
+                //console.log("EAST  ... quad="+quad + " k="+k)
                 this.camtarget.x += ektbl[quad|k]*d        
               }
             }
@@ -237,6 +242,7 @@ libek.control = {
                 processArrow(L)
               break
               case "ArrowRight_down":
+                //console.log(R)
                 processArrow(R)
               break
             }
@@ -279,6 +285,7 @@ libek.control = {
                 this.updateCamera(false)
               break
               case "mousewheel_neg":
+                //console.log(evt.data)
                 this.campos.radius -= this.radstep
                 if (this.campos.radius < this.radmin) {
                   this.campos.radius = this.radmin
@@ -290,6 +297,7 @@ libek.control = {
                 orbit:
                 while (true) {
                   evt = await rdr.next(orbit_evt) 
+                  //console.log(evt.data)
                   switch(evt.code) {
                     case "reconfigure": 
                       configure() 
@@ -353,6 +361,8 @@ libek.control = {
                 qrefocus = true
               case btndown:
                 let start = this.camtarget.clone()
+                                
+                //console.log("refocus", start, this.refocustarget)
                 
                 let starttime = Date.now()
                 while (true) {
@@ -409,7 +419,7 @@ libek.control = {
           
           let chase = (function() {
             let mpos3d = libek.pick.planepos(this.disp, this.evtman.mpos, this.pickplane)
-            let pos = mpos3d.clone()            
+            let pos = mpos3d.clone()
             pos.sub(this.camtarget)
             pos.normalize()
             pos.multiplyScalar(this.followspeed*this.campos.radius)
@@ -437,7 +447,6 @@ libek.control = {
               break
               case "exit": break main
               case btndown:          
-                //prev_mpos = evt.data
                 chase()
                 dochase:
                 while(true) {
@@ -458,9 +467,8 @@ libek.control = {
           }   
               
         }).bind(this)()
-      } 
-        
-      this.updateCamera(true)          
+      }         
+      this.updateCamera(true)    
     }
   }
 }

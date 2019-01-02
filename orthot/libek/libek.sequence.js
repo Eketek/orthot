@@ -104,12 +104,12 @@ libek.CommandSequence = function(init, end, length, ... tracks) {
         else if (cmd.command) {
           _track.frame.push(cmd.command)
         }
-        else if (cmd.at) {
+        else if (cmd.cmd) {
         
           // If action assigned to a time at or after length, insert the command into the finalizer
           //    (this makes sequences a bit more intuitive to program)
-          if (cmd.time >= length) {
-            _end.splice(_end.length-1, 0, cmd.at)
+          if (cmd.at >= length) {
+            _end.splice(_end.length-1, 0, cmd.cmd)
           }
           else {
             _track.breakpoints.push(cmd)
@@ -164,8 +164,8 @@ libek.CommandSequence = function(init, end, length, ... tracks) {
     }
     
     for (let track of _tracks) {
-      if (track.nbrk && track.nbrk.time <= t) {
-        track.nbrk.at(amt,t)
+      if (track.nbrk && track.nbrk.at <= t) {
+        track.nbrk.cmd(amt,t)
         track.nbrkid++
         track.nbrk = track.breakpoints[track.nbrkid]
         track.frame = track.frames[track.nbrkid]

@@ -45,6 +45,60 @@ orthot.Zone = function(ekvx, override_startloc) {
   let tickListeners = []
   let tmp_tickListeners = [] 
   
+  let keys = []
+  let locks = []
+  let reticlemat
+  let baseReticleOBJ = assets.cubereticle
+  if (baseReticleOBJ) {
+    reticlemat = baseReticleOBJ.children[0].material
+  }
+  else {
+    baseReticleOBJ = libek.getAsset("CubeMark")
+    assets.cubereticle = baseReticleOBJ
+    reticlemat = libek.Material({color:"green", emissive:"green", emissiveIntensity:0.333}) 
+    baseReticleOBJ.children[0].material = reticlemat
+    libek.storeAsset("cubereticle", baseReticleOBJ)
+  }
+  let keyReticle = new libek.Reticle(baseReticleOBJ)
+  let lockReticle = new libek.Reticle(baseReticleOBJ)
+  this.scene.add(keyReticle.obj)
+  this.scene.add(lockReticle.obj)
+  
+  let activeReticle = null
+  let setReticle = function(reticle, objs, code, color) {
+    if (activeReticle) {
+      activeReticle.clear()
+    }
+    activeReticle = reticle
+    
+    let hsl = color.getHSL()      
+    reticlemat.color.setHSL(hsl.h+0.5, hsl.s, hsl.l)
+    reticlemat.emissive.setHSL(hsl.h+0.5, hsl.s, hsl.l)
+    
+    for (let obj of objs) {
+      if (obj.code == code) {
+        reticle.add(obj.ctn)
+      }
+      else {
+        console.log(`"${obj.code}" neq "${code}"`)
+      }
+    }
+  }
+  this.clearReticle = function() {
+    if (activeReticle) {
+      activeReticle.clear()
+    }
+  }
+  
+  this.showKeys = function(code, color="green") {
+    setReticle(keyReticle, keys, code, color)
+  }
+  this.showLocks = function(code, color="green") {
+    setReticle(lockReticle, locks, code, color)
+  }
+  
+  
+  
   /*  Rules for determining which objects can enter space occupied by other objects
       These rules are assymetric (liquid objects can not enter space occupied by solid objects, but solid objects can enter space occupied by liquid)
       These rules apply to movements of objects under forces and to certain topology considerations.
@@ -910,13 +964,15 @@ orthot.Zone = function(ekvx, override_startloc) {
           case 'key': {
             color = libek.util.property("color", datas, "white") 
             let code = libek.util.property("code", datas)                  
-            gobj = new orthot.Key(this, color, code)            
+            gobj = new orthot.Key(this, color, code)        
+            keys.push(gobj)    
           }
           break          
           case 'lock': {
             color = libek.util.property("color", datas, "white") 
             let code = libek.util.property("code", datas)                  
-            gobj = new orthot.Lock(this, color, code)            
+            gobj = new orthot.Lock(this, color, code)   
+            locks.push(gobj)         
           }
           break
           case 'target': {
@@ -1100,7 +1156,11 @@ orthot.Zone = function(ekvx, override_startloc) {
     }
     
   }
-  this.destroyObjects = function() {
+  this.destroyObjects = function() {    
+    keys = []
+    locks = []
+    keyReticle.clear()
+    lockReticle.clear()
     vxc.forAll(ctn => {
       for (let gobj of ctn.content) {
         gobj.destroy()

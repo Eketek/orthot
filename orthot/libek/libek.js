@@ -97,6 +97,11 @@ var libek = {
   
   AXIS:{ X:1, Y:2, Z:3 },
   
+  storeAsset:function(name, obj) {
+    obj.__LIBEK_INST_ASSET_ID = name
+    assets[name] = obj
+  },
+  
   /*  Get a copy of a loaded asset
       This will either duplicate and return the named asset or fetch and return a pooled instance of it
       

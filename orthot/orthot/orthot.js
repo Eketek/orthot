@@ -95,6 +95,14 @@ $(async function() {
   libek.assignMaterials(assets.pushblock, ["white", "red", "black"])
   libek.assignMaterials(assets.lock, ["white", "black"])
   
+  let markmats = [{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
+  let cursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
+  
+  libek.assignMaterials(assets.CubeMark, markmats)
+  libek.assignMaterials(assets.FaceMark, markmats)
+  libek.assignMaterials(assets.CubeCursor, cursormats)
+  libek.assignMaterials(assets.FaceCursor, cursormats)
+  
   var evtman = new libek.event.Manager( disp_elem )
   inputCTL.EventManager = evtman
   
@@ -117,7 +125,7 @@ $(async function() {
     pickplane:new THREE.Plane(libek.direction.vector.UP, 0),
     UpdcamUpdatepickplane:true,
     followspeed:1/60,
-    campos_maxphi:Math.PI * 0.45,
+    campos_maxphi:Math.PI * 0.85,
     
     OrbitTargetMBTN:"rmb",
     ChaseTargetMBTN:"lmb",    

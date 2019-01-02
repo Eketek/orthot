@@ -134,6 +134,15 @@ orthot.Key = function(zone, color, code) {
   
   this.description = "Key-[" + code + "]"
   
+  this.visualizer = function(enable) {
+    if (enable) {
+      zone.showLocks(code, color)
+    }
+    else {
+      zone.clearReticle()
+    }
+  }
+  
   this.initGraphics = function() {
     orthot.AnimateBlock(this.zone, this)
     let axes = [ new THREE.Vector3(-0.5,1,0).normalize(), new THREE.Vector3(0,1,0) ]

@@ -17,7 +17,7 @@
 */
 
 
-libek.Model = function(params) {
+libek.Model = function(params={}) {
   this.isModelMain = true
   this.obj = new THREE.Object3D()
   this.instances = {}  
@@ -38,7 +38,9 @@ libek.Model = function(params) {
   }
   
   this.Instance = function(instname, configure, init_show=true) {
-  
+    if (!instname) {
+      instname = "libek.Model.Instance"
+    }
     model.instances[instname] = this
     let instance = this
     
@@ -47,8 +49,7 @@ libek.Model = function(params) {
     let components = this.components = []
     this.ctl = {}
           
-    this.Component = function() {
-      
+    this.Component = function() {      
       this.obj = new THREE.Object3D()
       this.matrix = new THREE.Matrix4()
       this.obj.matrix = this.matrix
@@ -58,14 +59,12 @@ libek.Model = function(params) {
       }
       
       this.show = (function() {
-        console.log("show", model.obj.children.indexOf(this.obj), this)
         if (model.obj.children.indexOf(this.obj) == -1) {
           model.obj.add(this.obj)
         }
       }).bind(this);
       
       this.hide = (function() {
-        console.log("hide", model.obj.children.indexOf(this.obj), this)
         if (model.obj.children.indexOf(this.obj) != -1) {
           model.obj.remove(this.obj)
         }
@@ -82,8 +81,11 @@ libek.Model = function(params) {
           if (typeof(mdlarg) == "function") {
             obj = mdlarg()
           }
-          else {
+          else  if (typeof(mdlarg) == "string") {
             obj = libek.getAsset( model.nmap[mdlarg] ? model.nmap[mdlarg] :mdlarg )
+          }
+          else if (typeof(mdlarg) == "object") { 
+            obj = libek.getAsset( mdlarg )
           }
         }
         else if (typeof(model.default) == "function") {
@@ -91,23 +93,28 @@ libek.Model = function(params) {
         }
         else {
           obj = libek.getAsset(model.default)
-        }        
-        
+        }                
         this.obj.add(obj)
         this.content[objname] = obj
         
+        return obj
       }      
       this.getObject = function(objname) {  
         return this.content[objname]
       }
-      this.removeObject = function(cmpname, objname) {
+      this.removeObject = function(objname) {
         let obj = this.content[objname]    
         if (obj) {   
           libek.releaseAsset(obj)
         }    
-        delete this.content[objname]
-        
+        delete this.content[objname]        
       }
+      this.clear = function() {
+        for (let obj of this.obj.children) {
+          libek.releaseAsset(obj)   
+        }
+        this.content = {}
+      } 
       components.push(this)
     }
     
@@ -123,7 +130,8 @@ libek.Model = function(params) {
       let inst = new model.Instance(dupname, configure)
       return inst
     }
-    
-    configure(this)
+    if (configure) {
+      configure(this)
+    }
   }
 }

@@ -1,4 +1,6 @@
 0.3.0:
+  2 Jan 2019
+    Mousing over the "key" GUI element now causes the game to temporarilly place illustrative reticles around all locks which that key is able to unlock.
   1 Jan 2019
     WASD controls
     puzzle-reset button

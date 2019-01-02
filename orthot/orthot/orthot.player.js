@@ -97,19 +97,24 @@ orthot.Player = function(zone) {
         break
       
     }
+    
+    let iUP = inputs.KeyW || inputs.ArrowUp
+    let iDOWN = inputs.KeyS || inputs.ArrowDown
+    let iLEFT = inputs.KeyA || inputs.ArrowLeft
+    let iRIGHT = inputs.KeyD || inputs.ArrowRight
         
     //If an arrow key is down, determine where it points [in relation to where the camera is pointing]
-    let dir    
-    if (inputs.ArrowDown) {    
+    let dir   
+    if (iDOWN) {    
       dir = libek.direction.getKeyDirection("down", sviewCTL.campos.theta)
     }
-    else if (inputs.ArrowUp) {
+    else if (iUP) {
       dir = libek.direction.getKeyDirection("up", sviewCTL.campos.theta)
     }
-    else if (inputs.ArrowRight) {
+    else if (iRIGHT) {
       dir = libek.direction.getKeyDirection("right", sviewCTL.campos.theta)
     }
-    else if (inputs.ArrowLeft) {
+    else if (iLEFT) {
       dir = libek.direction.getKeyDirection("left", sviewCTL.campos.theta)
     }
     
@@ -153,7 +158,7 @@ orthot.Player = function(zone) {
           this.animCTL.hopoffLadder(this.forward, this.up)  
           this.state = orthot.ObjectState.IDLE
         }
-        else if (inputs.ArrowDown) {
+        else if (iDOWN) {
           let force = orthot.topology.scan_downladder(zone, this.ctn, this, this.forward, this.up)
           force.initiator = this
           force.action = "climbdown"
@@ -161,7 +166,7 @@ orthot.Player = function(zone) {
           force.strength = orthot.Strength.NORMAL
           zone.addForce(force)
         }    
-        else if (inputs.ArrowUp || inputs.ArrowLeft || inputs.ArrowRight) {
+        else if (iUP || iLEFT || iRIGHT) {
           let force = orthot.topology.scan_upladder(zone, this.ctn, this, this.forward, this.up)
           force.initiator = this
           force.action = "climbup"

@@ -17,6 +17,7 @@ var sviewCTL
 var orthot = {
   zones:{},
   tiles:{},  
+  version:"0.3.0"
 }
 
 $(async function() {
@@ -98,7 +99,7 @@ $(async function() {
   inputCTL.EventManager = evtman
   
   inputCTL.keystate = new libek.control.QueryTriggeredButtonControl({
-    buttons:"arrows space",
+    buttons:"arrows space keys:w a s d",
     eventmanager:evtman,
     readheldbuttons:true,
     onInputAvailable:function() {
@@ -149,6 +150,14 @@ $(async function() {
   }
   
   orthot.loadScene("MainArea")
+  
+  let resetELEM = $("<div>").addClass("btn_active").text("RESET").click(function() {
+    if (orthot.ActiveZone) {
+      orthot.ActiveZone.reset()
+    }
+  })
+  $("#rightside").append(resetELEM)
+  
   
   renderCTL.build_domOBJ = function(tile, color, location, css_class, event_handlers) {
     if (typeof(tile) == "string") {

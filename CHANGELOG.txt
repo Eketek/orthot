@@ -1,13 +1,16 @@
-1 Jan 2019
-Key and Lock puzzle elements
-Added a continuous multi-axail rotation animation to orthot.AnimateBlock (to be used for items that can be picked up by an orthot.Player)
-orthot.OrthotObject and orthot.StandardObject have been changed from prototype objects to object augmentation functions.
-  (Mainly to allow objects to pass their functions around as delegates)
-orthot.Zone changed to call delegate functions tor per-tick updates instead of object.update()
-Removed libek.ui (opted instead to use DOM elements for GUI purposes)
-Added a colorized-image-dropshadow GUI button generator (renderCTL.build_domOBJ)
-Added logic for tooltips and graphical visualizations which are triggered by mousing over objects (both in the 3D scene and GUI elements)
-Various code consistancy adjustments
-disabled timing output from THREE.Objectloader.js
-Removed an unintended puzzle solution
-Added a changelog.  
+0.3.0:
+  1 Jan 2019
+    WASD controls
+    puzzle-reset button
+    Key and Lock puzzle elements
+    Added a continuous multi-axail rotation animation to orthot.AnimateBlock (to be used for items that can be picked up by an orthot.Player)
+    orthot.OrthotObject and orthot.StandardObject have been changed from prototype objects to object augmentation functions.
+      (Mainly to allow objects to pass their functions around as delegates)
+    orthot.Zone changed to call delegate functions tor per-tick updates instead of object.update()
+    Removed libek.ui (opted instead to use DOM elements for GUI purposes)
+    Added a colorized-image-dropshadow GUI button generator (renderCTL.build_domOBJ)
+    Added logic for tooltips and graphical visualizations which are triggered by mousing over objects (both in the 3D scene and GUI elements)
+    Various code consistancy adjustments
+    disabled timing output from THREE.Objectloader.js
+    Removed an unintended puzzle solution
+    Added a changelog.  

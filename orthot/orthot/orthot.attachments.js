@@ -21,6 +21,7 @@ orthot.Portal = function(align, color, pclass, pname, ptarget) {
   this.pname = name
   this.ptarget = ptarget
   this.type = "portal"
+  this.sources = []
   this.mdlgen = function() {
     let r = libek.getAsset("portal_pane")
     if (color) {

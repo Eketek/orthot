@@ -464,7 +464,7 @@ orthot.Zone = function(ekvx, override_startloc) {
       //if nothing is observably traversable, select the next non-daisy-chain portal without regard for obstructions
       //  I dont want to deal with the convoluted logic needed to prioritize a portal with an unblocked pushable object in front.
       if (!traversable) {
-        for (let _i = 0; _i < portal.target.length-2; _i++) {
+        for (let _i = 0; _i < portal.target.length-1; _i++) {
           let i = (_i + ofs) % portal.target.length
           dportal = portal.target[i]
           toHEADING = dportal.up
@@ -473,7 +473,7 @@ orthot.Zone = function(ekvx, override_startloc) {
           //accept the portal if it has not been rejected by a chained scan
           if (visited.indexOf(dportal == -1)) {
             break
-          }
+          }getAdjacentCTN
         }
         dportal = undefined
       }
@@ -561,7 +561,143 @@ orthot.Zone = function(ekvx, override_startloc) {
     return [adjCTN, outCTN, outHEADING, outFORWARD, outUP, isPortaljump, traversable]
   }
   
+  /*  Return containers from which the specified container (thisCTN) may be directly accessed.
+   *  "This" container may be accessed from "other" container under these circumstances:
+   *    1:  "this" and "other" are literally adjacent and "this" does not contain a portal pointed at "other"
+   *    2:  "other" has a path or multi-path of portals which has at least one portal-terminal at the literally adjacent container which is pointed at "this"
+  */
+  let getInboundNeighbors = (function(thisCTN, excludeDIR) {
+    let portals = []
+    let r = []
+    
+    let evaluateSide = (function(dir) {  
+      let invdir = libek.direction.invert[dir]
+      let otherCTN = this.getAdjacentCTN(thisCTN, dir)
+      if (!thisCTN.getSideobject_bytype(dir, "portal")) {
+        let otherPortal = otherCTN.getSideobject_bytype(dir, "portal")
+        if (otherPortal) {
+          let sourcePortals = getPortalSources(otherPortal)
+          for (let portal of sourcePortals) {
+            if (portals.indexOf(portal) == -1) {
+              portals.push(portal)
+              let invsrcpdir = libek.direction.invert[portal.up]
+              r.push({ctn:this.getAdjacentCTN(portal.host.ctn, invsrcpdir), dir:invsrcpdir, sourcePortal:portal, targetPortal:otherPortal})
+            }
+          }
+        }
+        else {
+          r.push({ctn:otherCTN, dir:invdir})          
+        }
+      }      
+    }).bind(this)
+    for (let dir of Object.values(libek.direction.code)) {
+      if (dir != excludeDIR) {
+        evaluateSide(dir)
+      }
+    }
+    
+    return r
+  }).bind(this)
   
+  /*  Given a target portal, find all potential source portals (anything directly or indirectly connected portal).  
+   *   An "other" portal is directly linked if one of the following conditions is true:
+   *   1.  "other" and "this" are part of the same multiportal
+   *   2.  "other" has "this" as its target
+   *   3.  There is a daisy-chain of portals which may be followed from "other" to "this"
+   */  
+  let findPortalSources = function(targetPortal, result, visited) {
+    visited.push(targetPortal)
+    
+    // Evaluate every portal in targetPortal.sources as a potential portal
+    for (let portal of targetPortal.sources) {
+      if (visited.indexOf(portal) == -1) {
+        visited.push(portal)
+        let pCTN = portal.host.ctn
+        let adjCTN = this.getAdjacentCTN(pCTN, portal.up)
+        let adjPortal = adjCTN.getSideobject_bytype(libek.direction.invert[portal.up], "portal")
+        if (adjPortal) {
+          if (visited.indexOf(adjPortal == -1)) {
+            // get THAT portal's sources too.  I must, Must, MUST have them!
+            getPortalSources(adjPortal, result, visited)
+          }
+        }
+        else {
+          // Portal source.
+          result.push(portal)
+        }
+      }
+      //NOTE:  Any other path a source portal can point is irrelevant here (destinations based on portal class).
+    }
+    
+    //It the portal is a multi-portal, extract every portal in it other than itself is a potential source portal
+    if (Array.isArray(targetPortal.target)) {
+      let pgroup = targetPortal.target
+      let ofs = pgroup.indexOf(targetPortal) +1
+      for (let _i = 0; _i < portal.target.length-1; _i++) {
+        let i = (_i + ofs) % portal.target.length
+        portal = pgroup[i]
+        if (visited.indexOf(portal) == -1) {
+          let pCTN = portal.host.ctn
+          let adjCTN = this.getAdjacentCTN(pCTN, portal.up)
+          let adjPortal = adjCTN.getSideobject_bytype(libek.direction.invert[portal.up], "portal")
+          if (adjPortal) {
+            if (visited.indexOf(adjPortal == -1)) {
+              // get THAT portal's sources too.  I must, Must, MUST have them!
+              getPortalSources(adjPortal, result, visited)
+            }
+          }
+          else {
+            // Portal source.
+            result.push(portal)
+          }
+        }
+      }
+    }
+  }
+  
+  // Secondary forces is additional forces exerted upon neighboring objects by the movement of an object:
+  //    things like Release of tension, gravity, riding, and shearing are triggered through this
+  //
+  //  This, incidentally, was conceived as an extremely roundabout [but thorough] way to make keys and crates ride moving objects... 
+  let processSecondaryForces = function(force) {
+    let ctn = force.fromCTN
+    let from_nbrpaths = getInboundNeighbors(force.fromCTN, force.fromHEADING)
+    
+    // outbound secondary forces - these apply to neighbors of force.fromCTN 
+    for (let path of from_nbrpaths) {
+      let sforce = { OBJ:force.OBJ, dir:path.dir, heading:force.fromHEADING, primaryForce:force }
+      if (path.sourcePortal) {      
+        // If the neighbor is behind a portal, inverse-portal the secondary force out to the neighbor (from targetPortal to sourcePortal).
+        // The inverse-portal'd force should be transformed by the portal to whatever the movement should look like form the source portal 
+        //NOTE:  This also is a wild guess.  I am unsure whether or not this even should give a *correct* transformation of a secondary force
+        // through an inverse portal.  
+        sforce.heading = libek.direction.rotateDirection_bydirections(
+          force.fromHEADING, 
+          libek.direction.invert[targetPortal.up],
+          libek.direction.invert[targetPortal.forward],
+          sourcePortal.up,
+          sourcePortal.forward
+        )
+      }
+      path.ctn.applyOutboundSecondaryForce(sforce)
+    }
+    
+    // inbound secondary forces - these apply to neighbors of force.toCTN 
+    let to_nbrpaths = getInboundNeighbors(force.toCTN, libek.direction.invert[force.toHEADING])
+    for (let path of to_nbrpaths) {
+      let sforce = { OBJ:force.OBJ, dir:path.dir, heading:force.fromHEADING, primaryForce:force }
+      if (path.sourcePortal) {      
+        sforce.heading = libek.direction.rotateDirection_bydirections(
+          force.fromHEADING, 
+          libek.direction.invert[targetPortal.up],
+          libek.direction.invert[targetPortal.forward],
+          sourcePortal.up,
+          sourcePortal.forward
+        )
+      }
+      path.ctn.applyInboundSecondaryForce(sforce)
+    }
+  }
   
   //----------------------------------------------------------------------------------------------------------------------------------
   //  MOVEMENT ENGINE
@@ -761,7 +897,6 @@ orthot.Zone = function(ekvx, override_startloc) {
                   force.deferred = true
                 }
                 continue pass
-              break
               case trit.TRUE:
                 forces.splice(i, 1)
                 resolved_any = true
@@ -773,7 +908,7 @@ orthot.Zone = function(ekvx, override_startloc) {
                   switch(incCollision.type) {
                     case orthot.Collision.CHASE:
                       incCollision.type = orthot.Collision.NONE                  
-                    break
+                      break
                     
                     // If the object has movement priority, it wins FAR_RAM and CORNER_RAM collisions.
                     case orthot.Collision.FAR_RAM:
@@ -781,16 +916,17 @@ orthot.Zone = function(ekvx, override_startloc) {
                       force.OBJ.strike(force, incForce.OBJ, orthot.Collision.PRIORITY_RAM)
                       incForce.OBJ.struck(force, force.OBJ, orthot.Collision.PRIORITY_RAM)
                       incForce.resolved = true
-                    break
+                      break
                     case orthot.Collision.CORNER_RAM:
                       //incCollision.type = orthot.collision.PRIORITY_STEAL     
                       force.OBJ.strike(force, incForce.OBJ, orthot.Collision.PRIORITY_STEAL)
                       incForce.OBJ.struck(force, force.OBJ, orthot.Collision.PRIORITY_STEAL)
                       incForce.resolved = true
-                    break
+                      break
                   }
                 }
-              break
+                processSecondaryForces(force)
+                break
               case trit.FALSE:
                 forces.splice(i, 1)
                 resolved_any = true
@@ -809,14 +945,14 @@ orthot.Zone = function(ekvx, override_startloc) {
                       //incForce.OBJ.strike(incForce, force.OBJ, orthot.collision.SIMPLE)
                       //force.OBJ.struck(incForce, incForce.OBJ, collision.SIMPLE)
                       //incForce.resolved = true
-                    break
+                      break
                     case orthot.Collision.FAR_RAM:
                     case orthot.Collision.CORNER_RAM:
                       incCollision.type = orthot.Collision.NONE
-                    break
+                      break
                   }
                 }
-              break
+                break
             }
           }
         }
@@ -860,6 +996,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     //{pos, [node]}
     moves_by_source = {}
   }
+  
   
     
   ekvx.loadConfig( (id, rawtemplate) => {    
@@ -1143,6 +1280,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     //process single-targetted portals
     for (let psrc of targetted_portals) {
       psrc.target = portals_byname[psrc.target]
+      psrc.target.sources.push(psrc)
     }
     
   }).bind(this)

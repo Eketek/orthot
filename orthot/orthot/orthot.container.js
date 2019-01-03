@@ -66,6 +66,15 @@ orthot.Container = function(x,y,z) {
       }
     },
     
+    applyInboundSecondaryForce(secondaryForce) {
+      //console.log("IB-secondary force")
+      //console.log(secondaryForce, this)
+    },
+    applyOutboundSecondaryForce(secondaryForce) {
+      //console.log("OB-secondary force")
+      //console.log(secondaryForce, this)    
+    },
+    
     /*  Query the container for a side-attachment.  (This is mainly for finding portals and ladders)
     */
     getSideobject_bytype:function(side, type) {
@@ -79,3 +88,9 @@ orthot.Container = function(x,y,z) {
   }
   return r
 }
+
+
+
+
+
+

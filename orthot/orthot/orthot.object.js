@@ -234,40 +234,12 @@ orthot.StandardObject = function(THIS, zone) {
     }
   }
   
-  /*
-  THIS.stackFall = function(force) {
-    if (THIS.AutoGravity) {
-      let gravity = orthot.topology.scan_simple(zone, THIS.ctn, THIS, libek.direction.code.DOWN)
-      gravity.OBJ = THIS
-      gravity.initiator = force.initiator
-      gravity.action = "fall"
-      gravity.puller = force.OBJ
-      gravity.strength = orthot.Strength.NORMAL
-      THIS.state = orthot.ObjectState.FALLING
-      zone.addForce(gravity)
-      zone.addTickListener(THIS.update)
-      return gravity
-    }
-  }
-  */
-  
   THIS.struck = function(force) {
     
   }
   
   THIS.strike = function(force, otherOBJ, collision, crash=false) {
-    /*
-    console.log("strike", force, otherOBJ, collision, crash)
-    if (force.action == "fall") {
-      if (THIS.state == orthot.ObjectState.FALLING) {
-        THIS.animCTL.impactDown(force)
-      }
-      
-      THIS.state = orthot.ObjectState.IDLE
-      zone.removeTickListener(THIS.update)   
-      //THIS.idle()
-    }
-    */
+  
   }
   
   THIS.push = function(force) { 
@@ -290,7 +262,6 @@ orthot.StandardObject = function(THIS, zone) {
       zone.putGameobject(force.toCTN, THIS)
       if ( (force.initiator == force.pusher) && ( zone.ticknum > (prev_ticknum+1) ) ) {
         THIS.animCTL.impulseShift(force)
-        //THIS.state = orthot.ObjectState.WALKING
       }
       else {
         THIS.animCTL.shift(force)

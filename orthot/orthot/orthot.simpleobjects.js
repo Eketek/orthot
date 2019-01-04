@@ -156,7 +156,7 @@ orthot.Crate = function(zone) {
           }
           else {
             pforce.strength = orthot.Strength.LIGHT
-            pforce.action = "driven"
+            pforce.action = "ride"
           }
           zone.addForce(pforce)
           zone.addTickListener(this.update)
@@ -254,12 +254,11 @@ orthot.Key = function(zone, color, code) {
       default:
         //If the object below moved, move with it!  (this is to be replaced with a much more general solution based on surface interactions)
         if (normal == libek.direction.code.DOWN) {
-          console.log("OBiF")
           let pforce = orthot.topology.scan_simple(zone, this.ctn, this, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
           if (pforce.isTraversable()) {
             pforce.strength = orthot.Strength.LIGHT
             pforce.initiator = originatingForce.initiator
-            pforce.action = "driven"
+            pforce.action = "ride"
             zone.addForce(pforce)
           }
           else if (heading != libek.direction.code.DOWN) {
@@ -279,39 +278,11 @@ orthot.Key = function(zone, color, code) {
         break
     }    
   }
-  
-  /*
-  this.applyOutboundIndirectForce = function(heading, normal, originatingForce) {
-    switch(this.state) {
-      case orthot.ObjectState.DEFEATED:
-      case orthot.ObjectState.FALLING:
-        return
-      default:
-        //If the object below moved, move with it!  (this is to be replaced with a much more general solution based on surface interactions)
-        if (normal == libek.direction.code.DOWN) {
-          let pforce = orthot.topology.scan_simple(zone, this.ctn, this, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
-          if (heading == libek.direction.code.DOWN) {
-            console.log("OBIF - fallNOW")
-            pforce.initiator = originatingForce.initiator
-            pforce.strength = orthot.Strength.NORMAL
-            pforce.action = "fall"
-            this.state = orthot.ObjectState.FALLING
-            zone.addForce(pforce)
-          }
-          else {
-            console.log("OBIF - maybefallLATER")
-          }
-          zone.addTickListener(this.update)
-        }
-        break
-    }    
-  }*/
 }
 
 orthot.Lock = function(zone, color, code) {
   orthot.StandardObject(this, zone)
   this.hasSides = true
-  zone.addTickListener(this.update)
   
   this.SpatialClass = "solid"  
   

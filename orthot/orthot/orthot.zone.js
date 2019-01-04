@@ -567,14 +567,15 @@ orthot.Zone = function(ekvx, override_startloc) {
       let invdir = libek.direction.invert[dir]
       let otherCTN = this.getAdjacentCTN(thisCTN, dir)
       if (!thisCTN.getSideobject_bytype(dir, "portal")) {
-        let otherPortal = otherCTN.getSideobject_bytype(dir, "portal")
+        let otherPortal = otherCTN.getSideobject_bytype(invdir, "portal")
         if (otherPortal) {
-          let sourcePortals = getPortalSources(otherPortal)
+          let sourcePortals = []
+          findPortalSources(otherPortal, sourcePortals, [])
           for (let portal of sourcePortals) {
             if (portals.indexOf(portal) == -1) {
               portals.push(portal)
               let invsrcpdir = libek.direction.invert[portal.up]
-              r.push({ctn:this.getAdjacentCTN(portal.host.ctn, invsrcpdir), dir:invsrcpdir, sourcePortal:portal, targetPortal:otherPortal})
+              r.push({ctn:this.getAdjacentCTN(portal.host.ctn, portal.up), dir:invsrcpdir, sourcePortal:portal, targetPortal:otherPortal})
             }
           }
         }
@@ -598,7 +599,7 @@ orthot.Zone = function(ekvx, override_startloc) {
    *   2.  "other" has "this" as its target
    *   3.  There is a daisy-chain of portals which may be followed from "other" to "this"
    */  
-  let findPortalSources = function(targetPortal, result, visited) {
+  let findPortalSources = (function(targetPortal, result, visited) {
     visited.push(targetPortal)
     
     // Evaluate every portal in targetPortal.sources as a potential portal
@@ -611,7 +612,7 @@ orthot.Zone = function(ekvx, override_startloc) {
         if (adjPortal) {
           if (visited.indexOf(adjPortal == -1)) {
             // get THAT portal's sources too.  I must, Must, MUST have them!
-            getPortalSources(adjPortal, result, visited)
+            findPortalSources(adjPortal, result, visited)
           }
         }
         else {
@@ -636,7 +637,7 @@ orthot.Zone = function(ekvx, override_startloc) {
           if (adjPortal) {
             if (visited.indexOf(adjPortal == -1)) {
               // get THAT portal's sources too.  I must, Must, MUST have them!
-              getPortalSources(adjPortal, result, visited)
+              findPortalSources(adjPortal, result, visited)
             }
           }
           else {
@@ -646,7 +647,7 @@ orthot.Zone = function(ekvx, override_startloc) {
         }
       }
     }
-  }
+  }).bind(this)
   
   // Secondary forces is additional forces exerted upon neighboring objects by the movement of an object:
   //    things like Release of tension, gravity, riding, and shearing are triggered through this
@@ -666,12 +667,14 @@ orthot.Zone = function(ekvx, override_startloc) {
       let heading = path.sourcePortal ? 
         libek.direction.rotateDirection_bydirections(
           force.fromHEADING, 
-          libek.direction.invert[targetPortal.up],
-          libek.direction.invert[targetPortal.forward],
-          sourcePortal.up,
-          sourcePortal.forward
+          libek.direction.invert[path.targetPortal.up],
+          libek.direction.invert[path.targetPortal.forward],
+          path.sourcePortal.up,
+          path.sourcePortal.forward
         ) 
         : force.fromHEADING      
+      if (path.sourcePortal) {
+      }
       path.ctn.applyOutboundIndirectForce(heading, path.dir, force)      
     }
     
@@ -681,10 +684,10 @@ orthot.Zone = function(ekvx, override_startloc) {
       let heading = path.sourcePortal ? 
         libek.direction.rotateDirection_bydirections(
           force.fromHEADING, 
-          libek.direction.invert[targetPortal.up],
-          libek.direction.invert[targetPortal.forward],
-          sourcePortal.up,
-          sourcePortal.forward
+          libek.direction.invert[path.targetPortal.up],
+          libek.direction.invert[path.targetPortal.forward],
+          path.sourcePortal.up,
+          path.sourcePortal.forward
         ) 
         : force.fromHEADING      
       path.ctn.applyInboundIndirectForce(heading, path.dir, force)      
@@ -1274,6 +1277,8 @@ orthot.Zone = function(ekvx, override_startloc) {
         let p2 = plist[1]
         p1.target = p2
         p2.target = p1
+        p1.sources.push(p2)
+        p2.sources.push(p1)
       }
       else if (plist.length > 2) {
         for (let portal of plist) {

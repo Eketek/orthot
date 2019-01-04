@@ -1,4 +1,12 @@
 0.3.0:
+  4 Jan 2019
+    Fixed several defects in indirect force portal handling which where caused by the "Eketek-made-sweeping-changes-then-completely-forgot-to-test-it" problem
+  3 Jan 2019
+    The concept of "Indirect Force" has been formalized and added to the movement engine and is now the main mechanism through which gravity and riding is handled.
+      (this replaces various informal hacks and is a major improvement over the original design)
+    Added crates.
+    Keys now ride on top of moving objects
+    Old stack-falling logic has been removed and replaced with more consistant handling based on indirect forces.
   2 Jan 2019
     Mousing over the "key" GUI element now causes the game to temporarilly place illustrative reticles around all locks which that key is able to unlock.
   1 Jan 2019

@@ -200,6 +200,13 @@ orthot.AnimateBlock = function(zone, blk) {
       behind.copy(libek.direction.vector[libek.direction.invert[_heading]])
     }
     
+    ctl.cancelActiveAnim = function() {      
+      if (activeAnim) {
+        activeAnim.stop()
+        activeAnim = null
+      }
+    }
+    
     ctl.shift = new libek.CommandSequence(
       init, end, 1,
       
@@ -419,6 +426,7 @@ orthot.AnimateBlock = function(zone, blk) {
       }
     },
     startContinuousMultiaxialRotator:function(speed, axis, pivot) {
+      mainINST.ctl.cancelActiveAnim()
       let rotator = mainINST.ctl.continuousmultiaxialrotator(speed, axis, pivot)
       zone.addCommandsequence_realtime(rotator)
       activeAnim = rotator

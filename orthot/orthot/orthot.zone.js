@@ -338,30 +338,13 @@ orthot.Zone = function(ekvx, override_startloc) {
       if (i != -1) {
         o.ctn.content.splice(i,1)
       }
-      let nctn = this.getAdjacentCTN(o.ctn, libek.direction.code.UP)      
-      if (nctn.bump()) {
-        while (true) {
-          nctn = this.getAdjacentCTN(nctn, libek.direction.code.UP)
-          if (nctn.content.length == 0) {
-            break
-          }
-          if (!nctn.bump(true)) {
-            break
-          }
-        }
-      }
     }
     o.ctn = ctn   
     
     if (o.obj) {
       o.worldpos.set(x,y,z)
-      //o.obj.position.set(x,y,z)
-      //if (o.obj.parent != this.scene) {
-      //  this.scene.add(o.obj)  
-      //}
     }
     
-    //ctn.content.push(o)
     if (o.OnUpdateCTN) {
       o.OnUpdateCTN()
     }
@@ -403,6 +386,16 @@ orthot.Zone = function(ekvx, override_startloc) {
     }
     return true
   } 
+  
+  this.impededBy = function( mover, impeder ) {
+    if (!impeder.SpatialClass || !mover.SpatialClass) {
+      return false
+    }
+    if (!traverseTestTBL[mover.SpatialClass]) {
+      return true
+    }
+    return (traverseTestTBL[mover.SpatialClass].indexOf(impeder.SpatialClass) == -1)
+  }
   
   this.getAdjacentCTN = function(ctn, dir) {    
     switch(dir) {
@@ -473,7 +466,7 @@ orthot.Zone = function(ekvx, override_startloc) {
           //accept the portal if it has not been rejected by a chained scan
           if (visited.indexOf(dportal == -1)) {
             break
-          }getAdjacentCTN
+          }
         }
         dportal = undefined
       }
@@ -659,43 +652,42 @@ orthot.Zone = function(ekvx, override_startloc) {
   //    things like Release of tension, gravity, riding, and shearing are triggered through this
   //
   //  This, incidentally, was conceived as an extremely roundabout [but thorough] way to make keys and crates ride moving objects... 
-  let processSecondaryForces = function(force) {
+  let processIndirectForces = function(force) {
     let ctn = force.fromCTN
     let from_nbrpaths = getInboundNeighbors(force.fromCTN, force.fromHEADING)
     
     // outbound secondary forces - these apply to neighbors of force.fromCTN 
     for (let path of from_nbrpaths) {
-      let sforce = { OBJ:force.OBJ, dir:path.dir, heading:force.fromHEADING, primaryForce:force }
-      if (path.sourcePortal) {      
-        // If the neighbor is behind a portal, inverse-portal the secondary force out to the neighbor (from targetPortal to sourcePortal).
-        // The inverse-portal'd force should be transformed by the portal to whatever the movement should look like form the source portal 
-        //NOTE:  This also is a wild guess.  I am unsure whether or not this even should give a *correct* transformation of a secondary force
-        // through an inverse portal.  
-        sforce.heading = libek.direction.rotateDirection_bydirections(
+    
+      // If the neighbor is behind a portal, inverse-portal the secondary force out to the neighbor (from targetPortal to sourcePortal).
+      // The inverse-portal'd force should be transformed by the portal to whatever the movement should look like form the source portal 
+      //NOTE:  This also is a wild guess.  I am unsure whether or not this even should give a *correct* transformation of a secondary force
+      // through an inverse portal.  
+      let heading = path.sourcePortal ? 
+        libek.direction.rotateDirection_bydirections(
           force.fromHEADING, 
           libek.direction.invert[targetPortal.up],
           libek.direction.invert[targetPortal.forward],
           sourcePortal.up,
           sourcePortal.forward
-        )
-      }
-      path.ctn.applyOutboundSecondaryForce(sforce)
+        ) 
+        : force.fromHEADING      
+      path.ctn.applyOutboundIndirectForce(heading, path.dir, force)      
     }
     
     // inbound secondary forces - these apply to neighbors of force.toCTN 
     let to_nbrpaths = getInboundNeighbors(force.toCTN, libek.direction.invert[force.toHEADING])
     for (let path of to_nbrpaths) {
-      let sforce = { OBJ:force.OBJ, dir:path.dir, heading:force.fromHEADING, primaryForce:force }
-      if (path.sourcePortal) {      
-        sforce.heading = libek.direction.rotateDirection_bydirections(
+      let heading = path.sourcePortal ? 
+        libek.direction.rotateDirection_bydirections(
           force.fromHEADING, 
           libek.direction.invert[targetPortal.up],
           libek.direction.invert[targetPortal.forward],
           sourcePortal.up,
           sourcePortal.forward
-        )
-      }
-      path.ctn.applyInboundSecondaryForce(sforce)
+        ) 
+        : force.fromHEADING      
+      path.ctn.applyInboundIndirectForce(heading, path.dir, force)      
     }
   }
   
@@ -769,26 +761,33 @@ orthot.Zone = function(ekvx, override_startloc) {
     let tgtList = moves_by_source[destID]
     if (tgtList && tgtList.length > 0) {
       for (let tgtForce of tgtList) {
-        //force.outgoing.push(tgtForce)        
-        //If the directions match, the source is chasing the target
-        if (force.toDIR == tgtForce.fromDIR) {          
-          let ocol = {target:tgtForce, type:orthot.Collision.CHASE}
-          force.outgoing.push( ocol )
-          tgtForce.incoming.push({source:force, collision:ocol})
-        }
-        
-        //If the directions are opposite, the source and target are ramming each other
-        else if (force.toDIR == libek.direction.opposite[tgtForce.fromDIR]) {              
-          let ocol = {target:tgtForce, type:orthot.Collision.NEAR_RAM}
-          force.outgoing.push( ocol )
-          tgtForce.incoming.push({source:force, collision:ocol})
-        }
-        
-        //If the directions are neither, the source is striking the target's side
-        else {
-          let ocol = {target:tgtForce, type:orthot.Collision.EDGE_RAM}
-          force.outgoing.push( ocol )
-          tgtForce.incoming.push({source:force, collision:ocol})
+        if (this.impededBy(force.OBJ, tgtForce.OBJ)) {
+          //force.outgoing.push(tgtForce)        
+          //If the directions match, the source is chasing the target
+          if (force.toDIR == tgtForce.fromDIR) {          
+            if (tgtForce.moved) {
+              //stackfall!
+            }
+            else {
+              let ocol = {target:tgtForce, type:orthot.Collision.CHASE}
+              force.outgoing.push( ocol )
+              tgtForce.incoming.push({source:force, collision:ocol})
+            }
+          }
+          
+          //If the directions are opposite, the source and target are ramming each other
+          else if (force.toDIR == libek.direction.opposite[tgtForce.fromDIR]) {              
+            let ocol = {target:tgtForce, type:orthot.Collision.NEAR_RAM}
+            force.outgoing.push( ocol )
+            tgtForce.incoming.push({source:force, collision:ocol})
+          }
+          
+          //If the directions are neither, the source is striking the target's side
+          else {
+            let ocol = {target:tgtForce, type:orthot.Collision.EDGE_RAM}
+            force.outgoing.push( ocol )
+            tgtForce.incoming.push({source:force, collision:ocol})
+          }
         }
       }
     }
@@ -797,29 +796,30 @@ orthot.Zone = function(ekvx, override_startloc) {
     tgtList = moves_by_dest[destID]
     if (tgtList && tgtList.length > 0) {
       for (let otherForce of tgtList) {  
+        if (this.impededBy(force.OBJ, otherForce.OBJ)) {
+          let srcForce = force
+          let tgtForce = otherForce
           
-        let srcForce = force
-        let tgtForce = otherForce
-        
-        // Two forces separated by one space moving toward that space
-        if (force.toDIR == libek.direction.opposite[otherForce.toDIR]) {
-          let ocol = {target:otherForce, type:orthot.Collision.FAR_RAM}
-          force.outgoing.push( ocol )
-          otherForce.incoming.push({source:force, collision:ocol})
-          
-          ocol = {target:force, type:orthot.Collision.FAR_RAM}
-          force.outgoing.push( ocol )
-          force.incoming.push({source:otherForce, collision:ocol})
-        }
-        // Two diagonally adjacent forces headed toward a common adjacent space
-        else if (force.toDIR != tgtForce.toDIR) {
-          let ocol = {target:otherForce, type:orthot.Collision.CORNER_RAM}
-          force.outgoing.push( ocol )
-          otherForce.incoming.push( {source:force, collision:ocol})
-          
-          ocol = {target:force, type:orthot.Collision.CORNER_RAM}
-          force.outgoing.push( ocol )
-          force.incoming.push({source:otherForce, collision:ocol})
+          // Two forces separated by one space moving toward that space
+          if (force.toDIR == libek.direction.opposite[otherForce.toDIR]) {
+            let ocol = {target:otherForce, type:orthot.Collision.FAR_RAM}
+            force.outgoing.push( ocol )
+            otherForce.incoming.push({source:force, collision:ocol})
+            
+            ocol = {target:force, type:orthot.Collision.FAR_RAM}
+            otherForce.outgoing.push( ocol )
+            force.incoming.push({source:otherForce, collision:ocol})
+          }
+          // Two diagonally adjacent forces headed toward a common adjacent space
+          else if (force.toDIR != tgtForce.toDIR) {
+            let ocol = {target:otherForce, type:orthot.Collision.CORNER_RAM}
+            force.outgoing.push( ocol )
+            otherForce.incoming.push( {source:force, collision:ocol})
+            
+            ocol = {target:force, type:orthot.Collision.CORNER_RAM}
+            otherForce.outgoing.push( ocol )
+            force.incoming.push({source:otherForce, collision:ocol})
+          }
         }
       }
     }
@@ -867,7 +867,7 @@ orthot.Zone = function(ekvx, override_startloc) {
             for (let collision of force.outgoing) {
               if (!force.OBJ.hasMovementPriority(collision.target.OBJ, collision.target.fromDIR, force.toDIR, collision.type)) {
                 priorityResolve = false
-              }          
+              }                        
               if (collision.type != orthot.Collision.NONE) {
                 simpleResolve = false
               }
@@ -900,6 +900,7 @@ orthot.Zone = function(ekvx, override_startloc) {
               case trit.TRUE:
                 forces.splice(i, 1)
                 resolved_any = true
+                force.moved = true
                 
                 //If the object moves, simplify Collisions
                 for (let collisionRef of force.incoming) {
@@ -925,12 +926,11 @@ orthot.Zone = function(ekvx, override_startloc) {
                       break
                   }
                 }
-                processSecondaryForces(force)
+                processIndirectForces(force)
                 break
               case trit.FALSE:
                 forces.splice(i, 1)
                 resolved_any = true
-                
 					      //If the move failed for some reason (such as a SIMPLE collision with a very stationary object), 
 					      //degenerate all incoming collisions.
                 
@@ -953,6 +953,8 @@ orthot.Zone = function(ekvx, override_startloc) {
                   }
                 }
                 break
+                
+                //force.OBJ.cancelMove(force)
             }
           }
         }
@@ -964,8 +966,13 @@ orthot.Zone = function(ekvx, override_startloc) {
           for (let force of forces) {
             if (!force.resolved) {
               for (let collision of force.outgoing) {
-                force.OBJ.strike(force, collision.target.OBJ, collision.type, true)
-                collision.target.OBJ.struck(force, force.OBJ, collision.type, true)
+                if (collision.target.OBJ == force.OBJ) {
+                  console.log("ERROR:  object struck itself???!")
+                }
+                else {
+                  force.OBJ.strike(force, collision.target.OBJ, collision.type, true)
+                  collision.target.OBJ.struck(force, force.OBJ, collision.type, true)
+                }
               }
             }
           }

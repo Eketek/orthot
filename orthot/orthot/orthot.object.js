@@ -34,8 +34,12 @@ orthot.OrthotObject = function(THIS, zone) {
   */
   THIS.strike = function(force, otherOBJ, collision, crash=false) { return false } 
   
+  THIS.idle = function() {}
+  
   //Called if requested by preStruck() and there either is space ahead or the space ahead is being vacated and strike()/struck() didn't veto the move
   THIS.move = function(force) { return false }
+  
+  THIS.cancelMove = function(force) {}
   
   //Called if requested by preStruck() and move either was not requested or was requested and subsequently vetoed by strike()/struck()
   THIS.crush = function(force) { }
@@ -45,6 +49,7 @@ orthot.OrthotObject = function(THIS, zone) {
   //isTraversableBy:function(otherOBJ) {return true},
   
   THIS.intruded = function(other) {}
+  THIS.intrude = function(other) {}
   
   // Called when a force originating from this object and pointed directly at another object either causes the object to leave or results in its destruction.
   //  (This is mainly used to trigger the Player pushwalk animation)
@@ -66,7 +71,7 @@ orthot.OrthotObject = function(THIS, zone) {
     }
     THIS.defeated = true
   }
-  
+  /*
   // Wake any objects up to possibly trigger gravity
   // called whenever anything is removed from lower container (if there is a contiguous stack of non-immobile objects between the the object location
   // and the location of whatever moved)
@@ -80,6 +85,32 @@ orthot.OrthotObject = function(THIS, zone) {
   THIS.stackFall = function(force) {
     return false
   }
+  */
+  
+  
+  /*  An object is moving out of some container other than this one, into a container which is adjacent to this container
+   *
+   *  heading:
+   *    Apparent direction of movement.  This either is the literal heading of the originating force or is the direction as transformed by a portal
+   *    which points at the location the object is moving into
+   *  normal:
+   *    A vector pointing toward the space which the object is moving into
+   *  originatingForce:
+   *    The [primary] force which is causing this secondary force to be applied
+   */
+  THIS.applyInboundIndirectForce = function(heading, normal, originatingForce) { }
+  
+  /*  An object is moving out of some container other than this one, into a container which is adjacent to this container
+   *
+   *  heading:
+   *    Apparent direction of movement.  This either is the literal heading of the originating force or is the direction as transformed by a portal
+   *    which points at the location the object is moving into
+   *  normal:
+   *    A vector pointing toward the space which the object is moving into
+   *  originatingForce:
+   *    The [primary] force which is causing this secondary force to be applied
+   */
+  THIS.applyOutboundIndirectForce = function(heading, normal, originatingForce) { }
   
   THIS.destroy = function() { 
     if (THIS.destroyed) {
@@ -159,39 +190,51 @@ orthot.StandardObject = function(THIS, zone) {
       zone.removeTickListener(THIS.update)
       return
     }
-    if (THIS.updflag) {
-      console.log(THIS.updflag, THIS.state)
-    }
-    if (THIS.AutoGravity) {
-      let gravity = orthot.topology.scan_simple(zone, THIS.ctn, THIS, libek.direction.code.DOWN, libek.direction.code.NORTH, libek.direction.code.UP)
-      gravity.OBJ = THIS
-      gravity.initiator = THIS
-      gravity.action = "fall"
-      gravity.strength = orthot.Strength.NORMAL
-      
-      switch(THIS.state) {
-        case orthot.ObjectState.FALLING:
+    
+    let gravity = orthot.topology.scan_simple(zone, THIS.ctn, THIS, libek.direction.code.DOWN, libek.direction.code.NORTH, libek.direction.code.UP)
+    gravity.OBJ = THIS
+    gravity.initiator = THIS
+    gravity.action = "fall"
+    gravity.strength = orthot.Strength.NORMAL
+    
+    switch(THIS.state) {    
+      case orthot.ObjectState.MAYBEFALL:
+      case orthot.ObjectState.FALLING:
+        if (gravity.isTraversable()) {
           zone.addForce(gravity)
-          break
-        case orthot.ObjectState.IDLE:
-        case orthot.ObjectState.WALKING:
-          if (gravity.isTraversable()) {
-            THIS.state = orthot.ObjectState.FALLING
-            let uctn = zone.getAdjacentCTN(THIS.ctn, libek.direction.code.UP)
-            zone.addForce(gravity)
-            uctn.stackFall(gravity)
-          }
-          else {
-            zone.removeTickListener(THIS.update)
-          }
-          break
-        default:
+        }
+        else {
           zone.removeTickListener(THIS.update)
-          break
-      }
+          if (THIS.state == orthot.ObjectState.FALLING) {
+            gravity.toCTN = THIS.ctn
+            THIS.animCTL.impactDown(gravity)
+          }
+          THIS.state = orthot.ObjectState.IDLE
+          THIS.idle()
+        }
+        break
+      case orthot.ObjectState.IDLE:        
+        if (gravity.isTraversable()) {
+          THIS.state = orthot.ObjectState.MAYBEFALL
+          let uctn = zone.getAdjacentCTN(THIS.ctn, libek.direction.code.UP)
+          zone.addForce(gravity)
+        }
+      case orthot.ObjectState.WALKING:
+        if (gravity.isTraversable()) {
+          THIS.state = orthot.ObjectState.MAYBEFALL
+          let uctn = zone.getAdjacentCTN(THIS.ctn, libek.direction.code.UP)
+          zone.addForce(gravity)
+        }
+        else {
+          zone.removeTickListener(THIS.update)
+        }
+        break
+      default:
+        break
     }
   }
   
+  /*
   THIS.stackFall = function(force) {
     if (THIS.AutoGravity) {
       let gravity = orthot.topology.scan_simple(zone, THIS.ctn, THIS, libek.direction.code.DOWN)
@@ -206,13 +249,25 @@ orthot.StandardObject = function(THIS, zone) {
       return gravity
     }
   }
+  */
   
   THIS.struck = function(force) {
     
   }
-  THIS.strike = function(force) {
-    //if (forc
-    //THIS.animCTL.impactDown(force)
+  
+  THIS.strike = function(force, otherOBJ, collision, crash=false) {
+    /*
+    console.log("strike", force, otherOBJ, collision, crash)
+    if (force.action == "fall") {
+      if (THIS.state == orthot.ObjectState.FALLING) {
+        THIS.animCTL.impactDown(force)
+      }
+      
+      THIS.state = orthot.ObjectState.IDLE
+      zone.removeTickListener(THIS.update)   
+      //THIS.idle()
+    }
+    */
   }
   
   THIS.push = function(force) { 
@@ -227,6 +282,7 @@ orthot.StandardObject = function(THIS, zone) {
       }
       else {        
         zone.addTickListener(THIS.update)
+        THIS.state = orthot.ObjectState.WALKING
       }
       if (force.pusher) {
         force.pusher.notify_ForcePropagationClearedObstruction(force, THIS)
@@ -234,7 +290,7 @@ orthot.StandardObject = function(THIS, zone) {
       zone.putGameobject(force.toCTN, THIS)
       if ( (force.initiator == force.pusher) && ( zone.ticknum > (prev_ticknum+1) ) ) {
         THIS.animCTL.impulseShift(force)
-        THIS.state = orthot.ObjectState.WALKING
+        //THIS.state = orthot.ObjectState.WALKING
       }
       else {
         THIS.animCTL.shift(force)
@@ -243,7 +299,7 @@ orthot.StandardObject = function(THIS, zone) {
       return trit.TRUE
     }
     else if ((!force.deferred) && (force.strength > orthot.Strength.NONE)) {
-      force.toCTN.push(force)      
+      force.toCTN.push(force)
       return trit.MAYBE
     }
     else if (force.action == "fall") {
@@ -267,4 +323,19 @@ orthot.StandardObject = function(THIS, zone) {
       return trit.FALSE
     }
   }
+  THIS.cancelMove = function(force) {
+    console.log("cancel-move", force)
+    if (force.action == "fall") {
+      if (THIS.state == orthot.ObjectState.FALLING) {
+        THIS.animCTL.impactDown(force)
+      }
+      
+      THIS.state = orthot.ObjectState.IDLE
+      zone.removeTickListener(THIS.update)   
+    }
+  }
 }
+
+
+
+

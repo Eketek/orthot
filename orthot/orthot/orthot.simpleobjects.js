@@ -100,6 +100,30 @@ orthot.PushBlock = function(zone, color) {
     }
     return false
   }
+  
+  this.applyOutboundIndirectForce = function(heading, normal, originatingForce) {
+    switch(this.state) {
+      case orthot.ObjectState.DEFEATED:
+      case orthot.ObjectState.FALLING:
+        return
+      default:
+        if (normal == libek.direction.code.DOWN) {
+          let pforce = orthot.topology.scan_simple(zone, this.ctn, this, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
+          if (heading == libek.direction.code.DOWN) {
+            pforce.initiator = originatingForce.initiator
+            pforce.strength = orthot.Strength.NORMAL
+            pforce.action = "fall"
+            this.state = orthot.ObjectState.FALLING
+            zone.addForce(pforce)
+          }
+          else {
+            this.state = orthot.ObjectState.MAYBEFALL
+          }
+          zone.addTickListener(this.update)
+        }
+        break
+    }    
+  }
 }
 
 orthot.Crate = function(zone) {
@@ -115,6 +139,31 @@ orthot.Crate = function(zone) {
     let mdl = libek.getAsset("crate")
     return mdl
   }
+  this.applyOutboundIndirectForce = function(heading, normal, originatingForce) {
+    switch(this.state) {
+      case orthot.ObjectState.DEFEATED:
+      case orthot.ObjectState.FALLING:
+        return
+      default:
+        //If the object below moved, move with it!  (this is to be replaced with a much more general solution based on surface interactions)
+        if (normal == libek.direction.code.DOWN) {
+          let pforce = orthot.topology.scan_simple(zone, this.ctn, this, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
+          if (heading == libek.direction.code.DOWN) {
+            pforce.initiator = originatingForce.initiator
+            pforce.strength = orthot.Strength.NORMAL
+            pforce.action = "fall"
+            this.state = orthot.ObjectState.FALLING
+          }
+          else {
+            pforce.strength = orthot.Strength.LIGHT
+            pforce.action = "driven"
+          }
+          zone.addForce(pforce)
+          zone.addTickListener(this.update)
+        }
+        break
+    }    
+  }
   
   this.propagateForce = (function(force){
     if (this.state == orthot.ObjectState.DEFEATED) {
@@ -122,7 +171,6 @@ orthot.Crate = function(zone) {
     }
     if (force.strength >= orthot.Strength.NORMAL) {
       let pbf = orthot.topology.scan_simple(zone, this.ctn, this, force.toHEADING, libek.direction.code.SOUTH, libek.direction.code.UP)
-      pbf.OBJ = this
       pbf.pusher = force.OBJ
       pbf.initiator = force.initiator
       pbf.action = force.strength >= orthot.Strength.CRUSHING ? "crushed" : "pushed"
@@ -138,6 +186,7 @@ orthot.Crate = function(zone) {
 orthot.Key = function(zone, color, code) {
   orthot.StandardObject(this, zone)
   this.AutoGravity = true
+  this.state = orthot.ObjectState.IDLE
   zone.addTickListener(this.update)
   
   this.itemType = "key"
@@ -169,11 +218,15 @@ orthot.Key = function(zone, color, code) {
     }
   }
   
-  this.initGraphics = function() {
-    orthot.AnimateBlock(this.zone, this)
+  this.idle = function() {
     let axes = [ new THREE.Vector3(-0.5,1,0).normalize(), new THREE.Vector3(0,1,0) ]
     let speed = [0.4*Math.random() + 1, (-0.25)*Math.random()]
     this.animCTL.startContinuousMultiaxialRotator(speed, axes, new THREE.Vector3(0,0.5,0))
+  }
+  
+  this.initGraphics = function() {
+    orthot.AnimateBlock(this.zone, this)
+    this.idle()
     return true
   }
   
@@ -183,7 +236,7 @@ orthot.Key = function(zone, color, code) {
     return mdl
   }
   
-  this.intruded = function(other) {
+  this.intruded = this.intrude = function(other) {
     if (other.isPlayer) {
       this.animCTL.pickedup(other.forward)
     
@@ -193,6 +246,66 @@ orthot.Key = function(zone, color, code) {
       })      
     }
   }
+  this.applyOutboundIndirectForce = function(heading, normal, originatingForce) {
+    switch(this.state) {
+      case orthot.ObjectState.DEFEATED:
+      case orthot.ObjectState.FALLING:
+        return
+      default:
+        //If the object below moved, move with it!  (this is to be replaced with a much more general solution based on surface interactions)
+        if (normal == libek.direction.code.DOWN) {
+          console.log("OBiF")
+          let pforce = orthot.topology.scan_simple(zone, this.ctn, this, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
+          if (pforce.isTraversable()) {
+            pforce.strength = orthot.Strength.LIGHT
+            pforce.initiator = originatingForce.initiator
+            pforce.action = "driven"
+            zone.addForce(pforce)
+          }
+          else if (heading != libek.direction.code.DOWN) {
+            pforce = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, libek.direction.code.SOUTH, libek.direction.code.UP)
+            if (pforce.isTraversable()) {
+              this.state = orthot.ObjectState.FALLING
+              pforce.strength = orthot.Strength.LIGHT
+              pforce.action = "fall"
+              zone.addForce(pforce)
+            }
+            else {              
+              this.state = orthot.ObjectState.FALLING
+            }
+            zone.addTickListener(this.update)
+          }
+        }
+        break
+    }    
+  }
+  
+  /*
+  this.applyOutboundIndirectForce = function(heading, normal, originatingForce) {
+    switch(this.state) {
+      case orthot.ObjectState.DEFEATED:
+      case orthot.ObjectState.FALLING:
+        return
+      default:
+        //If the object below moved, move with it!  (this is to be replaced with a much more general solution based on surface interactions)
+        if (normal == libek.direction.code.DOWN) {
+          let pforce = orthot.topology.scan_simple(zone, this.ctn, this, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
+          if (heading == libek.direction.code.DOWN) {
+            console.log("OBIF - fallNOW")
+            pforce.initiator = originatingForce.initiator
+            pforce.strength = orthot.Strength.NORMAL
+            pforce.action = "fall"
+            this.state = orthot.ObjectState.FALLING
+            zone.addForce(pforce)
+          }
+          else {
+            console.log("OBIF - maybefallLATER")
+          }
+          zone.addTickListener(this.update)
+        }
+        break
+    }    
+  }*/
 }
 
 orthot.Lock = function(zone, color, code) {

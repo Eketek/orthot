@@ -10,14 +10,14 @@ orthot.Container = function(x,y,z) {
     z:z, 
     content:[], 
     id:`${x}|${y}|${z}`,
-    
+    /*
     bump:function() {
       let falltriggered = false
       for (let internalOBJ of r.content) {
         falltriggered |= internalOBJ.bump()
       }
       return falltriggered
-    },
+    },*/
     push:function(force) {
       let internalOBJ_moved
       for (let internalOBJ of r.content) {        
@@ -37,6 +37,7 @@ orthot.Container = function(x,y,z) {
       for (let other of r.content) {
         if (other != obj) {
           other.intruded(obj)
+          obj.intrude(other)
         }
       }
     },
@@ -52,6 +53,7 @@ orthot.Container = function(x,y,z) {
         }
       }
     },
+    /*
     stackFall:function(force) {
       let nforce
       let _force
@@ -65,14 +67,38 @@ orthot.Container = function(x,y,z) {
         nforce.OBJ.zone.getAdjacentCTN(r, libek.direction.code.UP).stackFall(nforce)
       }
     },
+    */
     
-    applyInboundSecondaryForce(secondaryForce) {
-      //console.log("IB-secondary force")
-      //console.log(secondaryForce, this)
+    /*  An object is moving out of some container other than this one, into a container which is adjacent to this container
+     *
+     *  heading:
+     *    Apparent direction of movement.  This either is the literal heading of the originating force or is the direction as transformed by a portal
+     *    which points at the location the object is moving into
+     *  normal:
+     *    A vector pointing toward the space which the object is moving into
+     *  originatingForce:
+     *    The [primary] force which is causing this secondary force to be applied
+     */
+    applyInboundIndirectForce(heading, normal, originatingForce) {
+      for (let obj of r.content) {
+        obj.applyInboundIndirectForce(heading, normal, originatingForce)
+      }
     },
-    applyOutboundSecondaryForce(secondaryForce) {
-      //console.log("OB-secondary force")
-      //console.log(secondaryForce, this)    
+    
+    /*  An object is moving out of an adjacent container, into some container other than this one
+     *
+     *  heading:
+     *    Apparent direction of movement.  This either is the literal heading of the originating force or is the direction as transformed by a portal
+     *    which points at the location the object is moving away from
+     *  normal:
+     *    A vector pointing toward the space which the object is moving away from
+     *  originatingForce:
+     *    The [primary] force which is causing this secondary force to be applied
+     */
+    applyOutboundIndirectForce(heading, normal, originatingForce) {
+      for (let obj of r.content) {
+        obj.applyOutboundIndirectForce(heading, normal, originatingForce)
+      }
     },
     
     /*  Query the container for a side-attachment.  (This is mainly for finding portals and ladders)

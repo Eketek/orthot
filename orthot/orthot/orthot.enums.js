@@ -24,12 +24,31 @@ orthot.ObjectState = {
   SLIDING:3,
   DEFEATED:4,
   PICKEDUP:5,
+  MAYBEFALL:6
 }
 
+// Force-strength values.  Enumerated with large values because this should be closely related to composite stresses (weight/tension).
 orthot.Strength = {
-  NONE: 0,
-  LIGHT: 100,
-  NORMAL: 250,
-  HARD: 500,
-  CRUSHING: 1000
+  NONE:            0,
+  LIGHT:        5000,
+  NORMAL:      25000,
+  HARD:       100000,
+  CRUSHING:  1000000
+}
+
+// Various types of surfaces.  One of the first 
+orthot.SurfaceType = {
+  FRICTIONLESS:0,
+  SLICK:1,
+  SMOOTH:2,
+  ROUGH:3,  
+  COARSE:4,
+  
+  SOFT:5,
+  STICKY:6,  
+  ELASTIC:7,
+  
+  METALLIC:8,  
+  MAGNETIC_NEGATIVE:9,
+  MAGNETIC_POSITIVE:10,
 }

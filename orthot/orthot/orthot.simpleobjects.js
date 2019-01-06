@@ -38,7 +38,7 @@ orthot.ScenePortal = function(zone) {
   }
 }
 
-/*  Object thta allows movement up and down along a diagonal vector.
+/*  Object that allows movement up and down along a diagonal vector.
     Stairs are regarded as "ramps" for every purpose other than graphical representation
 */
 orthot.Stair = function(zone, color, align) {
@@ -75,6 +75,10 @@ orthot.PushBlock = function(zone, color) {
   
   this.SpatialClass = "solid"    
   this.state = orthot.ObjectState.IDLE
+  this.fall_forcestrength = orthot.Strength.LIGHT
+  
+  this.push = function(force) {
+  }
   
   this.mdlgen = function() {
     let mdl = libek.getAsset("pushblock")
@@ -96,9 +100,7 @@ orthot.PushBlock = function(zone, color) {
       pbf.action = force.strength >= orthot.Strength.CRUSHING ? "crushed" : "pushed"
       pbf.strength = orthot.Strength.LIGHT
       zone.addForce(pbf)
-      return true
     }
-    return false
   }
   
   this.applyOutboundIndirectForce = function(heading, normal, originatingForce) {
@@ -111,14 +113,12 @@ orthot.PushBlock = function(zone, color) {
           let pforce = orthot.topology.scan_simple(zone, this.ctn, this, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
           if (heading == libek.direction.code.DOWN) {
             pforce.initiator = originatingForce.initiator
-            pforce.strength = orthot.Strength.NORMAL
+            pforce.strength = orthot.Strength.LIGHT
             pforce.action = "fall"
             this.state = orthot.ObjectState.FALLING
             zone.addForce(pforce)
           }
-          else {
-            this.state = orthot.ObjectState.MAYBEFALL
-          }
+          
           zone.addTickListener(this.update)
         }
         break
@@ -134,6 +134,7 @@ orthot.Crate = function(zone) {
   
   this.SpatialClass = "solid"    
   this.state = orthot.ObjectState.IDLE
+  this.fall_forcestrength = orthot.Strength.LIGHT
   
   this.mdlgen = function() {
     let mdl = libek.getAsset("crate")
@@ -150,12 +151,13 @@ orthot.Crate = function(zone) {
           let pforce = orthot.topology.scan_simple(zone, this.ctn, this, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
           if (heading == libek.direction.code.DOWN) {
             pforce.initiator = originatingForce.initiator
-            pforce.strength = orthot.Strength.NORMAL
+            pforce.strength = orthot.Strength.LIGHT
             pforce.action = "fall"
-            this.state = orthot.ObjectState.FALLING
+            //this.state = orthot.ObjectState.FALLING
           }
           else {
             pforce.strength = orthot.Strength.LIGHT
+            pforce.priority = 200
             pforce.action = "ride"
           }
           zone.addForce(pforce)
@@ -176,9 +178,7 @@ orthot.Crate = function(zone) {
       pbf.action = force.strength >= orthot.Strength.CRUSHING ? "crushed" : "pushed"
       pbf.strength = force.strength   //crates propagate the input force completely
       zone.addForce(pbf)
-      return true
     }
-    return false
   }).bind(this)
 }
 

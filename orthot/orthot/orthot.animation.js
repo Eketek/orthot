@@ -1265,6 +1265,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
         {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
       ],
       lerprelpos,
+      txMAIN.update,
       end_trackCam,
     )
     

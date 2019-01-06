@@ -1,4 +1,14 @@
 0.3.0:
+  5 Jan 2019
+    The movement engine has been modified to allow multiple forces to be applied to a single object and used contingentially
+      The movement engine will propagate all applied forces, but only one of the forces can result in the object moving.
+      The movement engine will use force priority and force strength to select the best force to apply to the object.
+      If the object does not move under the influence of the highest priority force, it will select a lower priority force (and continue with lower and lower
+        priority forces until the object either moves or until all attempts to move the object have failed)
+    All objects have been modified to use force priority to manage gravity instead of object state
+    Fixed an animation glitch (down-ramp to lower down-ramp)
+    An object which is influenced by gravity and which is positioned above a horizontally aligned portal can now push away an object which is obstructing
+      a vertically aligned output portal (doing this correctly was the main reason for modifying the movement engine).  
   4 Jan 2019
     Fixed several defects in indirect force portal handling which where caused by the "Eketek-made-sweeping-changes-then-completely-forgot-to-test-it" problem
   3 Jan 2019

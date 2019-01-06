@@ -153,28 +153,31 @@ orthot.OrthotObject = function(THIS, zone) {
   
   THIS.sides = [ 0, [],[],[],[],[],[] ]
   
-  let fproptick = -1
+  THIS.forces = []
+  
+  THIS.fproptick = -1
   let fpropdirs = []   
   
   THIS.__propagate_force__ = function(force, tick) {    
-    if (fproptick < tick) {
+    if (THIS.fproptick < tick) {
+      THIS.fproptick = tick
       if (fpropdirs.length != 0) {
         fpropdirs = []
       }
     }
-    if ( (fproptick < tick) || (fpropdirs.indexOf(force.fromDIR) == -1) ) {
-      if (THIS.propagateForce(force)) {
-        fpropdirs.push(force.fromDIR)
-        fproptick = tick
-        return true
-      }
+    
+    if (fpropdirs.indexOf(force.toHEADING) == -1 ) {
+      THIS.propagateForce(force)
+      fpropdirs.push(force.toHEADING)
     }
-    return false
   }
 }
 
 orthot.StandardObject = function(THIS, zone) {    
+
   orthot.OrthotObject(THIS, zone) 
+  THIS.fall_forcestrength = orthot.Strength.LIGHT
+  
   THIS.initGraphics = function() {
     orthot.AnimateBlock(zone, THIS)
     return true
@@ -195,43 +198,10 @@ orthot.StandardObject = function(THIS, zone) {
     gravity.OBJ = THIS
     gravity.initiator = THIS
     gravity.action = "fall"
-    gravity.strength = orthot.Strength.NORMAL
+    gravity.strength = THIS.fall_forcestrength
+    gravity.priority = 100
+    zone.addForce(gravity)
     
-    switch(THIS.state) {    
-      case orthot.ObjectState.MAYBEFALL:
-      case orthot.ObjectState.FALLING:
-        if (gravity.isTraversable()) {
-          zone.addForce(gravity)
-        }
-        else {
-          zone.removeTickListener(THIS.update)
-          if (THIS.state == orthot.ObjectState.FALLING) {
-            gravity.toCTN = THIS.ctn
-            THIS.animCTL.impactDown(gravity)
-          }
-          THIS.state = orthot.ObjectState.IDLE
-          THIS.idle()
-        }
-        break
-      case orthot.ObjectState.IDLE:        
-        if (gravity.isTraversable()) {
-          THIS.state = orthot.ObjectState.MAYBEFALL
-          let uctn = zone.getAdjacentCTN(THIS.ctn, libek.direction.code.UP)
-          zone.addForce(gravity)
-        }
-      case orthot.ObjectState.WALKING:
-        if (gravity.isTraversable()) {
-          THIS.state = orthot.ObjectState.MAYBEFALL
-          let uctn = zone.getAdjacentCTN(THIS.ctn, libek.direction.code.UP)
-          zone.addForce(gravity)
-        }
-        else {
-          zone.removeTickListener(THIS.update)
-        }
-        break
-      default:
-        break
-    }
   }
   
   THIS.struck = function(force) {
@@ -254,7 +224,12 @@ orthot.StandardObject = function(THIS, zone) {
       }
       else {        
         zone.addTickListener(THIS.update)
-        THIS.state = orthot.ObjectState.WALKING
+        if (force.toHEADING == libek.direction.code.DOWN) {
+          THIS.state = orthot.ObjectState.FALLING
+        }
+        else {
+          THIS.state = orthot.ObjectState.WALKING
+        }
       }
       if (force.pusher) {
         force.pusher.notify_ForcePropagationClearedObstruction(force, THIS)
@@ -275,12 +250,12 @@ orthot.StandardObject = function(THIS, zone) {
     }
     else if (force.action == "fall") {
       if (THIS.state == orthot.ObjectState.FALLING) {
-        THIS.state = orthot.ObjectState.IDLE
         THIS.animCTL.impactDown(force)
       }
       
       THIS.state = orthot.ObjectState.IDLE
-      zone.removeTickListener(THIS.update)   
+      zone.removeTickListener(THIS.update)
+      THIS.idle()
       return trit.FALSE
     }
     else if (force.action == "crushed") {
@@ -291,18 +266,9 @@ orthot.StandardObject = function(THIS, zone) {
       return trit.TRUE
     }
     else {
+      //console.log(THIS.state, force)
+      THIS.idle()
       return trit.FALSE
-    }
-  }
-  THIS.cancelMove = function(force) {
-    console.log("cancel-move", force)
-    if (force.action == "fall") {
-      if (THIS.state == orthot.ObjectState.FALLING) {
-        THIS.animCTL.impactDown(force)
-      }
-      
-      THIS.state = orthot.ObjectState.IDLE
-      zone.removeTickListener(THIS.update)   
     }
   }
 }

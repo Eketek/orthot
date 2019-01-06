@@ -56,46 +56,8 @@ orthot.Player = function(zone) {
   }
   
   this.recvInput = function(inputs) {
-    let force_gravity
-    switch(this.state) {
-      case orthot.ObjectState.DEFEATED:
-        return
-      case orthot.ObjectState.FALLING:
-        force_gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
-        if (!force_gravity.isTraversable()) {
-          if (force_gravity.toCTN.push(force_gravity)) {
-            if (!force_gravity.isTraversable()) {
-              this.state = orthot.ObjectState.IDLE
-            }
-          }
-          else {
-            this.state = orthot.ObjectState.IDLE
-          }
-        }
-        break
-      case orthot.ObjectState.IDLE:
-        force_gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
-        if (force_gravity.isTraversable()) {
-          this.animCTL.setNMAP(nmap_walk)
-          this.state = orthot.ObjectState.FALLING
-        }
-        break
-      case orthot.ObjectState.WALKING:
-        force_gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
-        if (force_gravity.isTraversable()) {
-          this.animCTL.setNMAP(nmap_walk)
-          this.state = orthot.ObjectState.FALLING
-        }
-        else if (force_gravity.toCTN.push(force_gravity)) {
-          if (force_gravity.isTraversable()) {
-            this.animCTL.setNMAP(nmap_walk)
-            this.state = orthot.ObjectState.FALLING
-          }
-        }
-        break      
-      case orthot.ObjectState.CLIMBING:
-        break
-      
+    if (this.state == orthot.ObjectState.DEFEATED) {
+      return
     }
     
     let iUP = inputs.KeyW || inputs.ArrowUp
@@ -118,12 +80,20 @@ orthot.Player = function(zone) {
       dir = libek.direction.getKeyDirection("left", sviewCTL.campos.theta)
     }
     
+    //If gravity is valid (or eventually "enabled"), set up a high-priority downward force.  
+    if (this.state != orthot.ObjectState.CLIMBING) {
+      let force_gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
+      force_gravity.priority = 100
+      force_gravity.initiator = this
+      force_gravity.action = "fall"
+      force_gravity.inputDIR = dir
+      force_gravity.strength = orthot.Strength.NORMAL
+      zone.addForce(force_gravity)
+    }
     //process input
     switch(this.state) {
       case orthot.ObjectState.IDLE:
         if (dir) {    
-          //console.log("try-walk")
-          //console.log(dir)
           this.forward = dir.code
           let force = orthot.topology.scan_ramp(zone, this.ctn, this, dir.code, this.forward, this.up)
           force.initiator = this
@@ -152,7 +122,7 @@ orthot.Player = function(zone) {
           this.ready()
           this.state = orthot.ObjectState.IDLE
         }
-      break
+        break
       case orthot.ObjectState.CLIMBING:   
         if (inputs.Space) {
           this.animCTL.hopoffLadder(this.forward, this.up)  
@@ -174,22 +144,15 @@ orthot.Player = function(zone) {
           force.strength = orthot.Strength.NORMAL
           zone.addForce(force)
         }  
-      break
+        break
       case orthot.ObjectState.SLIDING:
-      break
+        break
       case orthot.ObjectState.FALLING:
         if (dir) {          
           libek.direction.setOrientation(this.animCTL.orientation, dir.code, "up")   
           this.ready()
-        }        
-        
-        force_gravity.initiator = this
-        force_gravity.action = "fall"
-        force_gravity.inputDIR = dir
-        force_gravity.strength = orthot.Strength.NORMAL
-        zone.addForce(force_gravity)
-        
-      break
+        }
+        break
     }    
   }
   
@@ -308,7 +271,7 @@ orthot.Player = function(zone) {
           return trit.FALSE
         }
       break
-      case "fall":      
+      case "fall":
         if (force.isTraversable()) {
           if (this.state != orthot.ObjectState.DEFEATED) {        
             zone.putGameobject(force.toCTN, this)
@@ -379,18 +342,6 @@ orthot.Player = function(zone) {
       break
     }
     return trit.FALSE
-  }
-  
-  this.stackFall = function(force) {
-    let gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
-    gravity.initiator = force.initiator
-    gravity.action = "fall"
-    gravity.puller = force.OBJ
-    gravity.strength = orthot.Strength.NORMAL
-    this.state = orthot.ObjectState.FALLING
-    zone.addForce(gravity)
-    zone.addTickListener(this.update)
-    return gravity
   }
 }
 //orthot.Player.prototype = orthot.OrthotObject

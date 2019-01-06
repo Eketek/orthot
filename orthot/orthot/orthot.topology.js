@@ -40,6 +40,7 @@ orthot.topology = {
     
     let r = Object.assign( {
       OBJ:obj,
+      priority:0,
       path:[hop],
       isPortaljump:isPortaljump,
       isTraversable:function() {
@@ -81,6 +82,7 @@ orthot.topology = {
     
     let r = { 
       OBJ:obj,
+      priority:0,
       path:[],      //Used by animation system for handling portals.  Eventually, the movement engine will need this for certain special cases
       fromCTN:loc,
       fromHEADING:heading,
@@ -337,6 +339,7 @@ orthot.topology = {
     
     let r = { 
       OBJ:obj,
+      priority:0,
       path:[],      //Used by animation system for handling portals.  Eventually, the movement engine will need this for certain special cases
       fromCTN:loc,
       fromHEADING:fromHEADING,
@@ -437,6 +440,7 @@ orthot.topology = {
     
     let r = { 
       OBJ:obj,
+      priority:0,
       path:[],      //Used by animation system for handling portals.  Eventually, the movement engine will need this for certain special cases
       fromCTN:loc,
       fromHEADING:fromHEADING,

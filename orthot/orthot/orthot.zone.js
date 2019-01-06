@@ -727,14 +727,14 @@ orthot.Zone = function(ekvx, override_startloc) {
   //{pos, [node]}
   let moves_by_source = {}
   let recent_insertion
-    
+      
   this.addForce = (function(force) {
     recent_insertion = true
-    forces.push(force)
     
     force.incoming = []
     force.outgoing = []  
     
+    forces.push(force)
     // Organize forces into a pair of tables - one indexed by source, the other indexed by destination
     let srcID = force.fromCTN.id
     let destID = force.toCTN.id
@@ -764,7 +764,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     let tgtList = moves_by_source[destID]
     if (tgtList && tgtList.length > 0) {
       for (let tgtForce of tgtList) {
-        if (this.impededBy(force.OBJ, tgtForce.OBJ)) {
+        if ((force.OBJ != tgtForce.OBJ) && this.impededBy(force.OBJ, tgtForce.OBJ)) {
           //force.outgoing.push(tgtForce)        
           //If the directions match, the source is chasing the target
           if (force.toDIR == tgtForce.fromDIR) {          
@@ -799,7 +799,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     tgtList = moves_by_dest[destID]
     if (tgtList && tgtList.length > 0) {
       for (let otherForce of tgtList) {  
-        if (this.impededBy(force.OBJ, otherForce.OBJ)) {
+        if ((force.OBJ != otherForce.OBJ) && this.impededBy(force.OBJ, otherForce.OBJ)) {
           let srcForce = force
           let tgtForce = otherForce
           
@@ -830,6 +830,29 @@ orthot.Zone = function(ekvx, override_startloc) {
     srclist.push(force)
     dstlist.push(force)
     
+    if (force.OBJ.tick != this.ticknum) {
+      if (force.OBJ.forces.length != 0) {
+        force.OBJ.forces = []
+      }
+      force.OBJ.tick = this.ticknum
+      //applyForce(force)
+      force.OBJ.__main_force__ = force
+    }
+    else {
+      force.suspended = true
+    }
+    force.OBJ.forces.push(force)
+        
+    //Favor processing the higher priority force, and if priority is matched, favor processing the stronger one.
+    if ((force.priority > force.OBJ.__main_force__.priority) || 
+       ((force.priority == force.OBJ.__main_force__.priority) && (force.strength > force.OBJ.__main_force__.strength))) {
+      //cancelForce(force.OBJ.__main_force__, false)      
+      //applyForce(force)
+      force.OBJ.__main_force__.suspended = true
+      force.OBJ.__main_force__ = force
+      force.suspended = false
+    }
+    
     //  Force propagation
     //  
     //  This is not *completely* necessesary, as the movement engine is capable of managing live insertions.  However, it is required if forces need to be 
@@ -849,7 +872,6 @@ orthot.Zone = function(ekvx, override_startloc) {
   }).bind(this)
   
   let processMovement = function() { 
-   
     try {
       let resolved_any = true;
       main:
@@ -860,6 +882,9 @@ orthot.Zone = function(ekvx, override_startloc) {
         pass:
         for (let i = forces.length-1; i >= 0; i--) {
           let force = forces[i]
+          if (force.suspended) {
+            continue pass
+          }
           if (force.resolved) {
             forces.splice(i, 1)
             continue pass
@@ -868,6 +893,9 @@ orthot.Zone = function(ekvx, override_startloc) {
           let simpleResolve = true
           if (!force.deferred) {
             for (let collision of force.outgoing) {
+              if (collision.target.suspended) {
+                continue
+              }
               if (!force.OBJ.hasMovementPriority(collision.target.OBJ, collision.target.fromDIR, force.toDIR, collision.type)) {
                 priorityResolve = false
               }                        
@@ -883,8 +911,8 @@ orthot.Zone = function(ekvx, override_startloc) {
             //  success (trit.TRUE) - the force resolved, and the object moved
             //  fail (trit.FALSE)   - the force resolved, but the object stayed put
             //  defer (trit.MAYBE)  - Additional forces have been added (which are to be processed, to be followed with another call to move())
-            let moveResult = force.OBJ.move(force)          
-            switch(moveResult) {          
+            let moveResult = force.OBJ.move(force)         
+            switch(moveResult) {
               // If the object pushed another object, attempt to resolve inserted forces
               case trit.MAYBE:
                 if (force.deferred) {
@@ -904,27 +932,29 @@ orthot.Zone = function(ekvx, override_startloc) {
                 forces.splice(i, 1)
                 resolved_any = true
                 force.moved = true
+                force.priority = Number.MAX_SAFE_INTEGER
                 
                 //If the object moves, simplify Collisions
                 for (let collisionRef of force.incoming) {
                   let incCollision = collisionRef.collision
                   let incForce = incCollision.target
+                  
                   switch(incCollision.type) {
                     case orthot.Collision.CHASE:
-                      incCollision.type = orthot.Collision.NONE                  
+                      incCollision.type = orthot.Collision.NONE   
                       break
                     
                     // If the object has movement priority, it wins FAR_RAM and CORNER_RAM collisions.
                     case orthot.Collision.FAR_RAM:
                       //incCollision.type = orthot.collision.PRIORITY_RAM       //POWER!!! 
-                      force.OBJ.strike(force, incForce.OBJ, orthot.Collision.PRIORITY_RAM)
-                      incForce.OBJ.struck(force, force.OBJ, orthot.Collision.PRIORITY_RAM)
+                      //force.OBJ.strike(force, incForce.OBJ, orthot.Collision.PRIORITY_RAM)
+                      //incForce.OBJ.struck(force, force.OBJ, orthot.Collision.PRIORITY_RAM)
                       incForce.resolved = true
                       break
                     case orthot.Collision.CORNER_RAM:
                       //incCollision.type = orthot.collision.PRIORITY_STEAL     
-                      force.OBJ.strike(force, incForce.OBJ, orthot.Collision.PRIORITY_STEAL)
-                      incForce.OBJ.struck(force, force.OBJ, orthot.Collision.PRIORITY_STEAL)
+                      //force.OBJ.strike(force, incForce.OBJ, orthot.Collision.PRIORITY_STEAL)
+                      //incForce.OBJ.struck(force, force.OBJ, orthot.Collision.PRIORITY_STEAL)
                       incForce.resolved = true
                       break
                   }
@@ -932,28 +962,53 @@ orthot.Zone = function(ekvx, override_startloc) {
                 processIndirectForces(force)
                 break
               case trit.FALSE:
-                forces.splice(i, 1)
                 resolved_any = true
-					      //If the move failed for some reason (such as a SIMPLE collision with a very stationary object), 
-					      //degenerate all incoming collisions.
-                
-                for (let collisionRef of force.incoming) {
-                  let incCollision = collisionRef.collision
-                  let incForce = incCollision.target
-                  switch(incCollision.type) {
-                    case orthot.Collision.EDGE_RAM:
-                    case orthot.Collision.NEAR_RAM:
-                    case orthot.Collision.CHASE:
-                      incCollision.type = orthot.Collision.SIMPLE
-                      //incForce.OBJ.strike(incForce, force.OBJ, orthot.collision.SIMPLE)
-                      //force.OBJ.struck(incForce, incForce.OBJ, collision.SIMPLE)
-                      //incForce.resolved = true
-                      break
-                    case orthot.Collision.FAR_RAM:
-                    case orthot.Collision.CORNER_RAM:
-                      incCollision.type = orthot.Collision.NONE
-                      break
+                force.suspended = true
+                forces.splice(i, 1)     
+                if (force.OBJ.forces.length == 1) {
+					        //If the move failed for some reason (such as a SIMPLE collision with a very stationary object), 
+					        //degenerate all incoming collisions.                
+                  for (let collisionRef of force.incoming) {
+                    let incCollision = collisionRef.collision
+                    let incForce = incCollision.target
+                    switch(incCollision.type) {
+                      case orthot.Collision.EDGE_RAM:
+                      case orthot.Collision.NEAR_RAM:
+                      case orthot.Collision.CHASE:
+                        incCollision.type = orthot.Collision.SIMPLE
+                        //incForce.OBJ.strike(incForce, force.OBJ, orthot.collision.SIMPLE)
+                        //force.OBJ.struck(incForce, incForce.OBJ, collision.SIMPLE)
+                        //incForce.resolved = true
+                        break
+                      case orthot.Collision.FAR_RAM:
+                      case orthot.Collision.CORNER_RAM:
+                        incCollision.type = orthot.Collision.NONE
+                        break
+                    }
+                  }             
+                }
+                else {
+                  force.OBJ.forces.splice(force.OBJ.forces.indexOf(force),1)
+                  let altforce
+                  let priority = Number.MIN_SAFE_INTEGER
+                  let strength = Number.MIN_SAFE_INTEGER
+                  for (let _force of force.OBJ.forces) {
+                    let p = _force.priority
+                    if (p > priority) {
+                      altforce = _force
+                      priority = _force.priority
+                      strength = _force.strength | 0
+                    }
+                    else if (p == priority) {
+                      let s = _force.strength
+                      if (s > strength) {
+                        altforce = _force
+                        strength = s
+                      }
+                    }                      
                   }
+                  altforce.suspended = false                
+                  continue main
                 }
                 break
                 
@@ -967,12 +1022,10 @@ orthot.Zone = function(ekvx, override_startloc) {
           //In theory, if there are still forces around, but none can be resolved, then it is because ther forces are all looped (no leaf-nodes to work from)
           //  So, to resolve it, all remaining forces "crash"
           for (let force of forces) {
-            if (!force.resolved) {
+            if (!force.resolved && !force.suspended) {
               for (let collision of force.outgoing) {
-                if (collision.target.OBJ == force.OBJ) {
-                  console.log("ERROR:  object struck itself???!")
-                }
-                else {
+                if (!collision.target.suspended) {
+                  console.log("COLLISION:", force, collision, collision.target.OBJ.forces, collision.target.OBJ.forces.length)
                   force.OBJ.strike(force, collision.target.OBJ, collision.type, true)
                   collision.target.OBJ.struck(force, force.OBJ, collision.type, true)
                 }

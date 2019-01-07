@@ -145,16 +145,33 @@ libek.control = {
     //  params.fpmode_turnlen:  default amount of time to use to do a basic swivel animation (in milliseconds) when controlling from program logic.  
     //  params.fpmode_offset:   an additional offset to add to the camera position while in fpmode
     
-    let fpmode_enabled = params.enable_fpmode
-    let fpmode_offset = params.fpmode_offset ? params.fpmode_offset : new THREE.Vector3()        
+    let fpmode_enabled = params.fpmode_enabled
+    let fpmode_fov = (params.fpmode_fov != undefined) ? params.fpmode_fov : this.disp.camera.fov
+    let tpmode_fov = (params.tpmode_fov != undefined) ? params.tpmode_fov : this.disp.camera.fov
+    let fpmode_z_offset = (params.fpmode_z_offset != undefined) ? params.fpmode_z_offset : 0
+    let fpmode_abs_offset = params.fpmode_abs_offset ? params.fpmode_abs_offset : new THREE.Vector3()         
     let fpmode_notify = params.fpmode_notify ? params.fpmode_notify : doNothing    
     let fpmode_defaultturnlen = params.fpmode_turnlen ? params.fpmode_turnlen : 200
     let fp_turn_start, fp_turn_end
     let fpmode = false
     let fpunlocked = true
     let fptarget = new THREE.Spherical()
-    this.setFPmode = function(mode) {
-      fpmode = mode     
+    this.setFPmode = function(mode, theta) {
+      if (mode != fpmode) {
+        fpmode = mode     
+        if (fpmode) {          
+          this.disp.camera.fov = fpmode_fov
+          this.disp.camera.updateProjectionMatrix()
+          if (theta != undefined) {
+            this.campos.theta = theta
+            this.updateCamera(false)
+          }
+        }
+        else {
+          this.disp.camera.fov = tpmode_fov
+          this.disp.camera.updateProjectionMatrix()
+        }
+      }
     }
     this.swivel_camtheta = function(ntheta, turnlen) {
       if (fpmode && fpunlocked) {
@@ -169,6 +186,9 @@ libek.control = {
         this.evtman.dispatch_libek_event("fpadjust")
       }
     }
+    
+    this.disp.camera.fov = tpmode_fov
+    this.disp.camera.updateProjectionMatrix()
     
     this.setCamposFromCartisian = function(cart_pos) {
       this.campos.setFromVector3(cart_pos)
@@ -185,14 +205,19 @@ libek.control = {
     
     this.updateCamera = (function() {
       let pos = new THREE.Vector3()   
+      let vec = new THREE.Vector3()
       return function(camtarget_changed) {
         if (fpmode) {
-          pos.setFromSpherical(this.campos)
+          pos.setFromSpherical(this.campos)          
+          vec.copy(pos)
+          vec.normalize()
+          vec.multiplyScalar(fpmode_z_offset)
+          vec.add(this.camtarget)
           pos.negate()
           pos.add(this.camtarget)
-          pos.add(fpmode_offset)     
-          this.disp.camera.position.copy( this.camtarget )    
-          this.disp.camera.position.add( fpmode_offset)   
+          pos.add(fpmode_abs_offset)     
+          this.disp.camera.position.copy( vec )    
+          this.disp.camera.position.add(fpmode_abs_offset)   
           this.disp.camera.lookAt( pos );
         }
         else {
@@ -213,7 +238,6 @@ libek.control = {
         }
       }
     })();
-      
       
     this.run = async function() { 
     
@@ -365,7 +389,7 @@ libek.control = {
                 }
                 if (fpmode_enabled && fpmode) {
                   fpmode_notify(false, false)
-                  fpmode = false
+                  this.setFPmode(false)
                 }
                 this.updateCamera(false)
               break
@@ -376,7 +400,7 @@ libek.control = {
                   this.campos.radius = this.radmin
                   if (fpmode_enabled && !fpmode) {
                     fpmode_notify(true, false)
-                    fpmode = true
+                    this.setFPmode(true)
                   }
                 }
                 this.updateCamera(false)

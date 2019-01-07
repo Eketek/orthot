@@ -1,4 +1,4 @@
-orthot.Player = function(zone) {   
+orthot.Player = function(zone, align, init_fpmode) {   
   orthot.StandardObject(this, zone)
   this.isPlayer = true
   this.types.push("creature")
@@ -8,31 +8,28 @@ orthot.Player = function(zone) {
     
   this.state = orthot.ObjectState.IDLE
   
-  let orientation = {}
-  libek.direction.setOrientation(orientation, "south", "up")
-  
   this.forward = libek.direction.code.SOUTH
   this.up = libek.direction.code.UP
   
+  if (align) {
+    this.forward = align.forward
+    this.up = align.up
+  }
+  let orientation = {}
+  libek.direction.setOrientation(orientation, this.forward, this.up)
+  
+  let dir_rad = [
+    0,0,0,
+    Math.PI*1.0,
+    Math.PI*0.5,
+    Math.PI*0.0,
+    Math.PI*1.5
+  ]
   
   let setFWD = (function(fwd) {
     if (fwd != this.forward) {
       this.forward = fwd
-      switch(fwd) {
-        case libek.direction.code.NORTH:
-          sviewCTL.swivel_camtheta(Math.PI*1.0, zone.ticklen/2)
-        break
-        case libek.direction.code.EAST:
-          sviewCTL.swivel_camtheta(Math.PI*0.5, zone.ticklen/2)
-        break
-        case libek.direction.code.SOUTH:
-          sviewCTL.swivel_camtheta(Math.PI*0.0, zone.ticklen/2)
-        break
-        case libek.direction.code.WEST:
-          sviewCTL.swivel_camtheta(Math.PI*1.5, zone.ticklen/2)
-        break
-      }
-      //sviewCTL.setFPheading(libek.direction.vector[fwd], zone.ticklen/2)
+      sviewCTL.swivel_camtheta(dir_rad[this.forward], zone.ticklen) 
     }
   }).bind(this)
   
@@ -72,8 +69,8 @@ orthot.Player = function(zone) {
   
   // First-person mode auto-switch notification
   //  fpmode_on:  if true, FP-mode is ON, kis false, fp-mode is OFF
-  //  fpmode_partial:   If true, FP-mode view is mouse-controlled, if false, FP-mode view is keyboard controlled
-  //    When FP-mode view is mouse-controlled, keys work exactly like in third-person view, allowing User to "strafe"
+  //  fpmode_moused:   If true, FP-mode view is mouse-controlled, if false, FP-mode view is keyboard controlled
+  //    When FP-mode view is mouse-controlled, keys work exactly like in third-person view, allowing User to move and mouse-look independently
   //    WHen it is keyboard-controlled, the "up" key moves forward and the other keys rotate the view
   this.setFPmode = function(fpmode_on, fpmode_moused) {
     fpmode = fpmode_on && !fpmode_moused
@@ -85,10 +82,20 @@ orthot.Player = function(zone) {
     }
   }
   
-  this.initGraphics = function() {
+  
+  this.initGraphics = (function() {
     orthot.AnimateCreature(zone, this, nmap_walk, orientation, true)
+    
+    libek.direction.setOrientation(this.animCTL.orientation, this.forward, this.up)   
+    this.ready()
+    
+    if (init_fpmode) {
+      sviewCTL.setFPmode(true, dir_rad[this.forward])
+      this.setFPmode(true, false)
+    }
     return true
-  }
+  }).bind(this)
+  
     
   this.OnUpdateCTN = function() {
     sviewCTL.refocustarget.set(this.ctn.x, this.ctn.y + (this.ctn.getObject_bytype("ramp") ? 1 : 0.5), this.ctn.z)
@@ -119,15 +126,15 @@ orthot.Player = function(zone) {
           let _t = Math.round(sviewCTL.campos.theta / (Math.PI/2)) * (Math.PI/2)        
           if (iDOWN) {    
             _t += Math.PI
-            sviewCTL.swivel_camtheta(_t, zone.ticklen/2)
+            sviewCTL.swivel_camtheta(_t, zone.ticklen)
           }
           else if (iRIGHT) {
             _t -= (Math.PI)*0.5
-            sviewCTL.swivel_camtheta(_t, zone.ticklen/2)
+            sviewCTL.swivel_camtheta(_t, zone.ticklen)
           }
           else if (iLEFT) {
             _t += (Math.PI)*0.5
-            sviewCTL.swivel_camtheta(_t, zone.ticklen/2)
+            sviewCTL.swivel_camtheta(_t, zone.ticklen)
           }
         }
       }

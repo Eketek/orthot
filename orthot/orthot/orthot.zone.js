@@ -1091,7 +1091,10 @@ orthot.Zone = function(ekvx, override_startloc) {
         
         template.id = id      
   	  }
-  	  break  	  
+  	    break  	
+  	  default:
+  	    //console.log(template)
+    	  break  
     }
     return template
   })
@@ -1114,6 +1117,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     
     let loaded_objects = []
     let ldstage = 1
+    let start_align, start_fpmode
     ekvx.loadData( (x,y,z, template, data) => {
       if (flipWorld) {
         z *= -1
@@ -1141,34 +1145,33 @@ orthot.Zone = function(ekvx, override_startloc) {
         switch(template.type) {
           case 'wall':
             vxc.loadTerrain(x,y,z, template.id)
-            this.putGameobject(loc, new orthot.Wall(this))
-            
-          break
+            this.putGameobject(loc, new orthot.Wall(this))            
+            break
           case 'stairs': {
-            color = libek.util.property("color", datas, "white", libek.util.color.parse)
-            align = libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation)
-            gobj = new orthot.Stair(this,  color, align)
-            adjctn = this.getAdjacentCTN(loc, libek.direction.invert[align.up])
-            vxc.setTerrainKnockout(adjctn, align.up)
-            adjctn = this.getAdjacentCTN(loc, libek.direction.invert[align.forward])
-            vxc.setTerrainKnockout(adjctn, align.forward)
-            
-          }
-          break          
+              color = libek.util.property("color", datas, "white", libek.util.color.parse)
+              align = libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation)
+              gobj = new orthot.Stair(this,  color, align)
+              adjctn = this.getAdjacentCTN(loc, libek.direction.invert[align.up])
+              vxc.setTerrainKnockout(adjctn, align.up)
+              adjctn = this.getAdjacentCTN(loc, libek.direction.invert[align.forward])
+              vxc.setTerrainKnockout(adjctn, align.forward)
+              
+            }
+            break          
           case 'key': {
-            color = libek.util.property("color", datas, "white") 
-            let code = libek.util.property("code", datas)                  
-            gobj = new orthot.Key(this, color, code)        
-            keys.push(gobj)    
-          }
-          break          
+              color = libek.util.property("color", datas, "white") 
+              let code = libek.util.property("code", datas)                  
+              gobj = new orthot.Key(this, color, code)        
+              keys.push(gobj)    
+            }
+            break          
           case 'lock': {
-            color = libek.util.property("color", datas, "white") 
-            let code = libek.util.property("code", datas)                  
-            gobj = new orthot.Lock(this, color, code)   
-            locks.push(gobj)         
-          }
-          break
+              color = libek.util.property("color", datas, "white") 
+              let code = libek.util.property("code", datas)                  
+              gobj = new orthot.Lock(this, color, code)   
+              locks.push(gobj)         
+            }
+            break
           case 'target': {
             let campos = libek.util.property("camPos", datas, undefined, libek.util.parseVec3)
             if (flipWorld) {
@@ -1182,19 +1185,19 @@ orthot.Zone = function(ekvx, override_startloc) {
               campos:campos
             }
           }
-          break
+            break
           case 'pblock':
             color = libek.util.property("color", datas, "red", libek.util.color.parse) 
             gobj = new orthot.PushBlock(this, color)
-          break
+            break
           case 'crate':
             gobj = new orthot.Crate(this)
-          break
+            break
           case 'sceneportal':
             gobj = new orthot.ScenePortal(this)
             gobj.destination = libek.util.property("dest", datas)
             gobj.target = libek.util.property("target", datas)
-          break
+            break
           case 'space_light':
           case 'face_light':
           //  ...  Will have to re-think lighting.  Previous version used unrestricted dynamic lighting, computed it directly and baked it in as VertexColors,
@@ -1213,23 +1216,29 @@ orthot.Zone = function(ekvx, override_startloc) {
             
             console.log(light)
             */
-          break
+            break
           default:
             return true
-          break
-          case "start": {          
-            let campos = libek.util.property("camPos", datas, undefined, libek.util.parseVec3)
-            if (flipWorld) {
-              campos.z *= -1
+            break
+          case "start": {   
+              //console.log(datas)       
+              let campos = libek.util.property("camPos", datas, undefined, libek.util.parseVec3)
+              if (flipWorld) {
+                campos.z *= -1
+              }
+              start_align = libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation)
+              start_fpmode = libek.util.property("camPos", datas) == "fp"
+              campos.x = campos.x - x
+              campos.y = campos.y - y + 0.5
+              campos.z = campos.z - z
+              targets.__STARTLOC = { 
+                loc:loc, 
+                campos:campos
+              }
             }
-            campos.x = campos.x - x
-            campos.y = campos.y - y + 0.5
-            campos.z = campos.z - z
-            targets.__STARTLOC = { 
-              loc:loc, 
-              campos:campos
-            }
-          }
+            break
+          case "cammode":
+            console.log(datas)  
           break
         }
       }
@@ -1312,7 +1321,15 @@ orthot.Zone = function(ekvx, override_startloc) {
     sviewCTL.setCamposFromCartisian(start_target.campos)
     sviewCTL.updateCamera(true)
     
-    player = new orthot.Player(this)    
+    let pl_align
+    if (start_align) {
+      pl_align = {
+        forward:libek.direction.invert[start_align.forward],
+        up:start_align.up
+      }
+    }
+    
+    player = new orthot.Player(this, pl_align, start_fpmode)    
     
     player.initGraphics()
     this.putGameobject(start_target.loc, player) 

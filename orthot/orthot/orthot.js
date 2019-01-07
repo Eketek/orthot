@@ -135,7 +135,14 @@ $(async function() {
     RefocusLen:700,
     QuickRefocusLen:150,
     
-  })  
+    enable_fpmode:true,
+    fpmode_offset:new THREE.Vector3(0,0.25,0),
+    fpmode_notify:function(on) {
+      if (orthot.ActiveZone) {
+        orthot.ActiveZone.setFPmode(on)
+      }
+    }
+  })    
   sviewCTL.run()
   
   orthot.loadScene = function(arg, loc) {

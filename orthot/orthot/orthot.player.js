@@ -13,6 +13,29 @@ orthot.Player = function(zone) {
   
   this.forward = libek.direction.code.SOUTH
   this.up = libek.direction.code.UP
+  
+  
+  let setFWD = (function(fwd) {
+    if (fwd != this.forward) {
+      this.forward = fwd
+      switch(fwd) {
+        case libek.direction.code.NORTH:
+          sviewCTL.swivel_camtheta(Math.PI*1.0, zone.ticklen/2)
+        break
+        case libek.direction.code.EAST:
+          sviewCTL.swivel_camtheta(Math.PI*0.5, zone.ticklen/2)
+        break
+        case libek.direction.code.SOUTH:
+          sviewCTL.swivel_camtheta(Math.PI*0.0, zone.ticklen/2)
+        break
+        case libek.direction.code.WEST:
+          sviewCTL.swivel_camtheta(Math.PI*1.5, zone.ticklen/2)
+        break
+      }
+      //sviewCTL.setFPheading(libek.direction.vector[fwd], zone.ticklen/2)
+    }
+  }).bind(this)
+  
     
   let inventory = this.inventory = []
   
@@ -45,6 +68,22 @@ orthot.Player = function(zone) {
     slide4:"man_slide4",
     slide5:"man_slide5"      
   }
+  let fpmode
+  
+  // First-person mode auto-switch notification
+  //  fpmode_on:  if true, FP-mode is ON, kis false, fp-mode is OFF
+  //  fpmode_partial:   If true, FP-mode view is mouse-controlled, if false, FP-mode view is keyboard controlled
+  //    When FP-mode view is mouse-controlled, keys work exactly like in third-person view, allowing User to "strafe"
+  //    WHen it is keyboard-controlled, the "up" key moves forward and the other keys rotate the view
+  this.setFPmode = function(fpmode_on, fpmode_partial) {
+    fpmode = fpmode_on && !fpmode_partial
+    if (fpmode_on) {
+      this.animCTL.hide()
+    }
+    else {
+      this.animCTL.show()
+    }
+  }
   
   this.initGraphics = function() {
     orthot.AnimateCreature(zone, this, nmap_walk, orientation, true)
@@ -65,19 +104,48 @@ orthot.Player = function(zone) {
     let iLEFT = inputs.KeyA || inputs.ArrowLeft
     let iRIGHT = inputs.KeyD || inputs.ArrowRight
         
-    //If an arrow key is down, determine where it points [in relation to where the camera is pointing]
+        
     let dir   
-    if (iDOWN) {    
-      dir = libek.direction.getKeyDirection("down", sviewCTL.campos.theta)
+    
+    if (fpmode) {    
+      // override FP-mode view-manipulation while on ladders
+      if (this.state != orthot.ObjectState.CLIMBING) {
+      
+        if (iUP) {
+          dir = libek.direction.getKeyDirection("up", sviewCTL.campos.theta).code
+          this.forward = dir
+        }
+        else {
+          let _t = Math.round(sviewCTL.campos.theta / (Math.PI/2)) * (Math.PI/2)        
+          if (iDOWN) {    
+            _t += Math.PI
+            sviewCTL.swivel_camtheta(_t, zone.ticklen/2)
+          }
+          else if (iRIGHT) {
+            _t -= (Math.PI)*0.5
+            sviewCTL.swivel_camtheta(_t, zone.ticklen/2)
+          }
+          else if (iLEFT) {
+            _t += (Math.PI)*0.5
+            sviewCTL.swivel_camtheta(_t, zone.ticklen/2)
+          }
+        }
+      }
     }
-    else if (iUP) {
-      dir = libek.direction.getKeyDirection("up", sviewCTL.campos.theta)
-    }
-    else if (iRIGHT) {
-      dir = libek.direction.getKeyDirection("right", sviewCTL.campos.theta)
-    }
-    else if (iLEFT) {
-      dir = libek.direction.getKeyDirection("left", sviewCTL.campos.theta)
+    else {
+      //If an arrow key is down, determine where it points [in relation to where the camera is pointing]
+      if (iDOWN) {    
+        dir = libek.direction.getKeyDirection("down", sviewCTL.campos.theta).code
+      }
+      else if (iUP) {
+        dir = libek.direction.getKeyDirection("up", sviewCTL.campos.theta).code
+      }
+      else if (iRIGHT) {
+        dir = libek.direction.getKeyDirection("right", sviewCTL.campos.theta).code
+      }
+      else if (iLEFT) {
+        dir = libek.direction.getKeyDirection("left", sviewCTL.campos.theta).code
+      }
     }
     
     //If gravity is valid (or eventually "enabled"), set up a high-priority downward force.  
@@ -86,7 +154,7 @@ orthot.Player = function(zone) {
       force_gravity.priority = 100
       force_gravity.initiator = this
       force_gravity.action = "fall"
-      force_gravity.inputDIR = dir
+      //force_gravity.inputDIR = dir
       force_gravity.strength = orthot.Strength.NORMAL
       zone.addForce(force_gravity)
     }
@@ -94,11 +162,12 @@ orthot.Player = function(zone) {
     switch(this.state) {
       case orthot.ObjectState.IDLE:
         if (dir) {    
-          this.forward = dir.code
-          let force = orthot.topology.scan_ramp(zone, this.ctn, this, dir.code, this.forward, this.up)
+          //this.forward = dir.code
+          setFWD(dir)
+          let force = orthot.topology.scan_ramp(zone, this.ctn, this, dir, this.forward, this.up)
           force.initiator = this
           force.action = "walk"
-          force.inputDIR = dir
+          //force.inputDIR = dir
           force.strength = orthot.Strength.NORMAL
           this.animCTL.setNMAP(nmap_walk)
           zone.addForce(force)
@@ -108,11 +177,12 @@ orthot.Player = function(zone) {
       break
       case orthot.ObjectState.WALKING:
         if (dir) {    
-          this.forward = dir.code
-          let force = orthot.topology.scan_ramp(zone, this.ctn, this, dir.code, this.forward, this.up)
+          //this.forward = dir.code
+          setFWD(dir)
+          let force = orthot.topology.scan_ramp(zone, this.ctn, this, dir, this.forward, this.up)
           force.initiator = this
           force.action = "walk"
-          force.inputDIR = dir
+          //force.inputDIR = dir
           force.strength = orthot.Strength.NORMAL
           this.animCTL.setNMAP(nmap_walk)
           zone.addForce(force)
@@ -132,7 +202,7 @@ orthot.Player = function(zone) {
           let force = orthot.topology.scan_downladder(zone, this.ctn, this, this.forward, this.up)
           force.initiator = this
           force.action = "climbdown"
-          force.inputDIR = dir
+          //force.inputDIR = dir
           force.strength = orthot.Strength.NORMAL
           zone.addForce(force)
         }    
@@ -140,7 +210,7 @@ orthot.Player = function(zone) {
           let force = orthot.topology.scan_upladder(zone, this.ctn, this, this.forward, this.up)
           force.initiator = this
           force.action = "climbup"
-          force.inputDIR = dir
+          //force.inputDIR = dir
           force.strength = orthot.Strength.NORMAL
           zone.addForce(force)
         }  
@@ -149,7 +219,7 @@ orthot.Player = function(zone) {
         break
       case orthot.ObjectState.FALLING:
         if (dir) {          
-          libek.direction.setOrientation(this.animCTL.orientation, dir.code, "up")   
+          libek.direction.setOrientation(this.animCTL.orientation, dir, "up")   
           this.ready()
         }
         break
@@ -242,7 +312,8 @@ orthot.Player = function(zone) {
     switch(force.action) {
       case "walk":
         if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) {        
-          this.forward = force.toHEADING
+          //this.forward = force.toHEADING          
+          setFWD(force.toHEADING)
         }
         if (force.isTraversable()) {
           if (force.toBLOCKINGRAMP) {
@@ -289,7 +360,8 @@ orthot.Player = function(zone) {
       break
       case "climbup":
         if ( (force.toFORWARD != libek.direction.code.UP) && (force.toFORWARD != libek.direction.code.DOWN) ) {  
-          this.forward = force.toFORWARD
+          //this.forward = force.toFORWARD          
+          setFWD(force.toFORWARD)
         }
         //else {
         //  this.forward = force.toFORWARD
@@ -316,7 +388,8 @@ orthot.Player = function(zone) {
       break
       case "climbdown":
         if ( (force.toFORWARD != libek.direction.UP) && (force.toFORWARD != libek.direction.DOWN) ) {  
-          this.forward = force.toFORWARD
+          //this.forward = force.toFORWARD      
+          setFWD(force.toFORWARD)
         }
         //else {
         //  this.forward = force.toFORWARD

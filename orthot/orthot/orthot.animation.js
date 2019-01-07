@@ -1678,6 +1678,13 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       }
     },
     
+    show:function() {
+      mainINST.ctl.mainCMP.show()
+    },
+    hide:function() {
+      mainINST.ctl.mainCMP.hide()
+    },
+    
     walk_flatflat:function(force) {    
       mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP)        
       switch(force.toHEADING) {

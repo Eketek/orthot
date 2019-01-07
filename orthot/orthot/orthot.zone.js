@@ -72,9 +72,9 @@ orthot.Zone = function(ekvx, override_startloc) {
     }
     activeReticle = reticle
     
-    let hsl = color.getHSL()      
-    reticlemat.color.setHSL(hsl.h+0.5, hsl.s, hsl.l)
-    reticlemat.emissive.setHSL(hsl.h+0.5, hsl.s, hsl.l)
+    let hue = color.getHSL().h+0.5      
+    reticlemat.color.setHSL(hue, 1, 0.5)
+    reticlemat.emissive.setHSL(hue, 1, 0.5)
     
     for (let obj of objs) {
       if (obj.code == code) {
@@ -201,8 +201,6 @@ orthot.Zone = function(ekvx, override_startloc) {
       tick()
     }
   }
-  
-  
   
   let tick = (function() {
     this.ticknum++
@@ -1308,6 +1306,7 @@ orthot.Zone = function(ekvx, override_startloc) {
       start_target = targets.__STARTLOC
     }
     startloc = start_target.loc
+    sviewCTL.setFPmode(false)
     sviewCTL.pickplane.constant = start_target.loc.y+0.5
     sviewCTL.camtarget.set(start_target.loc.x,start_target.loc.y+0.5,start_target.loc.z)
     sviewCTL.setCamposFromCartisian(start_target.campos)
@@ -1373,6 +1372,12 @@ orthot.Zone = function(ekvx, override_startloc) {
   
   this.destroyTerrain = function() {
     vxc.dispose()
+  }
+  
+  this.setFPmode = function(fpmode_on, fpmode_partial) {
+    if (player) {
+      player.setFPmode(fpmode_on, fpmode_partial)
+    }
   }
   
   this.reset = function() {    

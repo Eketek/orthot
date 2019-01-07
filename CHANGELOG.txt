@@ -1,4 +1,7 @@
 0.3.0:
+  7 Jan 2019
+    Added First-person view (with program-controlled and mouse-controlled sub-modes)
+    Adjusted key/lock reticle logic to always pick a contrasting color (uses the hsl hue component only now).
   5 Jan 2019
     The movement engine has been modified to allow multiple forces to be applied to a single object and used contingentially
       The movement engine will propagate all applied forces, but only one of the forces can result in the object moving.

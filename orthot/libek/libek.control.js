@@ -89,8 +89,6 @@ libek.control = {
   //    RefocusTarget   - When triggered, gradually shifts the camera target from its initial position to a "refocus" position
   //    ShiftPickPlane  - Shift the picking plane along its normal vector
   //
-  //  TODO:  FirstpersonView - sets FP view mode, disables other camera controllers, optionally hides an Object3D while active
-  //
   //  Required input params:  
   //    display             an instance of libek.Display
   //    eventmanager:       an event manager (supposedly one attached to the display
@@ -133,6 +131,45 @@ libek.control = {
     
     let updcam_adjust_pickplane = params.UpdcamUpdatepickplane  
     
+    // First-person mode:
+    //  If fpmode is enabled, when the camera is fully zoomed in, fpmode gets activated and altered logic is used to make the camera controller act like a 
+    //  first-person controller.
+    //  while fpmode is active, the purpose of this.camtarget and this.campos are swapped (camtarget then is used to position the camera and campos is used to 
+    //   orient the camera)
+    //
+    //  params.fpmode_notify:   callback for providing updates about what fpmode is doing.  These two arguments are passed to the callback:
+    //         fpmode_on:       boolean flag to indicating whether fpmode is activate (true) or inactive (false)
+    //         fpmode_moused:   boolean flag to indicate if fpmode is mouse-controlled (true) or program-controlled (false)
+    //            (moused fpmode is active when the orbit button is held down while fpmode is on, allows User to freely and swivel the view,
+    //             and should be regarded by the program as third-person view with the camera positioned at camtarget)
+    //  params.fpmode_turnlen:  default amount of time to use to do a basic swivel animation (in milliseconds) when controlling from program logic.  
+    //  params.fpmode_offset:   an additional offset to add to the camera position while in fpmode
+    
+    let fpmode_enabled = params.enable_fpmode
+    let fpmode_offset = params.fpmode_offset ? params.fpmode_offset : new THREE.Vector3()        
+    let fpmode_notify = params.fpmode_notify ? params.fpmode_notify : doNothing    
+    let fpmode_defaultturnlen = params.fpmode_turnlen ? params.fpmode_turnlen : 200
+    let fp_turn_start, fp_turn_end
+    let fpmode = false
+    let fpunlocked = true
+    let fptarget = new THREE.Spherical()
+    this.setFPmode = function(mode) {
+      fpmode = mode     
+    }
+    this.swivel_camtheta = function(ntheta, turnlen) {
+      if (fpmode && fpunlocked) {
+        if (turnlen != undefined) {
+          fpmode_turnlen = turnlen
+        }
+        else {
+          fpmode_turnlen = fpmode_defaultturnlen
+        }
+        fp_turn_start = this.campos.theta
+        fp_turn_end = ntheta
+        this.evtman.dispatch_libek_event("fpadjust")
+      }
+    }
+    
     this.setCamposFromCartisian = function(cart_pos) {
       this.campos.setFromVector3(cart_pos)
       clampCamposPHI()    
@@ -142,29 +179,76 @@ libek.control = {
       if (this.campos.radius > this.radmax) {
         this.campos.radius = this.radmax
       }
+      this.camdir = this.campos.theta
     }
     this.setCamposFromCartisian(init_campos)
         
     
-    this.updateCamera = function(camtarget_changed) { 
+    this.updateCamera = (function() {
       let pos = new THREE.Vector3()   
-      pos.setFromSpherical(this.campos)
-      pos.add(this.camtarget)
-      this.disp.camera.position.copy(pos)    
-      this.disp.camera.lookAt( this.camtarget );
-      if (camtarget_changed && this.onCamtargetChanged) {
-        this.onCamtargetChanged()
+      return function(camtarget_changed) {
+        if (fpmode) {
+          pos.setFromSpherical(this.campos)
+          pos.negate(0)
+          pos.add(this.camtarget)
+          pos.add(fpmode_offset)     
+          this.camdir = T-this.campos.theta
+          this.disp.camera.position.copy( this.camtarget )    
+          this.disp.camera.position.add( fpmode_offset)   
+          this.disp.camera.lookAt( pos );
+        }
+        else {
+          pos.setFromSpherical(this.campos)
+          pos.add(this.camtarget)
+          this.disp.camera.position.copy(pos)    
+          this.disp.camera.lookAt( this.camtarget );
+          this.camdir = this.campos.theta
+          if (camtarget_changed && this.onCamtargetChanged) {
+            this.onCamtargetChanged()
+          }
+        }
+        if (this.onCamUpdate) {
+          this.onCamUpdate()
+        }
+        if (updcam_adjust_pickplane) {
+          this.pickplane.setFromNormalAndCoplanarPoint(this.pickplane.normal, this.camtarget)
+          this.pickplane.constant *= -1
+        }
       }
-      if (this.onCamUpdate) {
-        this.onCamUpdate()
-      }
-      if (updcam_adjust_pickplane) {
-        this.pickplane.setFromNormalAndCoplanarPoint(this.pickplane.normal, this.camtarget)
-        this.pickplane.constant *= -1
-      }
-    }
+    })();
+      
       
     this.run = async function() { 
+    
+      if (fpmode_enabled) {
+        (async function fpmode_adjust() { 
+          
+          let main_evt = libek.event.policy(`read fpadjust`)
+          let frame_evt = libek.event.policy(`read frame`)
+          
+          let rdr = new libek.event.Reader(this.evtman)
+          rdr.returnType = libek.event.ReadReturnType.Object
+          while (true) {
+            await rdr.next(main_evt)  
+            
+            let starttime = Date.now()
+            let dt = 0
+            while (dt < 1) {            
+              await rdr.next(frame_evt) 
+              let t = Date.now()
+              dt = (t - starttime) / fpmode_turnlen  
+              if (dt < 1) {
+                this.campos.theta = ((fp_turn_start * (1-dt)) + (fp_turn_end * dt))
+              }
+              else {
+                this.campos.theta = fp_turn_end 
+              }              
+              this.updateCamera(false)
+            }
+          }
+        
+        }).bind(this)()
+      } 
         
       // A controller which shifts the pick plane around when the arrow keys are pressed.
       if (params.PickPlane_ArrowkeyController) {
@@ -282,6 +366,10 @@ libek.control = {
                 if (this.campos.radius > this.radmax) {
                   this.campos.radius = this.radmax
                 }
+                if (fpmode_enabled && fpmode) {
+                  fpmode_notify(false, false)
+                  fpmode = false
+                }
                 this.updateCamera(false)
               break
               case "mousewheel_neg":
@@ -289,15 +377,22 @@ libek.control = {
                 this.campos.radius -= this.radstep
                 if (this.campos.radius < this.radmin) {
                   this.campos.radius = this.radmin
+                  if (fpmode_enabled && !fpmode) {
+                    fpmode_notify(true, false)
+                    fpmode = true
+                  }
                 }
                 this.updateCamera(false)
               break
               case btndown:
                 prev_mpos = evt.data
+                fpunlocked = false
+                if (fpmode) {
+                  fpmode_notify(false, true)
+                }
                 orbit:
                 while (true) {
                   evt = await rdr.next(orbit_evt) 
-                  //console.log(evt.data)
                   switch(evt.code) {
                     case "reconfigure": 
                       configure() 
@@ -315,8 +410,13 @@ libek.control = {
                       clampCamposPHI()     
                       
                       this.updateCamera(false)
-                    break
-                    case btnup: break orbit
+                      break
+                    case btnup: 
+                      fpunlocked = true
+                      if (fpmode) {
+                        fpmode_notify(true, false)
+                      }
+                      break orbit
                   }
                 }
               break

@@ -139,7 +139,7 @@ $(async function() {
     fpmode_fov:75,
     fpmode_enabled:true,
     fpmode_abs_offset:new THREE.Vector3(0,0.25,0),
-    fpmode_z_offset:0.5,
+    fpmode_z_offset:-0.5,
     fpmode_notify:function(fpmode_on, fpmode_moused) {
       if (orthot.ActiveZone) {
         orthot.ActiveZone.setFPmode(fpmode_on, fpmode_moused)

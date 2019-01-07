@@ -143,7 +143,8 @@ libek.control = {
     //            (moused fpmode is active when the orbit button is held down while fpmode is on, allows User to freely and swivel the view,
     //             and should be regarded by the program as third-person view with the camera positioned at camtarget)
     //  params.fpmode_turnlen:  default amount of time to use to do a basic swivel animation (in milliseconds) when controlling from program logic.  
-    //  params.fpmode_offset:   an additional offset to add to the camera position while in fpmode
+    //  params.fpmode_abs_offset: offset the fpmode camera position in absolute space
+    //  params.fpmode_z_offset:   offset the fpmode camera along the camera-space z-axis
     
     let fpmode_enabled = params.fpmode_enabled
     let fpmode_fov = (params.fpmode_fov != undefined) ? params.fpmode_fov : this.disp.camera.fov
@@ -208,12 +209,12 @@ libek.control = {
       let vec = new THREE.Vector3()
       return function(camtarget_changed) {
         if (fpmode) {
-          pos.setFromSpherical(this.campos)          
+          pos.setFromSpherical(this.campos)    
+          pos.negate()      
           vec.copy(pos)
           vec.normalize()
           vec.multiplyScalar(fpmode_z_offset)
           vec.add(this.camtarget)
-          pos.negate()
           pos.add(this.camtarget)
           pos.add(fpmode_abs_offset)     
           this.disp.camera.position.copy( vec )    

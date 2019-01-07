@@ -1374,9 +1374,9 @@ orthot.Zone = function(ekvx, override_startloc) {
     vxc.dispose()
   }
   
-  this.setFPmode = function(fpmode_on, fpmode_partial) {
+  this.setFPmode = function(fpmode_on, fpmode_moused) {
     if (player) {
-      player.setFPmode(fpmode_on, fpmode_partial)
+      player.setFPmode(fpmode_on, fpmode_moused)
     }
   }
   

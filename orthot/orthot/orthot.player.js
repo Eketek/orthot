@@ -75,8 +75,8 @@ orthot.Player = function(zone) {
   //  fpmode_partial:   If true, FP-mode view is mouse-controlled, if false, FP-mode view is keyboard controlled
   //    When FP-mode view is mouse-controlled, keys work exactly like in third-person view, allowing User to "strafe"
   //    WHen it is keyboard-controlled, the "up" key moves forward and the other keys rotate the view
-  this.setFPmode = function(fpmode_on, fpmode_partial) {
-    fpmode = fpmode_on && !fpmode_partial
+  this.setFPmode = function(fpmode_on, fpmode_moused) {
+    fpmode = fpmode_on && !fpmode_moused
     if (fpmode_on) {
       this.animCTL.hide()
     }

@@ -137,9 +137,9 @@ $(async function() {
     
     enable_fpmode:true,
     fpmode_offset:new THREE.Vector3(0,0.25,0),
-    fpmode_notify:function(on) {
+    fpmode_notify:function(fpmode_on, fpmode_moused) {
       if (orthot.ActiveZone) {
-        orthot.ActiveZone.setFPmode(on)
+        orthot.ActiveZone.setFPmode(fpmode_on, fpmode_moused)
       }
     }
   })    

@@ -179,7 +179,6 @@ libek.control = {
       if (this.campos.radius > this.radmax) {
         this.campos.radius = this.radmax
       }
-      this.camdir = this.campos.theta
     }
     this.setCamposFromCartisian(init_campos)
         
@@ -189,10 +188,9 @@ libek.control = {
       return function(camtarget_changed) {
         if (fpmode) {
           pos.setFromSpherical(this.campos)
-          pos.negate(0)
+          pos.negate()
           pos.add(this.camtarget)
           pos.add(fpmode_offset)     
-          this.camdir = T-this.campos.theta
           this.disp.camera.position.copy( this.camtarget )    
           this.disp.camera.position.add( fpmode_offset)   
           this.disp.camera.lookAt( pos );
@@ -202,7 +200,6 @@ libek.control = {
           pos.add(this.camtarget)
           this.disp.camera.position.copy(pos)    
           this.disp.camera.lookAt( this.camtarget );
-          this.camdir = this.campos.theta
           if (camtarget_changed && this.onCamtargetChanged) {
             this.onCamtargetChanged()
           }
@@ -388,7 +385,7 @@ libek.control = {
                 prev_mpos = evt.data
                 fpunlocked = false
                 if (fpmode) {
-                  fpmode_notify(false, true)
+                  fpmode_notify(true, true)
                 }
                 orbit:
                 while (true) {

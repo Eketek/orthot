@@ -2,17 +2,19 @@ orthot.Wall = function(zone) {
   orthot.OrthotObject(this, zone)
   this.SpatialClass = "solid"  
   this.hasSides = true
+  this.setBaseSurface(orthot.surface.type.SMOOTH)
   
   this.isTraversableBy = function(otherOBJ) {return false}
-  this.struck = function(force, otherOBJ, collision) { console.log("WALL-struck", force, collision) }
-  this.strike = function(force, otherOBJ, collision) { console.log("WALL-strike", force, collision) }
   
   this.push = function(force) { 
   }
   
   this.attach = function(sideobj) {
     sideobj.host = this
-    this.sides[sideobj.up].push(sideobj)
+    this.sides[sideobj.up].push(sideobj)    
+    if (sideobj.surfacetype) {
+      this.surfaces[sideobj.up] = sideobj.surfacetype
+    }
     sideobj.obj = sideobj.mdlgen()
     sideobj.obj.__ISDIRTY = true
     let orientation = {}
@@ -21,6 +23,7 @@ orthot.Wall = function(zone) {
     sideobj.obj.position.add(orientation.position)
     sideobj.obj.setRotationFromEuler(orientation.rotation)
     this.zone.scene.add(sideobj.obj)
+    
   }
 }
 
@@ -44,6 +47,7 @@ orthot.ScenePortal = function(zone) {
 orthot.Stair = function(zone, color, align) {
   orthot.OrthotObject(this, zone)
   this.SpatialClass = "ramp" 
+  this.setBaseSurface(orthot.surface.type.SMOOTH)
   
   //set up some boundaries
   //  This is somewhat of a hack to prevent creatures from falling through ramps that do not have a solid object placed underneath.
@@ -68,18 +72,21 @@ orthot.Stair = function(zone, color, align) {
 // I still don't know what to call a pushblock.  A pushblock is a pushblock.
 // Please don't upload this comment somewhere embarassing, such as the Internet.
 orthot.PushBlock = function(zone, color) {
-  orthot.StandardObject(this, zone)
+  orthot.MovableObject(this, zone)
   this.hasSides = true
   this.AutoGravity = true
   zone.addTickListener(this.update)
   
   this.SpatialClass = "solid"    
-  this.state = orthot.ObjectState.IDLE
-  this.fall_forcestrength = orthot.Strength.LIGHT
+  this.state = orthot.state.IDLE
   
-  this.push = function(force) {
-  }
-  
+  this.fallStrength = orthot.strength.LIGHT
+  this.setBaseSurface(orthot.surface.type.SMOOTH)  
+  this.propforceMin = orthot.strength.NORMAL
+  this.propforceStrength = orthot.strength.LIGHT
+  this.crushingForce = orthot.strength.CRUSHING
+  this.slideStrength = orthot.strength.NORMAL
+    
   this.mdlgen = function() {
     let mdl = libek.getAsset("pushblock")
     if (color) {
@@ -87,110 +94,62 @@ orthot.PushBlock = function(zone, color) {
     }
     return mdl
   }
-  
-  this.propagateForce = function(force){
-    if (this.state == orthot.ObjectState.DEFEATED) {
-      return
-    }
-    if (force.strength >= orthot.Strength.NORMAL) {
-      let pbf = orthot.topology.scan_simple(zone, this.ctn, this, force.toHEADING, libek.direction.code.SOUTH, libek.direction.code.UP)
-      pbf.OBJ = this
-      pbf.pusher = force.OBJ
-      pbf.initiator = force.initiator
-      pbf.action = force.strength >= orthot.Strength.CRUSHING ? "crushed" : "pushed"
-      pbf.strength = orthot.Strength.LIGHT
-      zone.addForce(pbf)
-    }
-  }
-  
-  this.applyOutboundIndirectForce = function(heading, normal, originatingForce) {
-    switch(this.state) {
-      case orthot.ObjectState.DEFEATED:
-      case orthot.ObjectState.FALLING:
-        return
-      default:
-        if (normal == libek.direction.code.DOWN) {
-          let pforce = orthot.topology.scan_simple(zone, this.ctn, this, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
-          if (heading == libek.direction.code.DOWN) {
-            pforce.initiator = originatingForce.initiator
-            pforce.strength = orthot.Strength.LIGHT
-            pforce.action = "fall"
-            this.state = orthot.ObjectState.FALLING
-            zone.addForce(pforce)
-          }
-          
-          zone.addTickListener(this.update)
-        }
-        break
-    }    
-  }
 }
 
 orthot.Crate = function(zone) {
-  orthot.StandardObject(this, zone)
+  orthot.MovableObject(this, zone)
   this.hasSides = true
   this.AutoGravity = true
   zone.addTickListener(this.update)
   
   this.SpatialClass = "solid"    
-  this.state = orthot.ObjectState.IDLE
-  this.fall_forcestrength = orthot.Strength.LIGHT
+  this.state = orthot.state.IDLE
+  
+  this.fallStrength = orthot.strength.LIGHT
+  this.setBaseSurface(orthot.surface.type.ROUGH)
+  this.propforceMin = orthot.strength.LIGHT
+  this.crushingForce = orthot.strength.CRUSHING
+  
   
   this.mdlgen = function() {
     let mdl = libek.getAsset("crate")
     return mdl
   }
-  this.applyOutboundIndirectForce = function(heading, normal, originatingForce) {
-    switch(this.state) {
-      case orthot.ObjectState.DEFEATED:
-      case orthot.ObjectState.FALLING:
-        return
-      default:
-        //If the object below moved, move with it!  (this is to be replaced with a much more general solution based on surface interactions)
-        if (normal == libek.direction.code.DOWN) {
-          let pforce = orthot.topology.scan_simple(zone, this.ctn, this, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
-          if (heading == libek.direction.code.DOWN) {
-            pforce.initiator = originatingForce.initiator
-            pforce.strength = orthot.Strength.LIGHT
-            pforce.action = "fall"
-            //this.state = orthot.ObjectState.FALLING
-          }
-          else {
-            pforce.strength = orthot.Strength.LIGHT
-            pforce.priority = 200
-            pforce.action = "ride"
-          }
-          zone.addForce(pforce)
-          zone.addTickListener(this.update)
-        }
-        break
-    }    
-  }
-  
-  this.propagateForce = (function(force){
-    if (this.state == orthot.ObjectState.DEFEATED) {
-      return
-    }
-    if (force.strength >= orthot.Strength.NORMAL) {
-      let pbf = orthot.topology.scan_simple(zone, this.ctn, this, force.toHEADING, libek.direction.code.SOUTH, libek.direction.code.UP)
-      pbf.pusher = force.OBJ
-      pbf.initiator = force.initiator
-      pbf.action = force.strength >= orthot.Strength.CRUSHING ? "crushed" : "pushed"
-      pbf.strength = force.strength   //crates propagate the input force completely
-      zone.addForce(pbf)
-    }
-  }).bind(this)
 }
 
+orthot.Iceblock = function(zone) {
+  orthot.MovableObject(this, zone)
+  this.hasSides = true
+  this.AutoGravity = true
+  zone.addTickListener(this.update)
+  
+  this.SpatialClass = "solid"    
+  this.state = orthot.state.IDLE
+  
+  this.fallStrength = orthot.strength.LIGHT
+  this.setBaseSurface(orthot.surface.type.SLICK)
+  this.propforceMin = orthot.strength.LIGHT
+  this.crushingForce = orthot.strength.CRUSHING
+  
+  
+  this.mdlgen = function() {
+    let mdl = libek.getAsset("iceblock")
+    return mdl
+  }
+}
 
 orthot.Key = function(zone, color, code) {
-  orthot.StandardObject(this, zone)
+  orthot.MovableObject(this, zone)
   this.AutoGravity = true
-  this.state = orthot.ObjectState.IDLE
+  this.state = orthot.state.IDLE
   zone.addTickListener(this.update)
   
   this.itemType = "key"
   this.SpatialClass = "item"  
+  
+  this.fallStrength = orthot.strength.LIGHT
+  this.setBaseSurface(orthot.surface.type.COARSE)
+  this.crushingForce = orthot.strength.CRUSHING
   
   if (!color) {
     color = "white"
@@ -246,43 +205,12 @@ orthot.Key = function(zone, color, code) {
       })      
     }
   }
-  this.applyOutboundIndirectForce = function(heading, normal, originatingForce) {
-    switch(this.state) {
-      case orthot.ObjectState.DEFEATED:
-      case orthot.ObjectState.FALLING:
-        return
-      default:
-        //If the object below moved, move with it!  (this is to be replaced with a much more general solution based on surface interactions)
-        if (normal == libek.direction.code.DOWN) {
-          let pforce = orthot.topology.scan_simple(zone, this.ctn, this, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
-          if (pforce.isTraversable()) {
-            pforce.strength = orthot.Strength.LIGHT
-            pforce.initiator = originatingForce.initiator
-            pforce.action = "ride"
-            zone.addForce(pforce)
-          }
-          else if (heading != libek.direction.code.DOWN) {
-            pforce = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, libek.direction.code.SOUTH, libek.direction.code.UP)
-            if (pforce.isTraversable()) {
-              this.state = orthot.ObjectState.FALLING
-              pforce.strength = orthot.Strength.LIGHT
-              pforce.action = "fall"
-              zone.addForce(pforce)
-            }
-            else {              
-              this.state = orthot.ObjectState.FALLING
-            }
-            zone.addTickListener(this.update)
-          }
-        }
-        break
-    }    
-  }
 }
 
 orthot.Lock = function(zone, color, code) {
   orthot.StandardObject(this, zone)
   this.hasSides = true
+  this.setBaseSurface(orthot.surface.type.SMOOTH)
   
   this.SpatialClass = "solid"  
   

@@ -6,7 +6,7 @@ orthot.Player = function(zone, align, init_fpmode) {
 
   this.SpatialClass = "player"
     
-  this.state = orthot.ObjectState.IDLE
+  this.state = orthot.state.IDLE
   
   this.forward = libek.direction.code.SOUTH
   this.up = libek.direction.code.UP
@@ -102,7 +102,7 @@ orthot.Player = function(zone, align, init_fpmode) {
   }
   
   this.recvInput = function(inputs) {
-    if (this.state == orthot.ObjectState.DEFEATED) {
+    if (this.state == orthot.state.DEFEATED) {
       return
     }
     
@@ -116,7 +116,7 @@ orthot.Player = function(zone, align, init_fpmode) {
     
     if (fpmode) {    
       // override FP-mode view-manipulation while on ladders
-      if (this.state != orthot.ObjectState.CLIMBING) {
+      if (this.state != orthot.state.CLIMBING) {
       
         if (iUP) {
           dir = libek.direction.getKeyDirection("up", sviewCTL.campos.theta).code
@@ -156,18 +156,18 @@ orthot.Player = function(zone, align, init_fpmode) {
     }
     
     //If gravity is valid (or eventually "enabled"), set up a high-priority downward force.  
-    if (this.state != orthot.ObjectState.CLIMBING) {
+    if (this.state != orthot.state.CLIMBING) {
       let force_gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
       force_gravity.priority = 100
       force_gravity.initiator = this
       force_gravity.action = "fall"
       //force_gravity.inputDIR = dir
-      force_gravity.strength = orthot.Strength.NORMAL
+      force_gravity.strength = orthot.strength.NORMAL
       zone.addForce(force_gravity)
     }
     //process input
     switch(this.state) {
-      case orthot.ObjectState.IDLE:
+      case orthot.state.IDLE:
         if (dir) {    
           //this.forward = dir.code
           setFWD(dir)
@@ -175,14 +175,14 @@ orthot.Player = function(zone, align, init_fpmode) {
           force.initiator = this
           force.action = "walk"
           //force.inputDIR = dir
-          force.strength = orthot.Strength.NORMAL
+          force.strength = orthot.strength.NORMAL
           this.animCTL.setNMAP(nmap_walk)
           zone.addForce(force)
           
-          this.state = orthot.ObjectState.WALKING
+          this.state = orthot.state.WALKING
         }
       break
-      case orthot.ObjectState.WALKING:
+      case orthot.state.WALKING:
         if (dir) {    
           //this.forward = dir.code
           setFWD(dir)
@@ -190,27 +190,27 @@ orthot.Player = function(zone, align, init_fpmode) {
           force.initiator = this
           force.action = "walk"
           //force.inputDIR = dir
-          force.strength = orthot.Strength.NORMAL
+          force.strength = orthot.strength.NORMAL
           this.animCTL.setNMAP(nmap_walk)
           zone.addForce(force)
         }
         else {
           this.animCTL.setNMAP(nmap_walk)
           this.ready()
-          this.state = orthot.ObjectState.IDLE
+          this.state = orthot.state.IDLE
         }
         break
-      case orthot.ObjectState.CLIMBING:   
+      case orthot.state.CLIMBING:   
         if (inputs.Space) {
           this.animCTL.hopoffLadder(this.forward, this.up)  
-          this.state = orthot.ObjectState.IDLE
+          this.state = orthot.state.IDLE
         }
         else if (iDOWN) {
           let force = orthot.topology.scan_downladder(zone, this.ctn, this, this.forward, this.up)
           force.initiator = this
           force.action = "climbdown"
           //force.inputDIR = dir
-          force.strength = orthot.Strength.NORMAL
+          force.strength = orthot.strength.NORMAL
           zone.addForce(force)
         }    
         else if (iUP || iLEFT || iRIGHT) {
@@ -218,13 +218,13 @@ orthot.Player = function(zone, align, init_fpmode) {
           force.initiator = this
           force.action = "climbup"
           //force.inputDIR = dir
-          force.strength = orthot.Strength.NORMAL
+          force.strength = orthot.strength.NORMAL
           zone.addForce(force)
         }  
         break
-      case orthot.ObjectState.SLIDING:
+      case orthot.state.SLIDING:
         break
-      case orthot.ObjectState.FALLING:
+      case orthot.state.FALLING:
         if (dir) {          
           libek.direction.setOrientation(this.animCTL.orientation, dir, "up")   
           this.ready()
@@ -291,8 +291,8 @@ orthot.Player = function(zone, align, init_fpmode) {
   }
   
   this.defeat = async function() {
-    if (this.state != orthot.ObjectState.DEFEATED) {
-      this.state = orthot.ObjectState.DEFEATED
+    if (this.state != orthot.state.DEFEATED) {
+      this.state = orthot.state.DEFEATED
       this.animCTL.defeat()
     }
     await libek.delay(4000)
@@ -341,7 +341,7 @@ orthot.Player = function(zone, align, init_fpmode) {
           let ldr = force.toCTN.getSideobject_bytype(libek.direction.invert[force.toHEADING], "ladder")
           if (ldr) {
             this.animCTL.grabLadder(force)  
-            this.state = orthot.ObjectState.CLIMBING
+            this.state = orthot.state.CLIMBING
           }
           else {
             this.animCTL.pushfixedobjectAnim(force)            
@@ -351,7 +351,7 @@ orthot.Player = function(zone, align, init_fpmode) {
       break
       case "fall":
         if (force.isTraversable()) {
-          if (this.state != orthot.ObjectState.DEFEATED) {        
+          if (this.state != orthot.state.DEFEATED) {        
             zone.putGameobject(force.toCTN, this)
             this.animCTL.fall(force)
           }
@@ -378,7 +378,7 @@ orthot.Player = function(zone, align, init_fpmode) {
           if (force.isLADDEREXIT) {
             zone.putGameobject(force.toCTN, this)
             this.animCTL.exitLadder(force)
-            this.state = orthot.ObjectState.WALKING
+            this.state = orthot.state.WALKING
             return trit.TRUE
           }
           else if (force.isLADDER) {
@@ -389,7 +389,7 @@ orthot.Player = function(zone, align, init_fpmode) {
           else {
             //isLADDERTERMINAL
             this.animCTL.hopoffLadder(this.forward, this.up)  
-            this.state = orthot.ObjectState.IDLE
+            this.state = orthot.state.IDLE
           }
         }
       break
@@ -411,13 +411,13 @@ orthot.Player = function(zone, align, init_fpmode) {
           else {
             //isLADDERTERMINAL
             this.animCTL.hopoffLadder(this.forward, this.up)  
-            this.state = orthot.ObjectState.IDLE
+            this.state = orthot.state.IDLE
           }
         }
         else {
           //isLADDERTERMINAL
           this.animCTL.hopoffLadder(this.forward, this.up)  
-          this.state = orthot.ObjectState.IDLE
+          this.state = orthot.state.IDLE
         }
       break
     }

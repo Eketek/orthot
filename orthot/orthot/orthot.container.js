@@ -53,21 +53,19 @@ orthot.Container = function(x,y,z) {
         }
       }
     },
-    /*
-    stackFall:function(force) {
-      let nforce
-      let _force
-      for (let obj of r.content) {
-         _force = obj.stackFall(force)
-         if (_force) {
-          nforce = _force
-         }
+    
+    /*  Query the container for an object matching any specified spatial class
+    */
+    getObject_byspatialclass:function(sclass) {  
+      if (!Array.isArray(sclass)) {
+        sclass = [sclass]
       }
-      if (nforce) {
-        nforce.OBJ.zone.getAdjacentCTN(r, libek.direction.code.UP).stackFall(nforce)
+      for (let obj of r.content) {
+        if (sclass.indexOf(obj.SpatialClass) != -1) {
+          return obj
+        }
       }
     },
-    */
     
     /*  An object is moving out of some container other than this one, into a container which is adjacent to this container
      *
@@ -79,9 +77,9 @@ orthot.Container = function(x,y,z) {
      *  originatingForce:
      *    The [primary] force which is causing this secondary force to be applied
      */
-    applyInboundIndirectForce(heading, normal, originatingForce) {
+    applyInboundIndirectForce(heading, normal, from_normal, originatingForce) {
       for (let obj of r.content) {
-        obj.applyInboundIndirectForce(heading, normal, originatingForce)
+        obj.applyInboundIndirectForce(heading, normal, from_normal, originatingForce)
       }
     },
     
@@ -95,9 +93,9 @@ orthot.Container = function(x,y,z) {
      *  originatingForce:
      *    The [primary] force which is causing this secondary force to be applied
      */
-    applyOutboundIndirectForce(heading, normal, originatingForce) {
+    applyOutboundIndirectForce(heading, normal, from_normal, originatingForce) {
       for (let obj of r.content) {
-        obj.applyOutboundIndirectForce(heading, normal, originatingForce)
+        obj.applyOutboundIndirectForce(heading, normal, from_normal, originatingForce)
       }
     },
     

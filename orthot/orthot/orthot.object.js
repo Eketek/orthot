@@ -60,7 +60,7 @@ orthot.OrthotObject = function(THIS, zone) {
   
   THIS.defeat = function() {
     delete THIS.SpatialClass    //A reasonably simple way to disappear the object
-    THIS.state = orthot.ObjectState.DEFEATED
+    THIS.state = orthot.state.DEFEATED
     if (THIS.obj) {
       orthot.VanishAnim(zone, THIS, {
         end:(function() {
@@ -98,7 +98,7 @@ orthot.OrthotObject = function(THIS, zone) {
    *  originatingForce:
    *    The [primary] force which is causing this secondary force to be applied
    */
-  THIS.applyInboundIndirectForce = function(heading, normal, originatingForce) { }
+  THIS.applyInboundIndirectForce = function(heading, normal, from_normal, originatingForce) { }
   
   /*  An object is moving out of some container other than this one, into a container which is adjacent to this container
    *
@@ -110,7 +110,7 @@ orthot.OrthotObject = function(THIS, zone) {
    *  originatingForce:
    *    The [primary] force which is causing this secondary force to be applied
    */
-  THIS.applyOutboundIndirectForce = function(heading, normal, originatingForce) { }
+  THIS.applyOutboundIndirectForce = function(heading, normal, from_normal, originatingForce) { }
   
   THIS.destroy = function() { 
     if (THIS.destroyed) {
@@ -148,6 +148,12 @@ orthot.OrthotObject = function(THIS, zone) {
       }
     }
   }
+  
+  
+  THIS.surfaces = [0, 0,0,0,0,0,0]
+  THIS.setBaseSurface = function(sfctype) {
+    THIS.surfaces.fill(sfctype)
+  }
     
   THIS.types = []
   
@@ -176,7 +182,6 @@ orthot.OrthotObject = function(THIS, zone) {
 orthot.StandardObject = function(THIS, zone) {    
 
   orthot.OrthotObject(THIS, zone) 
-  THIS.fall_forcestrength = orthot.Strength.LIGHT
   
   THIS.initGraphics = function() {
     orthot.AnimateBlock(zone, THIS)
@@ -186,55 +191,109 @@ orthot.StandardObject = function(THIS, zone) {
   THIS.attach = function(sideobj) {
     sideobj.host = THIS
     THIS.sides[sideobj.up].push(sideobj)
+    if (sideobj.surfacetype) {
+      THIS.surfaces[sideobj.up] = sideobj.surfacetype
+    }
   }
+  
+  
+}
+orthot.MovableObject = function(THIS, zone) { 
+  orthot.StandardObject(THIS, zone)
+  
+  //Minimum amount of force-strength needed to propagate force to this object
+  //  By default, objects are immobile.  Recommend using orthot.strength.<WHATEVER> as values
+  THIS.propforceMin = Number.MAX_SAFE_INTEGER
+  
+  // Strength of propgated force.  If -1, the strength of the originating force will be used.  
+  THIS.propforceStrength = -1
+  
+  // Strength of sliding force.  If -1, the strength of the preceding force will be used.  
+  THIS.slideStrength = -1
+  
+  // Threshhold for using "crushed" logic instead of "pushed" logic 
+  //    (crushing force destroys the object if the object is obstructed)
+  THIS.crushingForce = orthot.strength.CRUSHING
+  
+  THIS.fallStrength = orthot.strength.LIGHT
+  
+  let gravity
   
   THIS.update = function() {
     if (THIS.defeated) {
       zone.removeTickListener(THIS.update)
       return
-    }
-    
-    let gravity = orthot.topology.scan_simple(zone, THIS.ctn, THIS, libek.direction.code.DOWN, libek.direction.code.NORTH, libek.direction.code.UP)
+    }    
+    gravity = orthot.topology.scan_simple(zone, THIS.ctn, THIS, libek.direction.code.DOWN, libek.direction.code.NORTH, libek.direction.code.UP)
     gravity.OBJ = THIS
     gravity.initiator = THIS
     gravity.action = "fall"
-    gravity.strength = THIS.fall_forcestrength
+    gravity.strength = THIS.fallStrength
     gravity.priority = 100
     zone.addForce(gravity)
     
+    if (THIS.state == orthot.state.SLIDING) {
+      let sforce = orthot.topology.scan_simple(zone, THIS.ctn, THIS, THIS.slideHEADING, libek.direction.code.NORTH, libek.direction.code.UP)
+      sforce.OBJ = THIS
+      sforce.initiator = THIS
+      sforce.action = "slide"
+      sforce.strength = (THIS.slideStrength != -1) ? THIS.slideStrength : THIS.slideStrength_prev
+      sforce.priority = 25
+      zone.addForce(sforce)
+    }
   }
   
-  THIS.struck = function(force) {
+  THIS.strike = function(force, otherOBJ, collision, crash=false) { 
+  
+    // If THIS object strikes something while sliding, cancel the slide.
+    if (THIS.state == orthot.state.SLIDING) {
+      THIS.state = orthot.state.IDLE
+      THIS.idle()
+    }
     
-  }
-  
-  THIS.strike = function(force, otherOBJ, collision, crash=false) {
-  
-  }
-  
-  THIS.push = function(force) { 
-    
-  }
+    //Just to be safe...
+    if (force.action == "slide") {
+      force.cancelled = true
+    }
+    return false     
+  } 
   
   prev_ticknum = -10
   THIS.move = function(force) {
-    if (force.isTraversable()) {
+    if (force.cancelled) {          
+      return trit.FALSE
+    }
+    if (force.isTraversable()) {    
+      zone.putGameobject(force.toCTN, THIS)
       if (force.action == "fall") {
-        THIS.state = orthot.ObjectState.FALLING
+        THIS.state = orthot.state.FALLING
       }
-      else {        
+      else {   
         zone.addTickListener(THIS.update)
         if (force.toHEADING == libek.direction.code.DOWN) {
-          THIS.state = orthot.ObjectState.FALLING
+          THIS.state = orthot.state.FALLING
         }
         else {
-          THIS.state = orthot.ObjectState.WALKING
+          THIS.state = orthot.state.WALKING
+          if (force.toHEADING != libek.direction.code.UP) {
+            let ngrav = orthot.topology.scan_simple(zone, THIS.ctn, THIS, libek.direction.code.DOWN, libek.direction.code.NORTH, libek.direction.code.UP)
+            let gravOBJ = zone.getObstructor(THIS, ngrav.toCTN)
+            if (gravOBJ) {
+              let gravSFC = gravOBJ.surfaces[libek.direction.invert[ngrav.toHEADING]]   
+              let sfc_interaction = orthot.surface.interact(THIS.surfaces[libek.direction.code.DOWN], gravSFC)
+              
+              if (sfc_interaction == orthot.surface.interaction.SLIDE) {
+                THIS.state = orthot.state.SLIDING
+                THIS.slideHEADING = force.toHEADING
+                THIS.slideStrength_prev = force.strength
+              }
+            }
+          }
         }
       }
       if (force.pusher) {
         force.pusher.notify_ForcePropagationClearedObstruction(force, THIS)
       }
-      zone.putGameobject(force.toCTN, THIS)
       if ( (force.initiator == force.pusher) && ( zone.ticknum > (prev_ticknum+1) ) ) {
         THIS.animCTL.impulseShift(force)
       }
@@ -244,33 +303,119 @@ orthot.StandardObject = function(THIS, zone) {
       prev_ticknum = zone.ticknum
       return trit.TRUE
     }
-    else if ((!force.deferred) && (force.strength > orthot.Strength.NONE)) {
+    else if ((!force.deferred) && (force.strength > orthot.strength.NONE)) {
       force.toCTN.push(force)
       return trit.MAYBE
     }
     else if (force.action == "fall") {
-      if (THIS.state == orthot.ObjectState.FALLING) {
+      if (THIS.state == orthot.state.FALLING) {
         THIS.animCTL.impactDown(force)
       }
       
-      THIS.state = orthot.ObjectState.IDLE
+      THIS.state = orthot.state.IDLE
       zone.removeTickListener(THIS.update)
       THIS.idle()
       return trit.FALSE
     }
     else if (force.action == "crushed") {
       THIS.defeat()
+      zone.removeTickListener(THIS.update)
       if (force.pusher) {
-        force.pusher.notify_ForcePropagationClearedObstruction(force, this)
+        force.pusher.notify_ForcePropagationClearedObstruction(force, THIS)
       }
       return trit.TRUE
     }
     else {
       //console.log(THIS.state, force)
+      //zone.removeTickListener(THIS.update)
       THIS.idle()
       return trit.FALSE
     }
   }
+  
+  THIS.propagateForce = function(force) {
+    if (THIS.state == orthot.state.DEFEATED) {
+      return
+    }
+    
+    force.OBJ.strike(force, THIS, orthot.collision.SIMPLE)
+    THIS.struck(force, force.OBJ, orthot.collision.SIMPLE)
+    
+    if (force.strength >= THIS.propforceMin) { 
+      let pbf = orthot.topology.scan_simple(zone, THIS.ctn, THIS, force.toHEADING, libek.direction.code.SOUTH, libek.direction.code.UP)
+      
+      pbf.pusher = force.OBJ
+      pbf.initiator = force.initiator
+      pbf.action = force.strength >= THIS.crushingForce ? "crushed" : "pushed"      
+      pbf.priority = 50
+      
+      switch(force.toHEADING) {
+        case libek.direction.code.DOWN:
+          pbf.strength = THIS.fallStrength
+          break
+        case libek.direction.code.UP:
+          break
+        default: {
+            pbf.strength = (THIS.propforceStrength != -1) ? THIS.propforceStrength : force.strength
+            let grav = orthot.topology.scan_simple(zone, THIS.ctn, THIS, libek.direction.code.DOWN, libek.direction.code.SOUTH, libek.direction.code.UP)
+            let gravOBJ = zone.getObstructor(THIS, grav.toCTN)
+            let gravSFC = gravOBJ ? gravOBJ.surfaces[libek.direction.invert[grav.toHEADING]] : orthot.surface.type.FRICTIONLESS
+            
+            let sfc_interaction = orthot.surface.interact(THIS.surfaces[libek.direction.code.DOWN], gravSFC)
+            
+            // Interpreting force-strength as traction, if the force is too weak, fail.
+            switch(sfc_interaction) {
+              case orthot.surface.interaction.SLIDE:  
+                if (force.strength < orthot.strength.LIGHT) return
+                break
+              case orthot.surface.interaction.RESIST:
+              case orthot.surface.interaction.DRAG:
+                if (THIS.propforce_threshold < orthot.strength.NORMAL) return
+                break
+              case orthot.surface.interaction.IMPEDE:
+                if (THIS.propforce_threshold < orthot.strength.HARD) return
+                break        
+              case orthot.surface.interaction.BLOCK:
+                if (THIS.propforce_threshold < orthot.strength.CRUSHING) return
+                break        
+            }
+          }
+          break
+      }
+      zone.addForce(pbf)
+    }
+  }
+  
+  THIS.applyOutboundIndirectForce = function(heading, normal, from_normal, originatingForce) {    
+    let sfc_interaction = orthot.surface.interact(THIS.surfaces[normal], originatingForce.OBJ.surfaces[from_normal])
+    switch(this.state) {
+      case orthot.state.DEFEATED:
+      case orthot.state.FALLING:
+        return
+      default:
+        //If the object below moved, move with it!  (this is to be replaced with a much more general solution based on surface interactions)
+        if (normal == libek.direction.code.DOWN) {
+          let pforce = orthot.topology.scan_simple(zone, THIS.ctn, THIS, heading, libek.direction.code.SOUTH, libek.direction.code.UP)
+          if (heading == libek.direction.code.DOWN) {
+            pforce.initiator = originatingForce.initiator
+            pforce.strength = orthot.strength.LIGHT
+            pforce.action = "fall"
+            zone.addForce(pforce)
+          }
+          else {
+            if (sfc_interaction >= orthot.surface.interaction.DRAG) {
+              pforce.strength = orthot.strength.LIGHT
+              pforce.priority = 200
+              pforce.action = "ride"
+              zone.addForce(pforce)
+            }
+          }
+          zone.addTickListener(THIS.update)
+        }
+        break
+    }
+  }
+  
 }
 
 

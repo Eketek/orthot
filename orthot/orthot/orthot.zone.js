@@ -117,6 +117,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     player:["creature", "item", "liquid", "gas", "ramp"],
     item:["player", "creature", "liquid", "gas"]
   }
+  
 	
   
   // Command sequences that are added at the beginning of a tick, end at the beginning of the next tick, and are measured in seconds (floating point values)
@@ -206,8 +207,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     this.ticknum++
     let input = inputCTL.keystate.query()
     
-    if (this.ticknum > 0) {   
-      
+    if (this.ticknum > 0) {
       if (tmp_tickListeners.length > 0) {
         for (let f of tmp_tickListeners) {
           f()
@@ -297,6 +297,9 @@ orthot.Zone = function(ekvx, override_startloc) {
     if (i != -1) {
       tickListeners.splice(i,1)
     }
+    if (tickListeners.indexOf(f) != -1) {
+      console.log("ERROR:  multiple instances of a ticklistener present!")
+    }
   }
   this.addTickListener_temp = function(f) {
     tmp_tickListeners.push(f)
@@ -323,6 +326,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     for (let obj of ctn.content) {
       if (obj.hasSides) {
         obj.attach(o)
+        console.log(obj)
         return true
       }
     }
@@ -393,6 +397,20 @@ orthot.Zone = function(ekvx, override_startloc) {
       return true
     }
     return (traverseTestTBL[mover.SpatialClass].indexOf(impeder.SpatialClass) == -1)
+  }
+  
+  this.getObstructor = function(mover, ctn) {
+    let mover_class = mover.SpatialClass
+    
+    if (mover_class) {
+      let obstruction_class
+      for (let obstruction of ctn.content) {
+        obstruction_class = obstruction.SpatialClass
+        if (obstruction_class && (traverseTestTBL[mover_class].indexOf(obstruction_class) == -1)) {
+          return obstruction
+        }
+      }
+    }
   }
   
   this.getAdjacentCTN = function(ctn, dir) {    
@@ -573,12 +591,12 @@ orthot.Zone = function(ekvx, override_startloc) {
             if (portals.indexOf(portal) == -1) {
               portals.push(portal)
               let invsrcpdir = libek.direction.invert[portal.up]
-              r.push({ctn:this.getAdjacentCTN(portal.host.ctn, portal.up), dir:invsrcpdir, sourcePortal:portal, targetPortal:otherPortal})
+              r.push({ctn:this.getAdjacentCTN(portal.host.ctn, portal.up), dir:invsrcpdir, fromdir:dir, sourcePortal:portal, targetPortal:otherPortal})
             }
           }
         }
         else {
-          r.push({ctn:otherCTN, dir:invdir})          
+          r.push({ctn:otherCTN, dir:invdir, fromdir:dir})          
         }
       }      
     }).bind(this)
@@ -673,7 +691,7 @@ orthot.Zone = function(ekvx, override_startloc) {
         : force.fromHEADING      
       if (path.sourcePortal) {
       }
-      path.ctn.applyOutboundIndirectForce(heading, path.dir, force)      
+      path.ctn.applyOutboundIndirectForce(heading, path.dir, path.fromdir, force)      
     }
     
     // inbound secondary forces - these apply to neighbors of force.toCTN 
@@ -688,7 +706,7 @@ orthot.Zone = function(ekvx, override_startloc) {
           path.sourcePortal.forward
         ) 
         : force.fromHEADING      
-      path.ctn.applyInboundIndirectForce(heading, path.dir, force)      
+      path.ctn.applyInboundIndirectForce(heading, path.dir, path.fromdir, force)      
     }
   }
   
@@ -770,7 +788,7 @@ orthot.Zone = function(ekvx, override_startloc) {
               //stackfall!
             }
             else {
-              let ocol = {target:tgtForce, type:orthot.Collision.CHASE}
+              let ocol = {target:tgtForce, type:orthot.collision.CHASE}
               force.outgoing.push( ocol )
               tgtForce.incoming.push({source:force, collision:ocol})
             }
@@ -778,14 +796,14 @@ orthot.Zone = function(ekvx, override_startloc) {
           
           //If the directions are opposite, the source and target are ramming each other
           else if (force.toDIR == libek.direction.opposite[tgtForce.fromDIR]) {              
-            let ocol = {target:tgtForce, type:orthot.Collision.NEAR_RAM}
+            let ocol = {target:tgtForce, type:orthot.collision.NEAR_RAM}
             force.outgoing.push( ocol )
             tgtForce.incoming.push({source:force, collision:ocol})
           }
           
           //If the directions are neither, the source is striking the target's side
           else {
-            let ocol = {target:tgtForce, type:orthot.Collision.EDGE_RAM}
+            let ocol = {target:tgtForce, type:orthot.collision.EDGE_RAM}
             force.outgoing.push( ocol )
             tgtForce.incoming.push({source:force, collision:ocol})
           }
@@ -803,21 +821,21 @@ orthot.Zone = function(ekvx, override_startloc) {
           
           // Two forces separated by one space moving toward that space
           if (force.toDIR == libek.direction.opposite[otherForce.toDIR]) {
-            let ocol = {target:otherForce, type:orthot.Collision.FAR_RAM}
+            let ocol = {target:otherForce, type:orthot.collision.FAR_RAM}
             force.outgoing.push( ocol )
             otherForce.incoming.push({source:force, collision:ocol})
             
-            ocol = {target:force, type:orthot.Collision.FAR_RAM}
+            ocol = {target:force, type:orthot.collision.FAR_RAM}
             otherForce.outgoing.push( ocol )
             force.incoming.push({source:otherForce, collision:ocol})
           }
           // Two diagonally adjacent forces headed toward a common adjacent space
           else if (force.toDIR != tgtForce.toDIR) {
-            let ocol = {target:otherForce, type:orthot.Collision.CORNER_RAM}
+            let ocol = {target:otherForce, type:orthot.collision.CORNER_RAM}
             force.outgoing.push( ocol )
             otherForce.incoming.push( {source:force, collision:ocol})
             
-            ocol = {target:force, type:orthot.Collision.CORNER_RAM}
+            ocol = {target:force, type:orthot.collision.CORNER_RAM}
             otherForce.outgoing.push( ocol )
             force.incoming.push({source:otherForce, collision:ocol})
           }
@@ -897,7 +915,7 @@ orthot.Zone = function(ekvx, override_startloc) {
               if (!force.OBJ.hasMovementPriority(collision.target.OBJ, collision.target.fromDIR, force.toDIR, collision.type)) {
                 priorityResolve = false
               }                        
-              if (collision.type != orthot.Collision.NONE) {
+              if (collision.type != orthot.collision.NONE) {
                 simpleResolve = false
               }
             }
@@ -917,7 +935,7 @@ orthot.Zone = function(ekvx, override_startloc) {
                   //If the move gets deferred a second time, panic-fail to prevent it from turning into an infinite loop.
                   forces.splice(i, 1)
                   console.log("Movement Engine PANIC:  Force deferred a second time!", force)
-                  force.OBJ.strike(force, undefined, orthot.Collision.FAKE)                
+                  force.OBJ.strike(force, undefined, orthot.collision.FAKE)                
                   resolvedAny = true
                   //continue pass
                 }
@@ -938,21 +956,21 @@ orthot.Zone = function(ekvx, override_startloc) {
                   let incForce = incCollision.target
                   
                   switch(incCollision.type) {
-                    case orthot.Collision.CHASE:
-                      incCollision.type = orthot.Collision.NONE   
+                    case orthot.collision.CHASE:
+                      incCollision.type = orthot.collision.NONE   
                       break
                     
                     // If the object has movement priority, it wins FAR_RAM and CORNER_RAM collisions.
-                    case orthot.Collision.FAR_RAM:
+                    case orthot.collision.FAR_RAM:
                       //incCollision.type = orthot.collision.PRIORITY_RAM       //POWER!!! 
-                      //force.OBJ.strike(force, incForce.OBJ, orthot.Collision.PRIORITY_RAM)
-                      //incForce.OBJ.struck(force, force.OBJ, orthot.Collision.PRIORITY_RAM)
+                      //force.OBJ.strike(force, incForce.OBJ, orthot.collision.PRIORITY_RAM)
+                      //incForce.OBJ.struck(force, force.OBJ, orthot.collision.PRIORITY_RAM)
                       incForce.resolved = true
                       break
-                    case orthot.Collision.CORNER_RAM:
+                    case orthot.collision.CORNER_RAM:
                       //incCollision.type = orthot.collision.PRIORITY_STEAL     
-                      //force.OBJ.strike(force, incForce.OBJ, orthot.Collision.PRIORITY_STEAL)
-                      //incForce.OBJ.struck(force, force.OBJ, orthot.Collision.PRIORITY_STEAL)
+                      //force.OBJ.strike(force, incForce.OBJ, orthot.collision.PRIORITY_STEAL)
+                      //incForce.OBJ.struck(force, force.OBJ, orthot.collision.PRIORITY_STEAL)
                       incForce.resolved = true
                       break
                   }
@@ -970,17 +988,17 @@ orthot.Zone = function(ekvx, override_startloc) {
                     let incCollision = collisionRef.collision
                     let incForce = incCollision.target
                     switch(incCollision.type) {
-                      case orthot.Collision.EDGE_RAM:
-                      case orthot.Collision.NEAR_RAM:
-                      case orthot.Collision.CHASE:
-                        incCollision.type = orthot.Collision.SIMPLE
+                      case orthot.collision.EDGE_RAM:
+                      case orthot.collision.NEAR_RAM:
+                      case orthot.collision.CHASE:
+                        incCollision.type = orthot.collision.SIMPLE
                         //incForce.OBJ.strike(incForce, force.OBJ, orthot.collision.SIMPLE)
                         //force.OBJ.struck(incForce, incForce.OBJ, collision.SIMPLE)
                         //incForce.resolved = true
                         break
-                      case orthot.Collision.FAR_RAM:
-                      case orthot.Collision.CORNER_RAM:
-                        incCollision.type = orthot.Collision.NONE
+                      case orthot.collision.FAR_RAM:
+                      case orthot.collision.CORNER_RAM:
+                        incCollision.type = orthot.collision.NONE
                         break
                     }
                   }             
@@ -1193,6 +1211,9 @@ orthot.Zone = function(ekvx, override_startloc) {
           case 'crate':
             gobj = new orthot.Crate(this)
             break
+          case 'iceblock':
+            gobj = new orthot.Iceblock(this)
+            break
           case 'sceneportal':
             gobj = new orthot.ScenePortal(this)
             gobj.destination = libek.util.property("dest", datas)
@@ -1276,7 +1297,14 @@ orthot.Zone = function(ekvx, override_startloc) {
                 clist.push(portal)
               } 
             }
-            break               
+            break   
+          case "icefloor":
+            //console.log("icefloor", datas)
+            align = libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation)
+            vxc.setTerrainKnockout(loc, align.up)
+				    let icefloor = new orthot.Icefloor( align )
+            this.attach(x,y,z, icefloor)
+            break            
           case "ladder":
             let ldr = new orthot.Ladder(
               libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation),

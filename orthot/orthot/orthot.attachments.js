@@ -22,6 +22,7 @@ orthot.Portal = function(align, color, pclass, pname, ptarget) {
   this.ptarget = ptarget
   this.type = "portal"
   this.sources = []
+  this.surfacetype = orthot.surface.type.FRICTIONLESS
   this.mdlgen = function() {
     let r = libek.getAsset("portal_pane")
     if (color) {
@@ -32,9 +33,20 @@ orthot.Portal = function(align, color, pclass, pname, ptarget) {
   
   Object.assign(this, align)
 }
+
+orthot.Icefloor = function(align) {
+  this.type = "icefloor"
+  this.sources = []
+  this.surfacetype = orthot.surface.type.SLICK
+  this.mdlgen = function() {
+    return libek.getAsset("icefloor")
+  }
+  
+  Object.assign(this, align)
+}
 orthot.SmallButton = function(align, color) {
   this.type = "button"
-  this.minForce = orthot.Strength.NORMAL    //Can be pressed by player
+  this.minForce = orthot.strength.NORMAL    //Can be pressed by player
   this.mdlgen = function() {
     let r = libek.getAsset("smallbutton_up")
     if (color) {
@@ -47,7 +59,7 @@ orthot.SmallButton = function(align, color) {
 }
 orthot.BigButton = function(align, color) {
   this.type = "button"
-  this.minForce = orthot.Strength.HARD      //require assistance to press
+  this.minForce = orthot.strength.HARD      //require assistance to press
   this.objgen = function() {
     let r = libek.getAsset("bigbutton_up")
     if (color) {

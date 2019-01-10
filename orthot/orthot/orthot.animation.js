@@ -1503,6 +1503,107 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       txMAIN.update,
       end_trackCam
     )
+    
+    let randslidepose = function() {
+      mainCMP.setObject("creature", "slide"+(Math.floor(1+Math.random()*5)))
+      scale.x = (Math.random() > 0.5 ? 1 : -1)
+    }
+    
+    ctl.slide_flatflat = new libek.CommandSequence(
+      init, end, 1,
+      begin_trackCam,
+      [ {at:0.125, cmd:randslidepose},
+        {at:0.375, cmd:randslidepose},
+        {at:0.625, cmd:randslidepose},
+        {at:0.875, cmd:randslidepose},
+      ],
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
+    )
+
+    ctl.slide_flatdown = new libek.CommandSequence(
+      init_uphigh, end_up, 1,
+      begin_trackCam,
+      [ {at:0.00, cmd: d => {              
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_startpos.y += 1
+          lerprelpos_endpos.lerpVectors(lerprelpos_startpos, up, 0.5)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0
+        }},
+        {at:0.125, cmd:randslidepose},
+        {at:0.375, cmd:randslidepose},
+        {at:0.50, cmd: d => { 
+          mainCMP.setObject("creature", "stand")
+          scale.y = 1 
+          lerprelpos_startpos.copy(lerprelpos_endpos)    
+          lerprelpos_endpos.set(0, 0.5, 0)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0.50
+        }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+      ],
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
+    )
+    
+    ctl.slide_flatup = new libek.CommandSequence(
+      init, end_up, 1,
+      begin_trackCam,
+      [ {at:0.00, cmd: d => {              
+          lerprelpos_startpos.copy(behind)
+          lerprelpos_endpos.lerpVectors(lerprelpos_startpos, center, 0.5)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0
+        }},
+        {at:0.125, cmd:randslidepose},
+        {at:0.375, cmd:randslidepose},
+        {at:0.50, cmd: d => {
+          mainCMP.setObject("creature", "stand");
+          scale.y = 1 
+          lerprelpos_startpos.copy(lerprelpos_endpos)    
+          lerprelpos_endpos.set(0, 0.5, 0)
+          lerprelpos_len = 0.50
+          lerprelpos_start = 0.50
+        }},
+        {at:0.60, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = -1; scale.y = 0.97;}},
+        {at:1.00, cmd: d => { mainCMP.setObject("creature", "stand"); scale.y = 1; }},
+      ],
+      lerprelpos,
+      txMAIN.update,
+      end_trackCam
+    )
+        
+    ctl.slidestrike = new libek.CommandSequence(
+      init_still, end_still, 1,
+      begin_trackCam,
+      [ {at:0,     cmd:d=>{
+          lerprelpos_startpos.copy(center)
+          lerprelpos_endpos.lerpVectors(center, ahead, 0.2)
+          lerprelpos_len = 0.2
+          lerprelpos_start = 0
+        }},
+        lerprelpos,
+        {at:0.125, cmd:randslidepose},
+        lerprelpos,
+        {at:0.2,   cmd:d=>{
+          relpos.copy(lerprelpos_endpos)
+        }},
+        {at:0.375,   cmd:d=>{
+          mainCMP.setObject("creature", "stand") 
+          lerprelpos_startpos.copy(lerprelpos_endpos); 
+          lerprelpos_endpos.copy(center)
+          lerprelpos_start = 0.375
+          lerprelpos_len = 0.625
+        }},
+        lerprelpos,
+      ],
+      txMAIN.update,
+      end_trackCam
+    )
   }
   
   //set up the main instance
@@ -1589,7 +1690,67 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       }
     },
     
+    slidestrike:function(force) {
+      configurecam(force.isPortaljump)       
+      mainINST.ctl.configure(force.fromCTN, force.toHEADING, force.toFORWARD, force.toUP)  
+      if (force.fromCTN.getObject_bytype("ramp")) { 
+        //Impossible.  For now.  But...  maybe ice-ramps could be a fun way to get launched?
+        zone.addCommandsequence_short(mainINST.ctl.halfupslidestrike)
+      }    
+      else {
+        zone.addCommandsequence_short(mainINST.ctl.slidestrike)
+      }
+    },
     
+    slide:function(force) {
+      configurecam(force.isPortaljump)
+      
+      let animName
+      
+      {  //flat ground
+        if (force.toUPRAMP) {
+          animName = "flatup"
+        }
+        else if (force.toDOWNRAMP) {
+          animName = "flatdown"
+        
+        }
+        else if (force.hopOUT) {    
+          animName = "flatflat"
+        }
+        else {  //flat ground 
+          animName = "flatflat"   
+        }
+      }
+      
+      
+      if (animName) {
+        //console.log("run animation:  ", animName)
+        animName = "slide_" + animName
+        if (force.isPUSH) {
+          animName = "push" + animName
+        }
+        //animName += "_anim"
+        
+          
+        if (mainINST.ctl[animName]) {
+          mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP) 
+          
+          if (force.isPortaljump) {   
+            let hop = force.path[0]
+            minorINST1.ctl.configure(hop.adjCTN, hop.fromHEADING, hop.fromFORWARD, hop.fromUP)                        
+            zone.addCommandsequence_short(minorINST1.ctl[animName])            
+            zone.addCommandsequence_short(mainINST.ctl[animName])
+          }
+          else {
+            zone.addCommandsequence_short(mainINST.ctl[animName])
+          }
+        }
+        else {
+          console.log(`ERROR:  ANIMATION "${animName}" Is not implemented!`)
+        }
+      }
+    },
     
     walk:function(force) {  
       //console.log("WALK", mainINST, force)

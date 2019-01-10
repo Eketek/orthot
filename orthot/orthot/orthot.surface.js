@@ -23,31 +23,33 @@ orthot.surface = {
   //  There was at some point, a plan to do something more sophisticated, but this simplified model seems best for keeping puzzles logic-based
   //    (rather than physics-based or physics-abuse-based)
   interaction:{
-    SLIDE:0,      // No resistance - any push will do, and the object will continue moving
-    RESIST:1,     // minor resistance - standard push is sufficient to overcome.  At this and lower levels, no riding will take place
-    DRAG:2,       // moderate resistance - standard push is sufficient to overcome, but at this and higher levels, objects will will ride
-    IMPEDE:3,     // major resistance - standard push is quite insufficient.  
-    BLOCK:4,      // Need crushing force to move - which also may be sufficient to destroy
+    NONE:0,
+    SLIDE:1,      // No resistance - any push will do, and the object will continue moving
+    RESIST:2,     // minor resistance - standard push is sufficient to overcome.  At this and lower levels, no riding will take place
+    DRAG:3,       // moderate resistance - standard push is sufficient to overcome, but at this and higher levels, objects will will ride
+    IMPEDE:4,     // major resistance - standard push is quite insufficient.  
+    BLOCK:5,      // Need crushing force to move - which also may be sufficient to destroy
   },
 
   //lookup the interaction between a pair of surface types.
   //  This mostly is for preventing combinatorial explosions.  
   interact:( function() {
     let interact_tbl = [ 
-      [ 0, 0,0,0,0, 0,0,0, 0,0,0 ],
+      [ 1, 1,1,1,1, 1,1,1, 1,1,1 ],
       
-      [ 0, 0,0,0,1, 1,3,0, 0,0,0 ],
-      [ 0, 0,1,1,1, 0,2,1, 1,1,1 ],
-      [ 0, 0,1,2,2, 1,3,1, 1,1,1 ],
-      [ 0, 1,2,2,3, 3,4,1, 1,1,1 ],
+      [ 1, 1,1,1,2, 2,4,1, 1,1,1 ],
+      [ 1, 1,2,2,2, 1,3,2, 2,2,2 ],
+      [ 1, 1,2,3,3, 2,4,2, 2,2,2 ],
+      [ 1, 2,3,3,4, 4,5,2, 2,2,2 ],
       
-      [ 0, 1,0,1,3, 3,4,2, 1,1,1 ],
-      [ 0, 3,2,3,4, 4,2,3, 3,3,3 ],
-      [ 0, 0,1,1,1, 2,3,3, 1,1,1 ],
+      [ 1, 2,1,2,4, 4,5,3, 2,2,2 ],
+      [ 1, 4,3,4,5, 5,3,4, 4,4,4 ],
+      [ 1, 1,2,2,2, 3,4,4, 2,2,2 ],
       
-      [ 0, 0,1,1,1, 1,3,1, 1,2,2 ],
-      [ 0, 0,1,1,1, 1,3,1, 2,0,3 ],
-      [ 0, 0,1,1,1, 1,3,1, 2,3,0 ],
+      [ 1, 1,2,2,2, 2,4,2, 2,3,3 ],
+      [ 1, 1,2,2,2, 2,4,2, 3,1,4 ],
+      [ 1, 1,2,2,2, 2,4,2, 3,4,1 ],
+      
     ]
     
     return function(sfc, other_sfc) {

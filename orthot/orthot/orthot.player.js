@@ -82,6 +82,7 @@ orthot.Player = function(zone, align, init_fpmode) {
     }
   }
   
+  this.shoe_sfctype = orthot.surface.type.SMOOTH
   
   this.initGraphics = (function() {
     orthot.AnimateCreature(zone, this, nmap_walk, orientation, true)
@@ -101,6 +102,17 @@ orthot.Player = function(zone, align, init_fpmode) {
     sviewCTL.refocustarget.set(this.ctn.x, this.ctn.y + (this.ctn.getObject_bytype("ramp") ? 1 : 0.5), this.ctn.z)
   }
   
+  let getSFCinteraction = (function(fgrav) {
+    if (!fgrav) {
+      fgrav = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
+    }
+    let gravOBJ = zone.getObstructor(this, fgrav.toCTN)
+    if (gravOBJ) {
+      return orthot.surface.interact(this.shoe_sfctype, gravOBJ.surfaces[libek.direction.invert[fgrav.toHEADING]])
+    }
+    return orthot.surface.interaction.NONE
+  }).bind(this)
+  
   this.recvInput = function(inputs) {
     if (this.state == orthot.state.DEFEATED) {
       return
@@ -112,7 +124,8 @@ orthot.Player = function(zone, align, init_fpmode) {
     let iRIGHT = inputs.KeyD || inputs.ArrowRight
         
         
-    let dir   
+    let dir       
+    let prev_force
     
     if (fpmode) {    
       // override FP-mode view-manipulation while on ladders
@@ -154,10 +167,11 @@ orthot.Player = function(zone, align, init_fpmode) {
         dir = libek.direction.getKeyDirection("left", sviewCTL.campos.theta).code
       }
     }
-    
+        
     //If gravity is valid (or eventually "enabled"), set up a high-priority downward force.  
+    let force_gravity
     if (this.state != orthot.state.CLIMBING) {
-      let force_gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
+      force_gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
       force_gravity.priority = 100
       force_gravity.initiator = this
       force_gravity.action = "fall"
@@ -165,33 +179,49 @@ orthot.Player = function(zone, align, init_fpmode) {
       force_gravity.strength = orthot.strength.NORMAL
       zone.addForce(force_gravity)
     }
+    let sfc_interaction = getSFCinteraction(force_gravity)
+    
     //process input
     switch(this.state) {
       case orthot.state.IDLE:
-        if (dir) {    
+        if (dir) {
           //this.forward = dir.code
           setFWD(dir)
           let force = orthot.topology.scan_ramp(zone, this.ctn, this, dir, this.forward, this.up)
           force.initiator = this
-          force.action = "walk"
-          //force.inputDIR = dir
-          force.strength = orthot.strength.NORMAL
           this.animCTL.setNMAP(nmap_walk)
-          zone.addForce(force)
           
-          this.state = orthot.state.WALKING
+          if (sfc_interaction == orthot.surface.interaction.SLIDE) {
+            force.strength = orthot.strength.LIGHT
+            //this.state = orthot.state.SLIDING
+            force.action = "slide"
+          }
+          else {
+            force.strength = orthot.strength.NORMAL
+            this.state = orthot.state.WALKING         
+            force.action = "walk" 
+          }
+          zone.addForce(force)  
         }
-      break
+        break
       case orthot.state.WALKING:
         if (dir) {    
           //this.forward = dir.code
           setFWD(dir)
           let force = orthot.topology.scan_ramp(zone, this.ctn, this, dir, this.forward, this.up)
           force.initiator = this
-          force.action = "walk"
           //force.inputDIR = dir
-          force.strength = orthot.strength.NORMAL
           this.animCTL.setNMAP(nmap_walk)
+          
+          if (sfc_interaction == orthot.surface.interaction.SLIDE) {
+            force.strength = orthot.strength.LIGHT    
+            //this.state = orthot.state.SLIDING
+            force.action = "slide"
+          }
+          else {
+            force.strength = orthot.strength.NORMAL  
+            force.action = "walk"
+          }
           zone.addForce(force)
         }
         else {
@@ -222,7 +252,22 @@ orthot.Player = function(zone, align, init_fpmode) {
           zone.addForce(force)
         }  
         break
+      // SLIDING - Player-avatar very gracefully continues moves forward, regardless of player input or intent, until he smacks into something.
       case orthot.state.SLIDING:
+        let force = orthot.topology.scan_ramp(zone, this.ctn, this, this.slideHEADING, this.forward, this.up)
+        force.initiator = this
+        this.animCTL.setNMAP(nmap_walk)
+        
+        if (sfc_interaction == orthot.surface.interaction.SLIDE) {
+          force.strength = orthot.strength.NORMAL
+          //this.state = orthot.state.SLIDING
+          force.action = "slide"
+          zone.addForce(force)  
+        }
+        else {
+          this.state = orthot.state.IDLE
+          this.ready() 
+        }
         break
       case orthot.state.FALLING:
         if (dir) {          
@@ -301,25 +346,54 @@ orthot.Player = function(zone, align, init_fpmode) {
   }
   
   this.notify_ForcePropagationClearedObstruction = function(force, other) { 
-    this.animCTL.setNMAP(nmap_push)
+    if (this.state == orthot.state.WALKING) {
+      this.animCTL.setNMAP(nmap_push)
+    }
   }
   
   this.notify_PushClearedObstruction = function(force, other) { 
-    this.animCTL.setNMAP(nmap_push)
+    if (this.state == orthot.state.WALKING) {
+      this.animCTL.setNMAP(nmap_push)
+    }
   }
   
-  this.propagate = function(force) { }  
   this.struck = function(force, collision) { 
     //console.log("PLAYER-struck", force, collision) 
   }  
   this.strike = function(force, collision) { 
     //console.log("PLAYER-strike", force, collision) 
+    if ( (force.action != "fall") && (this.state == orthot.state.SLIDING) ) {
+      this.animCTL.setNMAP(nmap_walk)
+      this.animCTL.slidestrike(force)
+      force.resolved = true
+      this.state = orthot.state.IDLE
+      this.ready()
+    }
   }  
   this.move = function(force) { 
     switch(force.action) {
+      case "slide":
+        if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) { 
+          setFWD(force.toHEADING)
+        }
+        if (force.isTraversable()) {
+          if (force.toBLOCKINGRAMP) {
+            this.animCTL.slidestrike(force)
+            this.state = orthot.state.IDLE
+          }
+          else {
+            zone.putGameobject(force.toCTN, this)
+            this.animCTL.slide(force)
+            this.state = orthot.state.SLIDING
+            this.slideHEADING = force.toHEADING
+            return trit.TRUE
+          }
+        }
+        this.state = orthot.state.IDLE
+        return trit.FALSE
+        break
       case "walk":
-        if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) {        
-          //this.forward = force.toHEADING          
+        if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) { 
           setFWD(force.toHEADING)
         }
         if (force.isTraversable()) {
@@ -329,6 +403,14 @@ orthot.Player = function(zone, align, init_fpmode) {
           else {
             zone.putGameobject(force.toCTN, this)
             this.animCTL.walk(force)
+            
+            if ( (force.toHEADING != libek.direction.code.DOWN) && (force.toHEADING != libek.direction.code.UP) ) {
+              let sfc_interaction = getSFCinteraction()
+              if (sfc_interaction == orthot.surface.interaction.SLIDE) {
+                this.state = orthot.state.SLIDING
+                this.slideHEADING = force.toHEADING
+              }
+            }
           }
           return trit.TRUE
         }
@@ -354,6 +436,17 @@ orthot.Player = function(zone, align, init_fpmode) {
           if (this.state != orthot.state.DEFEATED) {        
             zone.putGameobject(force.toCTN, this)
             this.animCTL.fall(force)
+            
+            if ( (force.toHEADING != libek.direction.code.DOWN) && (force.toHEADING != libek.direction.code.UP) ) {
+              let sfc_interaction = getSFCinteraction()
+              if (sfc_interaction == orthot.surface.interaction.SLIDE) {
+                this.state = orthot.state.SLIDING
+                this.slideHEADING = force.toHEADING
+              }
+              else {
+                this.state = orthot.state.IDLE
+              }
+            }
           }
           return trit.TRUE
         }

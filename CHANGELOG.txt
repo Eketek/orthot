@@ -1,4 +1,7 @@
 0.3.0:
+  9 Jan 2019
+    Player now slides on ice
+    Partial fix for broken complex collision handling [and knowledge of where the rest of the breakage takes place]
   7-8 Jan 2019
     Movement behavior of simple objects has been standardized and is defined and controlled by simple properties:
        surface type (which gets paired up with an adjacent surface to become a surface interaction)

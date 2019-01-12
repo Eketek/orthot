@@ -2,6 +2,7 @@
 // This was intended to be implemented with prototypes, but that proved probematic when switching from the use of objects to the use of delegates for receiving
 // tick events from orthot.Zone
 orthot.OrthotObject = function(THIS, zone) {
+  THIS.id = libek.UID
   THIS.zone = zone
   THIS.isOrthotObject = true
   THIS.initGraphics = function() { return false }
@@ -14,7 +15,7 @@ orthot.OrthotObject = function(THIS, zone) {
   
   // A mechanism for allowing objects to override the default collision resolution order
   //  If true is returned for all collisions the object is involved in, this object will have the opportunity to take the space
-  THIS.hasMovementPriority = function(other_OBJ, other_fromDIR, obj_toDIR, collisiontype) { return false }
+  THIS.hasMovementPriority = function(this_force, other_force, collisiontype) { return false }
   
   /*  Called when this object has been struck by another object.  
       force:  The striking force
@@ -384,6 +385,13 @@ orthot.MovableObject = function(THIS, zone) {
       }
       zone.addForce(pbf)
     }
+  }
+  
+  THIS.hasMovementPriority = function(this_force, other_force, collisiontype) { 
+    if ( (collisiontype == orthot.collision.CORNER_RAM) && (this_force.fromHEADING == libek.direction.code.DOWN) ) {
+      return true
+    }
+    return false 
   }
   
   THIS.applyOutboundIndirectForce = function(heading, normal, from_normal, originatingForce) {    

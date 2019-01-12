@@ -83,6 +83,7 @@ orthot.Player = function(zone, align, init_fpmode) {
   }
   
   this.shoe_sfctype = orthot.surface.type.SMOOTH
+  this.can_skate = true
   
   this.initGraphics = (function() {
     orthot.AnimateCreature(zone, this, nmap_walk, orientation, true)
@@ -254,6 +255,10 @@ orthot.Player = function(zone, align, init_fpmode) {
         break
       // SLIDING - Player-avatar very gracefully continues moves forward, regardless of player input or intent, until he smacks into something.
       case orthot.state.SLIDING:
+        if (this.can_skate && dir) {
+          this.slideHEADING = dir
+          setFWD(dir)
+        }
         let force = orthot.topology.scan_ramp(zone, this.ctn, this, this.slideHEADING, this.forward, this.up)
         force.initiator = this
         this.animCTL.setNMAP(nmap_walk)
@@ -357,12 +362,12 @@ orthot.Player = function(zone, align, init_fpmode) {
     }
   }
   
-  this.struck = function(force, collision) { 
+  this.struck = function(force, other, collision, crash=false) { 
     //console.log("PLAYER-struck", force, collision) 
   }  
-  this.strike = function(force, collision) { 
-    //console.log("PLAYER-strike", force, collision) 
-    if ( (force.action != "fall") && (this.state == orthot.state.SLIDING) ) {
+  this.strike = function(force, other, collision, crash=false) { 
+    //console.log("PLAYER-strike force:", force, "other:", other, "collision:", collision, "state:", this.state) 
+    if (force.action == "slide") {
       this.animCTL.setNMAP(nmap_walk)
       this.animCTL.slidestrike(force)
       force.resolved = true
@@ -389,8 +394,6 @@ orthot.Player = function(zone, align, init_fpmode) {
             return trit.TRUE
           }
         }
-        this.state = orthot.state.IDLE
-        return trit.FALSE
         break
       case "walk":
         if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) { 

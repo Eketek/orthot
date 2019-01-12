@@ -1,4 +1,6 @@
 0.3.0:
+  12 Jan 2019
+    Revised movement dependency solver
   9 Jan 2019
     Player now slides on ice
     Partial fix for broken complex collision handling [and knowledge of where the rest of the breakage takes place]

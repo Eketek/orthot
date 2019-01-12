@@ -933,6 +933,19 @@ orthot.Zone = function(ekvx, override_startloc) {
         for (let id in movers) {          
           let mover = movers[id]
           let force = mover.forces[0]
+          if (force.cancelled) {
+            mover.forces.shift()
+            if (mover.forces.length == 0) { 
+              num_movers--                  
+              let depOBJ = depend[id]
+              if (depOBJ) {
+                movers[depOBJ.id] = depOBJ
+              }
+              delete movers[id]
+              delete depend[id]
+              continue
+            }
+          }
           
           let priorityResolve = true
           let simpleResolve = true      

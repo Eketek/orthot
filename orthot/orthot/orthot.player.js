@@ -83,7 +83,7 @@ orthot.Player = function(zone, align, init_fpmode) {
   }
   
   this.shoe_sfctype = orthot.surface.type.SMOOTH
-  this.can_skate = true
+  this.can_skate = false
   
   this.initGraphics = (function() {
     orthot.AnimateCreature(zone, this, nmap_walk, orientation, true)
@@ -370,7 +370,7 @@ orthot.Player = function(zone, align, init_fpmode) {
     if (force.action == "slide") {
       this.animCTL.setNMAP(nmap_walk)
       this.animCTL.slidestrike(force)
-      force.resolved = true
+      force.cancelled = true
       this.state = orthot.state.IDLE
       this.ready()
     }

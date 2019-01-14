@@ -868,7 +868,7 @@ orthot.Zone = function(ekvx, override_startloc) {
           }
         }
       }
-      // Classify near-collisions from objects moving toward the origin  (force-originating Object entering a space occupied by a departing Object)
+      // Classify near-collisions with objects moving toward the origin  (force-originating object entering a space occupied by a departing Object)
       let srcList = moves_by_dest[srcID]
       if (srcList && srcList.length > 0) {
         for (let srcForce of srcList) {
@@ -885,11 +885,11 @@ orthot.Zone = function(ekvx, override_startloc) {
                 force.incoming.push({source:srcForce, collision:ocol})
               }
             }
-            //else if (srcForce.toHEADING != libek.direction.opposite[force.fromHEADING]) {
-            //  let ocol = {target:force, type:orthot.collision.EDGE_RAM}
-            //  srcForce.outgoing.push( ocol )
-            //  force.incoming.push({source:srcForce, collision:ocol})
-            //}
+            else if (srcForce.toHEADING != libek.direction.opposite[force.fromHEADING]) {
+              let ocol = {target:force, type:orthot.collision.EDGE_RAM}
+              srcForce.outgoing.push( ocol )
+              force.incoming.push({source:srcForce, collision:ocol})
+            }
           }
         }
       }

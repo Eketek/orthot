@@ -3,6 +3,7 @@
     Fixed force dependency to account for multiple forces dependent upon one
     Fixed a sliding problem
     Reset button no longer steals focus.
+    Re-enable an unchecked collision
   12 Jan 2019
     Revised movement dependency solver
   9 Jan 2019

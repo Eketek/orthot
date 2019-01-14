@@ -175,6 +175,8 @@ $(async function() {
   let resetELEM = $("<div>").addClass("btn_active").text("RESET").click(function() {
     if (orthot.ActiveZone) {
       orthot.ActiveZone.reset()
+      disp_elem.focus()
+      
     }
   })
   $("#rightside").append(resetELEM)

@@ -732,7 +732,16 @@ orthot.Zone = function(ekvx, override_startloc) {
   //  
   //----------------------------------------------------------------------------------------------------------------------------------
   
+  // table of moving objects, indexed by object ID
   let movers = {}  
+    
+  // table of lists of dependant forces, indexed by ID of the object belonging to the impeding force
+  // this is a dynamic dependency graph representing unresolved collisions between forces.
+  // A dependent force is a force which is possibly impeded by another force.  The impeding force may be either of these two situations: 
+  //    an incoming object (impedes if it passes)
+  //    an outgoing (impedes if it fails)
+  //
+  // This is updated every time dependencies between forces are found, resolved, deferred, or nullified.
   let depend
   
   let num_movers = 0
@@ -756,151 +765,171 @@ orthot.Zone = function(ekvx, override_startloc) {
   }
       
   this.addForce = (function(force) {
-    recent_insertion = true
-    
-    force.incoming = []
-    force.outgoing = []  
-    
-    let obj = force.OBJ
-    if (force.OBJ.recently != this.ticknum) {
-      force.OBJ.recently = this.ticknum
-      movers[force.OBJ.id] = force.OBJ
-      force.OBJ.forces = [force]
-      num_movers++
-    }
-    else if (cmp_forces(force.OBJ.forces[0], force) > 0) {
-      force.OBJ.forces.unshift(force)
-      if (force.OBJ.depend && (depend[force.OBJ.depend] == force.OBJ)) {
-        delete depend[force.OBJ.depend]
+  
+    //If the object has not moved this tick, add the force
+    //If the object did move already, skip ahead a bit, propagate the force, then return.
+    if (force.OBJ.movedAt != this.ticknum) {
+      recent_insertion = true
+      
+      force.incoming = []
+      force.outgoing = []  
+      
+      
+      //let obj = force.OBJ
+      if (force.OBJ.recently != this.ticknum) {
+        force.OBJ.recently = this.ticknum
         movers[force.OBJ.id] = force.OBJ
+        force.OBJ.forces = [force]
+        delete force.OBJ.depend
+        num_movers++
       }
-    }
-    else {
-      force.OBJ.forces.push(force)
-      force.OBJ.forces.sort(cmp_forces)
-    }
-    //forces.push(force)
-    
-    // Organize forces into a pair of tables - one indexed by source, the other indexed by destination
-    let srcID = force.fromCTN.id
-    let destID = force.toCTN.id
-        
-    let srclist = moves_by_source[srcID]
-    let dstlist = moves_by_dest[destID]
-    
-    if (!srclist) {
-      srclist = []
-      moves_by_source[srcID] = srclist
-    }
-    if (!dstlist) {
-      dstlist = []
-      moves_by_dest[destID] = dstlist
-    }
-        
-    // Movement insertion during processMovement() [generally dragging and falling] might need to result in re-classification of movement in affected spaces,
-    // but this doesn't seem particularly important.  So, for now, any movement inserted during processMovement() is assumed to be non-controversial and will
-    // be blindly accepted.
-    //
-    // if (processMovementActive) { 
-    //   classifyNearCollisions(srcID)
-    //   classifyFarCollisions(destID)
-    // }
-    
-    // Classify near-collisions with objects moving away from the destination (force-originating Object entering a space occupied by a departing Object)
-    let tgtList = moves_by_source[destID]
-    if (tgtList && tgtList.length > 0) {
-      for (let tgtForce of tgtList) {
-        if ((force.OBJ != tgtForce.OBJ) && this.impededBy(force.OBJ, tgtForce.OBJ)) {
-          //force.outgoing.push(tgtForce)        
-          //If the directions match, the source is chasing the target
-          if (force.toHEADING == tgtForce.fromHEADING) {          
-            if (tgtForce.moved) {
-              //stackfall!
+      
+      //If the force has a higher priority than the object's active force, replace the active force with the new one and clear the dependancy (if present)
+      else if (cmp_forces(force.OBJ.forces[0], force) > 0) {
+        force.OBJ.forces.unshift(force)
+        if (force.OBJ.depend) {
+          let depOBJs = depend[force.OBJ.depend]
+          if (depOBJs) {
+            let i = depOBJs.indexOf(force.OBJ)
+            if (i != -1) {
+              if (depOBJs.length == 1) {
+                delete depend[force.OBJ.depend]
+              }
+              else {
+                depOBJs.splice(i,1)
+              }
+              movers[force.OBJ.id] = force.OBJ
             }
+          }
+        }
+      }
+      else {
+        force.OBJ.forces.push(force)
+        force.OBJ.forces.sort(cmp_forces)
+      }
+      //forces.push(force)
+      
+      // Organize forces into a pair of tables - one indexed by source, the other indexed by destination
+      let srcID = force.fromCTN.id
+      let destID = force.toCTN.id
+          
+      let srclist = moves_by_source[srcID]
+      let dstlist = moves_by_dest[destID]
+      
+      if (!srclist) {
+        srclist = []
+        moves_by_source[srcID] = srclist
+      }
+      if (!dstlist) {
+        dstlist = []
+        moves_by_dest[destID] = dstlist
+      }
+          
+      // Movement insertion during processMovement() [generally dragging and falling] might need to result in re-classification of movement in affected spaces,
+      // but this doesn't seem particularly important.  So, for now, any movement inserted during processMovement() is assumed to be non-controversial and will
+      // be blindly accepted.
+      //
+      // if (processMovementActive) { 
+      //   classifyNearCollisions(srcID)
+      //   classifyFarCollisions(destID)
+      // }
+      
+      // Classify near-collisions with objects moving away from the destination (force-originating Object entering a space occupied by a departing Object)
+      let tgtList = moves_by_source[destID]
+      if (tgtList && tgtList.length > 0) {
+        for (let tgtForce of tgtList) {
+          if ((force.OBJ != tgtForce.OBJ) && this.impededBy(force.OBJ, tgtForce.OBJ)) {
+            //force.outgoing.push(tgtForce)        
+            //If the directions match, the source is chasing the target
+            if (force.toHEADING == tgtForce.fromHEADING) {          
+              if (tgtForce.moved) {
+                //stackfall!
+              }
+              else {
+                let ocol = {target:tgtForce, type:orthot.collision.CHASE}
+                force.outgoing.push( ocol )
+                tgtForce.incoming.push({source:force, collision:ocol})
+              }
+            }
+            
+            //If the directions are opposite, the source and target are ramming each other
+            else if (force.toHEADING == libek.direction.opposite[tgtForce.fromHEADING]) {              
+              let ocol = {target:tgtForce, type:orthot.collision.NEAR_RAM}
+              force.outgoing.push( ocol )
+              tgtForce.incoming.push({source:force, collision:ocol})
+            }
+            
+            //If the directions are neither, the source is striking the target's side
             else {
-              let ocol = {target:tgtForce, type:orthot.collision.CHASE}
+              let ocol = {target:tgtForce, type:orthot.collision.EDGE_RAM}
               force.outgoing.push( ocol )
               tgtForce.incoming.push({source:force, collision:ocol})
             }
           }
-          
-          //If the directions are opposite, the source and target are ramming each other
-          else if (force.toHEADING == libek.direction.opposite[tgtForce.fromHEADING]) {              
-            let ocol = {target:tgtForce, type:orthot.collision.NEAR_RAM}
-            force.outgoing.push( ocol )
-            tgtForce.incoming.push({source:force, collision:ocol})
-          }
-          
-          //If the directions are neither, the source is striking the target's side
-          else {
-            let ocol = {target:tgtForce, type:orthot.collision.EDGE_RAM}
-            force.outgoing.push( ocol )
-            tgtForce.incoming.push({source:force, collision:ocol})
+        }
+      }
+      // Classify near-collisions from objects moving toward the origin  (force-originating Object entering a space occupied by a departing Object)
+      let srcList = moves_by_dest[srcID]
+      if (srcList && srcList.length > 0) {
+        for (let srcForce of srcList) {
+          if ((force.OBJ != srcForce.OBJ) && this.impededBy(force.OBJ, srcForce.OBJ)) {
+            //force.outgoing.push(tgtForce)        
+            //If the directions match, the source is chasing the target
+            if (srcForce.toHEADING == force.fromHEADING) {          
+              if (srcForce.moved) {
+                //stackfall!
+              }
+              else {
+                let ocol = {target:force, type:orthot.collision.CHASE}
+                srcForce.outgoing.push( ocol )
+                force.incoming.push({source:srcForce, collision:ocol})
+              }
+            }
+            //else if (srcForce.toHEADING != libek.direction.opposite[force.fromHEADING]) {
+            //  let ocol = {target:force, type:orthot.collision.EDGE_RAM}
+            //  srcForce.outgoing.push( ocol )
+            //  force.incoming.push({source:srcForce, collision:ocol})
+            //}
           }
         }
       }
-    }
-    // Classify near-collisions from objects moving toward the origin  (force-originating Object entering a space occupied by a departing Object)
-    let srcList = moves_by_dest[srcID]
-    if (srcList && srcList.length > 0) {
-      for (let srcForce of srcList) {
-        if ((force.OBJ != srcForce.OBJ) && this.impededBy(force.OBJ, srcForce.OBJ)) {
-          //force.outgoing.push(tgtForce)        
-          //If the directions match, the source is chasing the target
-          if (srcForce.toHEADING == force.fromHEADING) {          
-            if (srcForce.moved) {
-              //stackfall!
+      
+      // Classify far-collisions (Two objects attempting to enter the same destination)
+      tgtList = moves_by_dest[destID]
+      if (tgtList && tgtList.length > 0) {
+        for (let otherForce of tgtList) {  
+          if ((force.OBJ != otherForce.OBJ) && this.impededBy(force.OBJ, otherForce.OBJ)) {
+            let srcForce = force
+            let tgtForce = otherForce
+            
+            // Two forces separated by one space moving toward that space
+            if (force.toHEADING == libek.direction.opposite[otherForce.toHEADING]) {
+              let ocol = {target:otherForce, type:orthot.collision.FAR_RAM}
+              force.outgoing.push( ocol )
+              otherForce.incoming.push({source:force, collision:ocol})
+              
+              ocol = {target:force, type:orthot.collision.FAR_RAM}
+              otherForce.outgoing.push( ocol )
+              force.incoming.push({source:otherForce, collision:ocol})
             }
-            else {
-              let ocol = {target:force, type:orthot.collision.CHASE}
-              srcForce.outgoing.push( ocol )
-              force.incoming.push({source:srcForce, collision:ocol})
+            // Two diagonally adjacent forces headed toward a common adjacent space
+            else if (force.toHEADING != tgtForce.toHEADING) {
+              let ocol = {target:otherForce, type:orthot.collision.CORNER_RAM}
+              force.outgoing.push( ocol )
+              otherForce.incoming.push( {source:force, collision:ocol})
+              
+              ocol = {target:force, type:orthot.collision.CORNER_RAM}
+              otherForce.outgoing.push( ocol )
+              force.incoming.push({source:otherForce, collision:ocol})
             }
           }
-          //else if (srcForce.toHEADING != libek.direction.opposite[force.fromHEADING]) {
-          //  let ocol = {target:force, type:orthot.collision.EDGE_RAM}
-          //  srcForce.outgoing.push( ocol )
-          //  force.incoming.push({source:srcForce, collision:ocol})
-          //}
         }
       }
+      
+      srclist.push(force)
+      dstlist.push(force)
     }
     
-    // Classify far-collisions (Two objects attempting to enter the same destination)
-    tgtList = moves_by_dest[destID]
-    if (tgtList && tgtList.length > 0) {
-      for (let otherForce of tgtList) {  
-        if ((force.OBJ != otherForce.OBJ) && this.impededBy(force.OBJ, otherForce.OBJ)) {
-          let srcForce = force
-          let tgtForce = otherForce
-          
-          // Two forces separated by one space moving toward that space
-          if (force.toHEADING == libek.direction.opposite[otherForce.toHEADING]) {
-            let ocol = {target:otherForce, type:orthot.collision.FAR_RAM}
-            force.outgoing.push( ocol )
-            otherForce.incoming.push({source:force, collision:ocol})
-            
-            ocol = {target:force, type:orthot.collision.FAR_RAM}
-            otherForce.outgoing.push( ocol )
-            force.incoming.push({source:otherForce, collision:ocol})
-          }
-          // Two diagonally adjacent forces headed toward a common adjacent space
-          else if (force.toHEADING != tgtForce.toHEADING) {
-            let ocol = {target:otherForce, type:orthot.collision.CORNER_RAM}
-            force.outgoing.push( ocol )
-            otherForce.incoming.push( {source:force, collision:ocol})
-            
-            ocol = {target:force, type:orthot.collision.CORNER_RAM}
-            otherForce.outgoing.push( ocol )
-            force.incoming.push({source:otherForce, collision:ocol})
-          }
-        }
-      }
-    }
-    
-    srclist.push(force)
-    dstlist.push(force)
-           
     //  Force propagation
     //  
     //  This is not *completely* necessesary, as the movement engine is capable of managing live insertions.  However, it is required if forces need to be 
@@ -922,6 +951,7 @@ orthot.Zone = function(ekvx, override_startloc) {
   
   let processMovement = function() {
     try {    
+    
       depend = {}
       
       let resolved_any = true
@@ -933,13 +963,18 @@ orthot.Zone = function(ekvx, override_startloc) {
         for (let id in movers) {          
           let mover = movers[id]
           let force = mover.forces[0]
+          
+          //handle force cancellation triggered by logic outside of the movement engine
           if (force.cancelled) {
+            //delete the force, if no forces left for the object, remove it from the movement data and re-activate any dependencies
             mover.forces.shift()
             if (mover.forces.length == 0) { 
               num_movers--                  
-              let depOBJ = depend[id]
-              if (depOBJ) {
-                movers[depOBJ.id] = depOBJ
+              let depOBJs = depend[id]
+              if (depOBJs) {
+                for (let depOBJ of depOBJs) {
+                  movers[depOBJ.id] = depOBJ
+                }
               }
               delete movers[id]
               delete depend[id]
@@ -973,7 +1008,12 @@ orthot.Zone = function(ekvx, override_startloc) {
           
           if (!(simpleResolve || priorityResolve)) {
             if (deferTO) {
-              depend[deferTO.OBJ.id] = force.OBJ
+              let depOBJs = depend[deferTO.OBJ.id]
+              if (!depOBJs) {
+                depend[deferTO.OBJ.id] = depOBJs = []
+              }
+              depOBJs.push(force.OBJ)
+              //depend[deferTO.OBJ.id] = force.OBJ
               force.OBJ.depend = deferTO.OBJ.id
               delete movers[id]
               resolved_any = true
@@ -990,18 +1030,20 @@ orthot.Zone = function(ekvx, override_startloc) {
               // If the object pushed another object, attempt to resolve inserted forces
               case trit.MAYBE:
                 if (force.deferred) {
+                  //console.log("defer", force)
                   //If the move gets deferred a second time, panic-fail to prevent it from turning into an infinite loop.
-                  //forces.splice(i, 1)
                   console.log("  Movement Engine PANIC:  Force deferred a second time!", force)
                   mover.strike(force, undefined, orthot.collision.FAKE)                
                   resolvedAny = true
                   force.cancelled = true
                   mover.shift()
                   if (mover.forces.length == 0) {   
-                    num_movers--                  
-                    let depOBJ = depend[id]
-                    if (depOBJ) {
-                      movers[depOBJ.id] = depOBJ
+                    num_movers--           
+                    let depOBJs = depend[id]
+                    if (depOBJs) {
+                      for (let depOBJ of depOBJs) {
+                        movers[depOBJ.id] = depOBJ
+                      }
                     }
                     delete movers[id]
                     delete depend[id]
@@ -1013,16 +1055,22 @@ orthot.Zone = function(ekvx, override_startloc) {
                 }
                 break
               case trit.TRUE:
+                //console.log("pass", force)
                 resolved_any = true
                 force.moved = true
                 num_movers--              
                 //force.priority = Number.MAX_SAFE_INTEGER
+                
+                //cancel all other forces still operating on the object, remove it from movement data, and reactivate any dependencies
+                mover.movedAt = this.ticknum
                 for (let i = 1; i < mover.forces.length; i++) {
                   mover.forces[i].cancelled = true
-                }
-                let depOBJ = depend[id]
-                if (depOBJ) {
-                  movers[depOBJ.id] = depOBJ
+                }       
+                let depOBJs = depend[id]
+                if (depOBJs) {
+                  for (let depOBJ of depOBJs) {
+                    movers[depOBJ.id] = depOBJ
+                  }
                 }
                 delete movers[id]
                 delete depend[id]
@@ -1049,6 +1097,7 @@ orthot.Zone = function(ekvx, override_startloc) {
                 processIndirectForces(force)
                 break
               case trit.FALSE:
+                //console.log("cancel", force)
                 force.cancelled = true
                 resolved_any = true
                 for (let collisionRef of force.incoming) {
@@ -1067,12 +1116,15 @@ orthot.Zone = function(ekvx, override_startloc) {
                   }
                 }
                 
+                //delete the force, if no forces left for the object, remove it from the movement data and re-activate any dependencies
                 mover.forces.shift()
                 if (mover.forces.length == 0) { 
-                  num_movers--                  
-                  let depOBJ = depend[id]
-                  if (depOBJ) {
-                    movers[depOBJ.id] = depOBJ
+                  num_movers--               
+                  let depOBJs = depend[id]
+                  if (depOBJs) {
+                    for (let depOBJ of depOBJs) {
+                      movers[depOBJ.id] = depOBJ
+                    }
                   }
                   delete movers[id]
                   delete depend[id]
@@ -1083,7 +1135,20 @@ orthot.Zone = function(ekvx, override_startloc) {
         }
       }
       if (num_movers > 0) {
+        //console.log("-------------------------------------------")
         console.log("  Objects remaining at processMovement end:", movers, depend)
+        /*
+        for (let k in movers) {
+          console.log(k, movers[k].id, movers[k].forces)
+        }
+        console.log("--")
+        for (let k in depend) {
+          for (let dobj of depend[k]) {
+            console.log(k, dobj.id, dobj.forces)
+          }
+        }
+        console.log("-------------------------------------------")
+        */
         movers = {}
         num_movers = 0
         

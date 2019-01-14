@@ -11,7 +11,10 @@ orthot.OrthotObject = function(THIS, zone) {
   //  and this function is also where force proapgation should be handled.
   //This should return true if this object has propagated the force (to prevent infinite loop from force-propagation)
   // If the function returns true, no additional forces from the originating direction will be applied to the object during the same tick
-  THIS.propagateForce = function(force){ return true }
+  THIS.propagateForce = function(force){     
+    force.OBJ.strike(force, THIS, orthot.collision.SIMPLE)
+    THIS.struck(force, force.OBJ, orthot.collision.SIMPLE)
+  }
   
   // A mechanism for allowing objects to override the default collision resolution order
   //  If true is returned for all collisions the object is involved in, this object will have the opportunity to take the space
@@ -225,13 +228,6 @@ orthot.MovableObject = function(THIS, zone) {
       zone.removeTickListener(THIS.update)
       return
     }    
-    gravity = orthot.topology.scan_simple(zone, THIS.ctn, THIS, libek.direction.code.DOWN, libek.direction.code.NORTH, libek.direction.code.UP)
-    gravity.OBJ = THIS
-    gravity.initiator = THIS
-    gravity.action = "fall"
-    gravity.strength = THIS.fallStrength
-    gravity.priority = 100
-    zone.addForce(gravity)
     
     if (THIS.state == orthot.state.SLIDING) {
       let sforce = orthot.topology.scan_simple(zone, THIS.ctn, THIS, THIS.slideHEADING, libek.direction.code.NORTH, libek.direction.code.UP)
@@ -242,6 +238,15 @@ orthot.MovableObject = function(THIS, zone) {
       sforce.priority = 25
       zone.addForce(sforce)
     }
+    
+    gravity = orthot.topology.scan_simple(zone, THIS.ctn, THIS, libek.direction.code.DOWN, libek.direction.code.NORTH, libek.direction.code.UP)
+    gravity.OBJ = THIS
+    gravity.initiator = THIS
+    gravity.action = "fall"
+    gravity.strength = THIS.fallStrength
+    gravity.priority = 100
+    zone.addForce(gravity)
+    
   }
   
   THIS.strike = function(force, otherOBJ, collision, crash=false) { 
@@ -409,6 +414,7 @@ orthot.MovableObject = function(THIS, zone) {
             pforce.strength = orthot.strength.LIGHT
             pforce.action = "fall"
             zone.addForce(pforce)
+            originatingForce.stacked = pforce
           }
           else {
             if (sfc_interaction >= orthot.surface.interaction.DRAG) {

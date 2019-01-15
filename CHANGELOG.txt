@@ -4,6 +4,7 @@
     Fixed a sliding problem
     Reset button no longer steals focus.
     Re-enable an unchecked collision
+    Added loop-crashing logic (to resolve loops of moving objects)
   12 Jan 2019
     Revised movement dependency solver
   9 Jan 2019

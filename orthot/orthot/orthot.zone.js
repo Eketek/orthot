@@ -733,7 +733,8 @@ orthot.Zone = function(ekvx, override_startloc) {
   //----------------------------------------------------------------------------------------------------------------------------------
   
   // table of moving objects, indexed by object ID
-  let movers = {}  
+  let active_movers = {}    
+  let all_movers = {}
     
   // table of lists of dependant forces, indexed by ID of the object belonging to the impeding force
   // this is a dynamic dependency graph representing unresolved collisions between forces.
@@ -778,7 +779,8 @@ orthot.Zone = function(ekvx, override_startloc) {
       //let obj = force.OBJ
       if (force.OBJ.recently != this.ticknum) {
         force.OBJ.recently = this.ticknum
-        movers[force.OBJ.id] = force.OBJ
+        active_movers[force.OBJ.id] = force.OBJ
+        all_movers[force.OBJ.id] = force.OBJ
         force.OBJ.forces = [force]
         delete force.OBJ.depend
         num_movers++
@@ -798,7 +800,8 @@ orthot.Zone = function(ekvx, override_startloc) {
               else {
                 depOBJs.splice(i,1)
               }
-              movers[force.OBJ.id] = force.OBJ
+              active_movers[force.OBJ.id] = force.OBJ
+              all_movers[force.OBJ.id] = force.OBJ
             }
           }
         }
@@ -949,214 +952,296 @@ orthot.Zone = function(ekvx, override_startloc) {
   }).bind(this)
   
   
-  let processMovement = function() {
+  let processMovement = (function() {
     try {    
     
       depend = {}
       
       let resolved_any = true
       
-      main:
-      while (resolved_any || recent_insertion) {
-        recent_insertion = false
-        resolved_any = false
-        for (let id in movers) {          
-          let mover = movers[id]
-          let force = mover.forces[0]
-          
-          //handle force cancellation triggered by logic outside of the movement engine
-          if (force.cancelled) {
-            //delete the force, if no forces left for the object, remove it from the movement data and re-activate any dependencies
-            mover.forces.shift()
-            if (mover.forces.length == 0) { 
-              num_movers--                  
-              let depOBJs = depend[id]
-              if (depOBJs) {
-                for (let depOBJ of depOBJs) {
-                  movers[depOBJ.id] = depOBJ
-                }
-              }
-              delete movers[id]
-              delete depend[id]
-              continue
-            }
-          }
-          
-          let priorityResolve = true
-          let simpleResolve = true      
-          
-          let deferTO
-          
-            // Check to see if the force can be resolved simply.
-          for (let collision of force.outgoing) {
-            if (!collision.target.cancelled) {
+      while (true) {
+        while (resolved_any || recent_insertion) {
+          recent_insertion = false
+          resolved_any = false
+          for (let id in active_movers) {      
+            let mover = active_movers[id]
+            let force = mover.forces[0]   
             
-              // This may be problematic in a difficult-to-test case:  If a force ("force-A") with two collisions ("force-B" and "force-C") claims priority over 
-              //  force-B, does not claim priority over force-C, force-C obstructs only if it succeessfully moves its object, and force-C is impeded in some way,
-              //  does force-A with its priority over force-B get respected?
-              if (!force.OBJ.hasMovementPriority(force, collision.target, collision.type)) {              
-                priorityResolve = false
-                if (collision.type != orthot.collision.NONE) {
-                  simpleResolve = false
-                  if (!deferTO) {
-                    deferTO = collision.target
-                  }
-                }
-              }
-            }
-          }
-          
-          if (!(simpleResolve || priorityResolve)) {
-            if (deferTO) {
-              let depOBJs = depend[deferTO.OBJ.id]
-              if (!depOBJs) {
-                depend[deferTO.OBJ.id] = depOBJs = []
-              }
-              depOBJs.push(force.OBJ)
-              //depend[deferTO.OBJ.id] = force.OBJ
-              force.OBJ.depend = deferTO.OBJ.id
-              delete movers[id]
-              resolved_any = true
-            }
-          }          
-          else {          
-            //Attempt to move
-            //  The move can succeeed, fail, or get deferred.
-            //  success (trit.TRUE) - the force resolved, and the object moved
-            //  fail (trit.FALSE)   - the force resolved, but the object stayed put
-            //  defer (trit.MAYBE)  - Additional forces have been added (which are to be processed, to be followed with another call to move())
-            let moveResult = force.OBJ.move(force)         
-            switch(moveResult) {
-              // If the object pushed another object, attempt to resolve inserted forces
-              case trit.MAYBE:
-                if (force.deferred) {
-                  //console.log("defer", force)
-                  //If the move gets deferred a second time, panic-fail to prevent it from turning into an infinite loop.
-                  console.log("  Movement Engine PANIC:  Force deferred a second time!", force)
-                  mover.strike(force, undefined, orthot.collision.FAKE)                
-                  resolvedAny = true
-                  force.cancelled = true
-                  mover.shift()
-                  if (mover.forces.length == 0) {   
-                    num_movers--           
-                    let depOBJs = depend[id]
-                    if (depOBJs) {
-                      for (let depOBJ of depOBJs) {
-                        movers[depOBJ.id] = depOBJ
-                      }
-                    }
-                    delete movers[id]
-                    delete depend[id]
-                  }                
-                }
-                else {                
-                  resolved_any = true
-                  force.deferred = true
-                }
-                break
-              case trit.TRUE:
-                //console.log("pass", force)
-                resolved_any = true
-                force.moved = true
-                num_movers--              
-                //force.priority = Number.MAX_SAFE_INTEGER
-                
-                //cancel all other forces still operating on the object, remove it from movement data, and reactivate any dependencies
-                mover.movedAt = this.ticknum
-                for (let i = 1; i < mover.forces.length; i++) {
-                  mover.forces[i].cancelled = true
-                }       
+            //handle force cancellation triggered by logic outside of the movement engine
+            if (force.cancelled) {
+              //delete the force, if no forces left for the object, remove it from the movement data and re-activate any dependencies
+              mover.forces.shift()
+              if (mover.forces.length == 0) { 
+                num_movers--                  
                 let depOBJs = depend[id]
                 if (depOBJs) {
                   for (let depOBJ of depOBJs) {
-                    movers[depOBJ.id] = depOBJ
+                    active_movers[depOBJ.id] = depOBJ
                   }
                 }
-                delete movers[id]
+                delete active_movers[id]
                 delete depend[id]
-                
-                //If the object moves, simplify Collisions and mark them as deferred collisions
-                //  (collisions are "deferred" until it can be determined which force to use for it)
-                for (let collisionRef of force.incoming) {
-                  let incCollision = collisionRef.collision
-                  let incForce = incCollision.target
-                  
-                  switch(incCollision.type) {
-                    case orthot.collision.CHASE:
-                      incCollision.type = orthot.collision.NONE   
-                      break
-                    // If the object has movement priority, it wins FAR_RAM and CORNER_RAM collisions.
-                    case orthot.collision.FAR_RAM:
-                      incCollision.type = orthot.collision.PRIORITY_RAM       //POWER!!! 
-                      break
-                    case orthot.collision.CORNER_RAM:
-                      incCollision.type = orthot.collision.PRIORITY_STEAL     
-                      break
+                continue
+              }
+            }
+            
+            let priorityResolve = true
+            let simpleResolve = true      
+            
+            let deferTO
+            
+              // Check to see if the force can be resolved simply.
+            for (let collision of force.outgoing) {
+              if (!collision.target.cancelled) {
+              
+                // This may be problematic in a difficult-to-test case:  If a force ("force-A") with two collisions ("force-B" and "force-C") claims priority over 
+                //  force-B, does not claim priority over force-C, force-C obstructs only if it succeessfully moves its object, and force-C is impeded in some way,
+                //  does force-A with its priority over force-B get respected?
+                if (!force.OBJ.hasMovementPriority(force, collision.target, collision.type)) {              
+                  priorityResolve = false
+                  if (collision.type != orthot.collision.NONE) {
+                    simpleResolve = false
+                    if (!deferTO) {
+                      deferTO = collision.target
+                    }
                   }
                 }
-                processIndirectForces(force)
-                break
-              case trit.FALSE:
-                //console.log("cancel", force)
-                force.cancelled = true
+              }
+            }
+            
+            if (!(simpleResolve || priorityResolve)) {
+              if (deferTO) {
+                let depOBJs = depend[deferTO.OBJ.id]
+                if (!depOBJs) {
+                  depend[deferTO.OBJ.id] = depOBJs = []
+                }
+                depOBJs.push(force.OBJ)
+                //depend[deferTO.OBJ.id] = force.OBJ
+                force.OBJ.depend = deferTO.OBJ.id
+                delete active_movers[id]
                 resolved_any = true
-                for (let collisionRef of force.incoming) {
-                  let incCollision = collisionRef.collision
-                  let incForce = incCollision.target
-                  switch(incCollision.type) {
-                    case orthot.collision.EDGE_RAM:
-                    case orthot.collision.NEAR_RAM:
-                    case orthot.collision.CHASE:
-                      incCollision.type = orthot.collision.SIMPLE
-                      break
-                    case orthot.collision.FAR_RAM:
-                    case orthot.collision.CORNER_RAM:
-                      incCollision.type = orthot.collision.NONE
-                      break
-                  }
-                }
+              }
+            }          
+            else {          
+              //Attempt to move
+              //  The move can succeeed, fail, or get deferred.
+              //  success (trit.TRUE) - the force resolved, and the object moved
+              //  fail (trit.FALSE)   - the force resolved, but the object stayed put
+              //  defer (trit.MAYBE)  - Additional forces have been added (which are to be processed, to be followed with another call to move())
+              let moveResult = force.OBJ.move(force)         
+              switch(moveResult) {
+                // If the object pushed another object, attempt to resolve inserted forces
+                case trit.MAYBE:
                 
-                //delete the force, if no forces left for the object, remove it from the movement data and re-activate any dependencies
-                mover.forces.shift()
-                if (mover.forces.length == 0) { 
-                  num_movers--               
+                  // NOTE:  deferred forces is somewhat of a relic of an earlier and incomplete version of the movement engine.  Force deferral was a hack to
+                  //        re-order forces when pushing objects (which has since been cleaned up and handled by the force propagation mechanism)
+                  //        force deferral is now automatic and tied directly to collision detection.
+                  //        However, this is to be kept as-is because it us useful if pushing an object can result in that object moving through some 
+                  //        mechanism other than regular force propagation (such as a button attached to the side of an otherwise immobile object which triggers
+                  //        its movement)
+                  if (force.deferred) {
+                    //If the move gets deferred a second time, panic-fail to prevent it from turning into an infinite loop.
+                    console.log("  Movement Engine PANIC:  Force deferred a second time!", force)
+                    mover.strike(force, undefined, orthot.collision.FAKE)                
+                    resolvedAny = true
+                    force.cancelled = true
+                    mover.shift()
+                    if (mover.forces.length == 0) {   
+                      num_movers--           
+                      let depOBJs = depend[id]
+                      if (depOBJs) {
+                        for (let depOBJ of depOBJs) {
+                          active_movers[depOBJ.id] = depOBJ
+                        }
+                      }
+                      delete active_movers[id]
+                      delete depend[id]
+                    }                
+                  }
+                  else {
+                    resolved_any = true
+                    force.deferred = true
+                  }
+                  break
+                case trit.TRUE:
+                  resolved_any = true
+                  force.moved = true
+                  num_movers--              
+                  //force.priority = Number.MAX_SAFE_INTEGER
+                  
+                  //cancel all other forces still operating on the object, remove it from movement data, and reactivate any dependencies
+                  mover.movedAt = this.ticknum
+                  for (let i = 1; i < mover.forces.length; i++) {
+                    mover.forces[i].cancelled = true
+                  }       
                   let depOBJs = depend[id]
                   if (depOBJs) {
                     for (let depOBJ of depOBJs) {
-                      movers[depOBJ.id] = depOBJ
+                      active_movers[depOBJ.id] = depOBJ
                     }
                   }
-                  delete movers[id]
+                  delete active_movers[id]
                   delete depend[id]
-                }
-                break
+                  
+                  //If the object moves, simplify Collisions and mark them as deferred collisions
+                  //  (collisions are "deferred" until it can be determined which force to use for it)
+                  for (let collisionRef of force.incoming) {
+                    let incCollision = collisionRef.collision
+                    let incForce = incCollision.target
+                    
+                    switch(incCollision.type) {
+                      case orthot.collision.CHASE:
+                        incCollision.type = orthot.collision.NONE   
+                        break
+                      // If the object has movement priority, it wins FAR_RAM and CORNER_RAM collisions.
+                      case orthot.collision.FAR_RAM:
+                        incCollision.type = orthot.collision.PRIORITY_RAM       //POWER!!! 
+                        break
+                      case orthot.collision.CORNER_RAM:
+                        incCollision.type = orthot.collision.PRIORITY_STEAL
+                        break
+                    }
+                  }
+                  processIndirectForces(force)
+                  break
+                case trit.FALSE:
+                  force.cancelled = true
+                  resolved_any = true
+                  for (let collisionRef of force.incoming) {
+                    let incCollision = collisionRef.collision
+                    let incForce = incCollision.target
+                    switch(incCollision.type) {
+                      case orthot.collision.EDGE_RAM:
+                      case orthot.collision.NEAR_RAM:
+                      case orthot.collision.CHASE:
+                        incCollision.type = orthot.collision.SIMPLE
+                        break
+                      case orthot.collision.FAR_RAM:
+                      case orthot.collision.CORNER_RAM:
+                        incCollision.type = orthot.collision.NONE
+                        break
+                    }
+                  }
+                  
+                  //delete the force, if no forces left for the object, remove it from the movement data and re-activate any dependencies
+                  mover.forces.shift()
+                  if (mover.forces.length == 0) { 
+                    num_movers--               
+                    let depOBJs = depend[id]
+                    if (depOBJs) {
+                      for (let depOBJ of depOBJs) {
+                        active_movers[depOBJ.id] = depOBJ
+                      }
+                    }
+                    delete active_movers[id]
+                    delete depend[id]
+                  }
+                  break
+              }
             }
           }
         }
-      }
-      if (num_movers > 0) {
-        //console.log("-------------------------------------------")
-        console.log("  Objects remaining at processMovement end:", movers, depend)
-        /*
-        for (let k in movers) {
-          console.log(k, movers[k].id, movers[k].forces)
+        
+        if (num_movers == 0) {
+          break
         }
-        console.log("--")
-        for (let k in depend) {
-          for (let dobj of depend[k]) {
-            console.log(k, dobj.id, dobj.forces)
+        
+        if (num_movers > 0) {
+          //console.log("-------------------------------------------")  
+          if (Object.values(active_movers).length != 0) {      
+            // This is supposed to be impossible - If the above loop does anything with any entry in movers, it runs another iteration
+            console.log("  ERROR:  unexpected unprocessed non-dependent movement:", movers)  
+            for (let k in active_movers) {
+              console.log(k, active_movers[k].id, active_movers[k].forces)
+            }
+            active_movers = {}
+          }
+          
+           
+          if (Object.values(depend).length != 0) {   
+          
+            let checked = []
+            
+            main:
+            for (let k in depend) {
+              k = Number.parseInt(k)
+              //Scan for the next unchecked object
+              if (checked.indexOf(k) == -1) {
+                let node = k
+                let cycle_start
+                let nodes = []   
+                //trace through force-dependencies until a loop can be established
+                while (true) {
+                  let cycle_start = nodes.indexOf(node)
+                  if (cycle_start != -1) {
+                    break
+                  }
+                  nodes.push(node)
+                  checked.push(node)
+                  node = depend[node][0].depend
+                  
+                  //If the loop has already been encountered, bail out.  (this should be impossible)
+                  if ( (checked.indexOf(node) != -1) && (nodes.indexOf(node) == -1) ) {
+                    console.log("ERROR:  loop-crasher implicated a force dependency in a previously crashed loop!", node, all_movers[node], nodes, checked)
+                    continue main
+                  }
+                } 
+                if (cycle_start == -1) {
+                  continue main
+                }
+                //remove nodes which only lead into the loop
+                nodes = nodes.splice(cycle_start)
+                
+                if (nodes.length > 0) {
+                  resolved_any = true
+                 
+                  //crash the loop
+                  for (let id of nodes) {
+                    let dobj = all_movers[id]   
+                    let force = dobj.forces.shift()
+                    force.cancelled = true
+                    
+                    for (let outCollision of force.outgoing) {
+                      let outForce = outCollision.target
+                      force.OBJ.strike(outForce, outForce.OBJ, outCollision.type, true)
+                      outForce.OBJ.struck(force, force.OBJ, outCollision.type, true)
+                    }
+                    
+                    if ( (dobj.forces.length == 0) && (active_movers[dobj.id]) ) {
+                      delete active_movers[dobj.id]
+                    }
+                  }
+                  
+                  //unleash all forces which are dependent upon anything in the loop and which are not [obviously] part of the loop
+                  for (let id of nodes) {
+                    let depOBJs = depend[id]
+                    if (depOBJs) {
+                      for (let depOBJ of depOBJs) {
+                        if (depOBJ.forces.length > 0) {
+                          active_movers[depOBJ.id] = depOBJ
+                          num_movers++
+                        }
+                      }
+                    }
+                    delete depend[id]
+                  }
+                }
+              }
+            }
+            depend = {}
+          }
+          else {
+            all_movers = {}
+            active_movers = {}
+            num_movers = 0
           }
         }
-        console.log("-------------------------------------------")
-        */
-        movers = {}
-        num_movers = 0
-        
       }
     }
     catch (err) {
       console.log("  Error processing movement:", err)
-      movers = {}
+      active_movers = {}
+      all_movers = {}
       num_movers = 0
     }
     
@@ -1167,7 +1252,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     //Moves listed by destination
     //{pos, [node]}
     moves_by_source = {}
-  }
+  }).bind(this);
   
   
     

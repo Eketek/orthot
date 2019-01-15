@@ -8,13 +8,14 @@ orthot.collision = {
 	NEAR_RAM:2,	      	//Two adjacent objects move toward each other and collide
 	FAR_RAM:3,		      //Two objects with one space separating move toward each other and collide
 	CORNER_RAM:4,	      //Two diagonally adjacent objects moving toward the same destination
-	EDGE_RAM:5,		      //One object striking an adjacent object which is moving in a perpendicular direction
+	EDGE_RAM:5,		      //One object striking an adjacent object which is moving away from destination in a perpendicular direction
 	CHASE:6,			      //One object following another.
 
 	FAKE:7,			        //not really a collision.  This is just used to put generic callbacks into contingent movement
 	
 	PRIORITY_RAM:9,     //Upgraded FAR_RAM - occurs when a FAR_RAM opponent has movement priority over the contested destination
-	PRIORITY_STEAL:10,   //Side-graded CORNER_RAM - occurs when a CORNER_RAM opponent has movement priority over the contested destination
+	PRIORITY_STEAL:10,  //degenerate CORNER_RAM - occurs when a CORNER_RAM opponent has movement priority over the contested destination
+	                    //    This is also similar to EDGE_RAM (the target object is moving into the destination instead of out)
 }
 
 orthot.state = {

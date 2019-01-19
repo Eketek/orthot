@@ -164,14 +164,21 @@ var libek = {
     if (obj.parent) {
       obj.parent.remove(obj)
     }    
-    if (obj.__LIBEK_INST_ASSET_ID && (libek._inst_asset_pool[obj.__LIBEK_INST_ASSET_ID].indexOf(obj) == -1) ) {
-      if (obj.__ISDIRTY) {
-        obj.__ISDIRTY = false
-        
-        let base = assets[obj.__LIBEK_INST_ASSET_ID]
-        libek.cleanAsset(obj, base)
+    if (obj.__LIBEK_INST_ASSET_ID) {
+      if (libek._inst_asset_pool[obj.__LIBEK_INST_ASSET_ID].indexOf(obj) == -1) {
+        if (obj.__ISDIRTY) {
+          obj.__ISDIRTY = false
+          
+          let base = assets[obj.__LIBEK_INST_ASSET_ID]
+          libek.cleanAsset(obj, base)
+        }
+        libek._inst_asset_pool[obj.__LIBEK_INST_ASSET_ID].push(obj)
       }
-      libek._inst_asset_pool[obj.__LIBEK_INST_ASSET_ID].push(obj)
+    }
+    else {
+      for (let subobj of obj.children) {
+        libek.releaseAsset(subobj)
+      }
     }
   },
   

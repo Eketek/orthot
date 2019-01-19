@@ -24,7 +24,7 @@ orthot.GateGroup = function(zone, _gate) {
     
     // If a pair of end-gates are adjacent, merge in the other group's gates and ensure that gates are ordered by how distant they are from the retract to or
     //  extend from. 
-    if (zone.getAdjacentCTN(this.gates[this.gates.length-1], this.forward) == other.gates[0].ctn) {
+    if (zone.getAdjacentCTN(this.gates[this.gates.length-1].ctn, this.forward) == other.gates[0].ctn) {
       for (let i = 0; i < other.gates.length; i++) {
         this.gates.push(other.gates[i])
       }
@@ -161,11 +161,9 @@ orthot.GateGroup = function(zone, _gate) {
     }
     
     this.update = (function() {
-      //console.log("gate-upd", zone.ticknum)
       let gate
       switch(this.state) {
         case orthot.gatestate.EXTENDED:
-          //this.gates[this.gates.length-1].animCTL.impact()
           zone.removeTickListener(this.update)
           break
         case orthot.gatestate.RETRACTED:
@@ -248,6 +246,15 @@ orthot.Gate = function(zone, ctn, color, align, data) {
   
   this.forward = align.forward
   this.up = align.up
+  
+  this.behind = libek.direction.cross(this.forward, this.up)
+  
+  let ss = [0,0,0,0,0,0,0]
+  ss[this.up] = orthot.strength.HARD
+  ss[libek.direction.invert[this.up]] = orthot.strength.HARD
+  //ss[this.behind] = orthot.strength.HARD
+  ss[libek.direction.invert[this.behind]] = orthot.strength.HARD
+  this.shearStrength = ss
   
   if (!color) {
     color = "white"

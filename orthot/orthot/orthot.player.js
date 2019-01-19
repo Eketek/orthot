@@ -3,6 +3,8 @@ orthot.Player = function(zone, align, init_fpmode) {
   this.isPlayer = true
   this.types.push("creature")
   this.types.push("player")
+  
+  window.player = this
 
   this.SpatialClass = "player"
     

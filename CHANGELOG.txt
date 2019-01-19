@@ -1,6 +1,18 @@
 0.3.0:
   17-19 Jan 2019
     Partial implementation of gates and buttons
+    Modified tick handler to allow deferred actions.
+      Deferred actions are functions which run after all other processing has taken place (tick-listeners, player input,movement)
+      If deferred action results in additional movement, the movement engine will be re-activated.
+      Deferred actions can also trigger additional deferred actions
+    added "stress" and "relax" triggers for informing side-attached objects when movement occurs into or out of an adjacent space.
+      sideObject.stress() is called when an object enters the adjacent space
+      sideObject.relax() is called when an object departs the adjacent space
+    Added shear strength to OrthotObject
+      shearStrength is a per-side strength value to used when the object presses against adjacent side-attached objects
+      Smaller objects which do not press against adjacent objects (player, creatures, items)
+      Large box-like objects should set a numeric value
+      Oddly shaped objects should set an array containing the shearing strength value for each side.
   14 Jan 2019
     Fixed force dependency to account for multiple forces dependent upon one
     Fixed a sliding problem

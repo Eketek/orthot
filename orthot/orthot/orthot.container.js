@@ -27,7 +27,7 @@ orthot.Container = function(x,y,z) {
           let attachments = internalOBJ.sides[pside]
           for (let sobj of attachments) {
             if (sobj.push) {
-              sobj.push()
+              sobj.push(force)
             }
           }
         }
@@ -86,7 +86,7 @@ orthot.Container = function(x,y,z) {
      */
     applyInboundIndirectForce(heading, normal, from_normal, originatingForce) {
       for (let obj of r.content) {
-        obj.applyInboundIndirectForce(heading, normal, from_normal, originatingForce)
+        obj.__applyInboundIndirectForce__(heading, normal, from_normal, originatingForce)
       }
     },
     
@@ -102,7 +102,7 @@ orthot.Container = function(x,y,z) {
      */
     applyOutboundIndirectForce(heading, normal, from_normal, originatingForce) {
       for (let obj of r.content) {
-        obj.applyOutboundIndirectForce(heading, normal, from_normal, originatingForce)
+        obj.__applyOutboundIndirectForce__(heading, normal, from_normal, originatingForce)
       }
     },
     
@@ -116,6 +116,11 @@ orthot.Container = function(x,y,z) {
         }
       }
     },
+  }
+  
+  if (x == undefined) {
+    throw new Error("WHAT HAPPENED?!!")
+    console.log(r)
   }
   return r
 }

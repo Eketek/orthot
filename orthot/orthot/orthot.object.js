@@ -103,7 +103,25 @@ orthot.OrthotObject = function(THIS, zone) {
    *  originatingForce:
    *    The [primary] force which is causing this secondary force to be applied
    */
-  THIS.applyInboundIndirectForce = function(heading, normal, from_normal, originatingForce) { }
+  THIS.__applyInboundIndirectForce__ = function(heading, normal, from_normal, originatingForce) {  
+    if (THIS.hasSides) {
+      let slist = THIS.sides[normal]
+      for (let attachment of slist) {
+        if (attachment.stress) {
+          let ss = 0
+          let oobj = originatingForce.OBJ
+          if (oobj.shearStrength) {
+            ss = oobj.shearStrength[from_normal]
+          }
+          attachment.stress(originatingForce, ss)
+        }
+      }
+    }
+    THIS.applyInboundIndirectForce(heading, normal, from_normal, originatingForce)
+  }
+  THIS.applyInboundIndirectForce = function(heading, normal, from_normal, originatingForce) { 
+  
+  }
   
   /*  An object is moving out of some container other than this one, into a container which is adjacent to this container
    *
@@ -115,6 +133,22 @@ orthot.OrthotObject = function(THIS, zone) {
    *  originatingForce:
    *    The [primary] force which is causing this secondary force to be applied
    */
+  THIS.__applyOutboundIndirectForce__ = function(heading, normal, from_normal, originatingForce) {
+    if (THIS.hasSides) {
+      let slist = THIS.sides[normal]
+      for (let attachment of slist) {
+        if (attachment.relax) {
+          let ss = 0
+          let oobj = originatingForce.OBJ
+          if (oobj.shearStrength) {
+            ss = oobj.shearStrength[from_normal]
+          }
+          attachment.relax(originatingForce, ss)
+        }
+      }
+    }
+    THIS.applyOutboundIndirectForce(heading, normal, from_normal, originatingForce)
+  }
   THIS.applyOutboundIndirectForce = function(heading, normal, from_normal, originatingForce) { }
   
   THIS.destroy = function() { 
@@ -159,6 +193,21 @@ orthot.OrthotObject = function(THIS, zone) {
   THIS.setBaseSurface = function(sfctype) {
     THIS.surfaces.fill(sfctype)
   }
+  
+  let _shearStrength
+  Object.defineProperty(THIS, 'shearStrength', { 
+    set:function(arg) { 
+      if (typeof(arg) == "object") {
+        _shearStrength = arg
+      }
+      else {
+        _shearStrength = [0, arg,arg,arg,arg,arg,arg]
+      }
+    },
+    get:function() {
+      return _shearStrength
+    }
+  })
     
   THIS.types = []
   

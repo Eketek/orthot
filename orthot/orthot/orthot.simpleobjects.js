@@ -79,6 +79,7 @@ orthot.PushBlock = function(zone, color) {
   this.SpatialClass = "solid"    
   this.state = orthot.state.IDLE
   
+  this.shearStrength = orthot.strength.NORMAL  
   this.fallStrength = orthot.strength.LIGHT
   this.setBaseSurface(orthot.surface.type.SMOOTH)  
   this.propforceMin = orthot.strength.NORMAL
@@ -104,6 +105,7 @@ orthot.Crate = function(zone) {
   this.SpatialClass = "solid"    
   this.state = orthot.state.IDLE
   
+  this.shearStrength = orthot.strength.NORMAL
   this.fallStrength = orthot.strength.LIGHT
   this.setBaseSurface(orthot.surface.type.ROUGH)
   this.propforceMin = orthot.strength.LIGHT
@@ -125,6 +127,7 @@ orthot.Iceblock = function(zone) {
   this.SpatialClass = "solid"    
   this.state = orthot.state.IDLE
   
+  this.shearStrength = orthot.strength.NORMAL  
   this.fallStrength = orthot.strength.LIGHT
   this.setBaseSurface(orthot.surface.type.SLICK)
   this.propforceMin = orthot.strength.LIGHT

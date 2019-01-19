@@ -45,6 +45,7 @@ orthot.Zone = function(ekvx, override_startloc) {
   
   let tickListeners = []
   let tmp_tickListeners = [] 
+  let deferredActions = []
   
   //set up "reticles" that can show which keys will work with which locks
   let keys = []
@@ -250,10 +251,23 @@ orthot.Zone = function(ekvx, override_startloc) {
       if (player) {
         player.recvInput(input)
       }
-      //
-      if (num_movers > 0) {
-        processMovement()
-      }      
+      
+      while (true) {
+        if ( (num_movers == 0) && (deferredActions.length == 0)) {
+          break
+        }
+        if (num_movers > 0) {
+          processMovement()
+        }     
+        if (deferredActions.length != 0) {          
+          let _da = deferredActions
+          deferredActions = []
+          for (let act of _da) {
+            act()
+          } 
+        }
+      }
+       
     }
   }).bind(this)
   
@@ -329,6 +343,12 @@ orthot.Zone = function(ekvx, override_startloc) {
   this.addTickListener_temp = function(f) {
     tmp_tickListeners.push(f)
   } 
+  
+  this.addDeferredAction = function(f) {
+    if (deferredActions.indexOf(f) == -1) {
+      deferredActions.push(f)
+    }
+  }
   
   this.inputAvailable = function() {
     if ( (cmdSequences_short.length == 0) && (cmdSequences_long.length == 0)) {
@@ -720,7 +740,7 @@ orthot.Zone = function(ekvx, override_startloc) {
       path.ctn.applyOutboundIndirectForce(heading, path.dir, path.fromdir, force)      
     }
     
-    // inbound secondary forces - these apply to neighbors of force.toCTN 
+    // inbound secondary forces - these apply to neighbors of force.toCTN     
     let to_nbrpaths = getInboundNeighbors(force.toCTN, libek.direction.invert[force.toHEADING])
     for (let path of to_nbrpaths) {
       let heading = path.sourcePortal ? 
@@ -1532,7 +1552,8 @@ orthot.Zone = function(ekvx, override_startloc) {
               libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation),
               libek.util.property("color", datas, "white", libek.util.color.parse),
               libek.util.property("size", datas, "small"),
-              libek.util.property("press", datas)
+              libek.util.property("press", datas),              
+              libek.util.property("release", datas)
             )
             this.attach(x,y,z, btn)
             break
@@ -1643,19 +1664,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     
     for (let ggroup of gategroups) {   
       ggroup.init() 
-      for (let gate of ggroup.gates) {
-        /*
-        let ctn = gate.ctn
-        this.putGameobject(ctn, gate)  
-        gate.initGraphics()
-        this.scene.add(gate.obj)
-        if (!gate.worldpos) {
-          gate.worldpos = gate.obj.position
-        }
-        gate.worldpos.set(ctn.x, ctn.y, ctn.z)
-        gate.ready()
-        */
-        
+      for (let gate of ggroup.gates) {        
         // For the time being, I want gates which unlock by progress to be visible, but non-obstructing.        
         if (ggroup.code) {
           delete gate.SpatialClass
@@ -1715,6 +1724,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     cmdSequences_realtime = [] 
     tmp_tickListeners = []
     tickListeners = []
+    deferredActions = []
 
     sigReceivers = {}
     

@@ -15,8 +15,6 @@
     
   This mainly is intended as an abstraction layer to allow animated 3D object-groups to render on both sides while passing through portals.
 */
-
-
 libek.Model = function(params={}) {
   this.isModelMain = true
   this.obj = new THREE.Object3D()
@@ -49,7 +47,7 @@ libek.Model = function(params={}) {
     let components = this.components = []
     this.ctl = {}
           
-    this.Component = function() {      
+    this.Component = function() {
       this.obj = new THREE.Object3D()
       this.matrix = new THREE.Matrix4()
       this.obj.matrix = this.matrix

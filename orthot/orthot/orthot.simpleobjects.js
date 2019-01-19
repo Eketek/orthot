@@ -23,7 +23,6 @@ orthot.Wall = function(zone) {
     sideobj.obj.position.add(orientation.position)
     sideobj.obj.setRotationFromEuler(orientation.rotation)
     this.zone.scene.add(sideobj.obj)
-    
   }
 }
 

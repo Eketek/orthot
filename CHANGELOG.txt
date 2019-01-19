@@ -1,4 +1,6 @@
 0.3.0:
+  17-19 Jan 2019
+    Partial implementation of gates and buttons
   14 Jan 2019
     Fixed force dependency to account for multiple forces dependent upon one
     Fixed a sliding problem

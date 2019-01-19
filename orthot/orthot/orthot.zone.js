@@ -12,6 +12,7 @@ orthot.Zone = function(ekvx, override_startloc) {
   
   vxc.default = orthot.Container
   
+  
   let rawdata = {}
   let flipWorld = (ekvx.data_version <= 5)
   
@@ -86,13 +87,37 @@ orthot.Zone = function(ekvx, override_startloc) {
     if (activeReticle) {
       activeReticle.clear()
     }
-  }  
+  }
   
   this.showKeys = function(code, color="green") {
     setReticle(keyReticle, keys, code, color)
   }
   this.showLocks = function(code, color="green") {
     setReticle(lockReticle, locks, code, color)
+  }
+  
+  let sigReceivers = {}
+  this.signal = function(name, value=true) {
+    let receivers = sigReceivers[name]
+    if (receivers) {
+      for (let receiver of receivers) {
+        receiver(name, value)
+      }
+    }
+  }
+  this.addSignalreceiver = function(name, receiver) {
+    let receivers = sigReceivers[name]
+    if (!receivers) {
+      receivers = sigReceivers[name] = []
+    }
+    receivers.push(receiver)
+  }
+  this.removeSignalreceiver = function(name, receiver) {
+    let receivers = sigReceivers[name]
+    let i = receivers.indexOf(receiver)
+    if (i != -1) {
+      receivers.splice(i,1)
+    }
   }
   
   /*  Rules for determining which objects can enter space occupied by other objects
@@ -311,14 +336,16 @@ orthot.Zone = function(ekvx, override_startloc) {
     }
   }
   
-  this.removeGameobject = function(obj) {
+  this.removeGameobject = function(obj, destroy=true) {
     if (obj.ctn) {
       let i = obj.ctn.content.indexOf(obj)
       if (i != -1) {
         obj.ctn.content.splice(i,1)
       }
     }
-    obj.destroy()
+    if (destroy) {
+      obj.destroy()
+    }
   }
   
   this.attach = function(...args) {
@@ -1150,7 +1177,7 @@ orthot.Zone = function(ekvx, override_startloc) {
           //console.log("-------------------------------------------")  
           if (Object.values(active_movers).length != 0) {      
             // This is supposed to be impossible - If the above loop does anything with any entry in movers, it runs another iteration
-            console.log("  ERROR:  unexpected unprocessed non-dependent movement:", movers)  
+            console.log("  ERROR:  unexpected unprocessed non-dependent movement:", active_movers)  
             for (let k in active_movers) {
               console.log(k, active_movers[k].id, active_movers[k].forces)
             }
@@ -1307,6 +1334,8 @@ orthot.Zone = function(ekvx, override_startloc) {
 	}
   
   let loadData = (function() {
+  
+    let gategroups = []
     let targetted_portals = []
     let portals_byname = {}
     let portals_byclass = {}
@@ -1439,6 +1468,14 @@ orthot.Zone = function(ekvx, override_startloc) {
           case "cammode":
             console.log(datas)  
           break
+          case "gate": {
+            color = libek.util.property("color", datas, "white", libek.util.color.parse)
+            align = libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation)
+            let mprops = libek.util.mergeObjects(datas)  
+            let gate = new orthot.Gate(this, loc, color, align, mprops)             
+            gategroups.push(new orthot.GateGroup(this, gate))
+          }
+          break
         }
       }
       else {
@@ -1489,7 +1526,16 @@ orthot.Zone = function(ekvx, override_startloc) {
               libek.util.property("color", datas, "white", libek.util.color.parse)
             )
             this.attach(x,y,z, ldr)
-          break
+            break
+          case "button":
+            let btn = new orthot.Button( this,
+              libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation),
+              libek.util.property("color", datas, "white", libek.util.color.parse),
+              libek.util.property("size", datas, "small"),
+              libek.util.property("press", datas)
+            )
+            this.attach(x,y,z, btn)
+            break
         }
       }
       
@@ -1570,6 +1616,53 @@ orthot.Zone = function(ekvx, override_startloc) {
       psrc.target.sources.push(psrc)
     }
     
+    // Merge gate groups.  
+    // Result will be that all gates which have the same alignment and are lined up in a row without interruption will be part of the same group.
+    let merged_any = true
+    while (merged_any) {
+      merged_any = false
+      for (let i = 0; i < gategroups.length; i++) {
+        for (let j = 0; j < gategroups.length; j++) {
+          if (i != j) {
+            
+            //try a merge and, if successful, drop the merged-in group.
+            if (gategroups[i].merge(gategroups[j])) {
+              merged_any = true
+              gategroups.splice(j,1)
+              
+              // decrement indices
+              if (i >= j) {
+                i--
+              }
+              j--
+            }
+          }
+        }
+      }
+    }
+    
+    for (let ggroup of gategroups) {   
+      ggroup.init() 
+      for (let gate of ggroup.gates) {
+        /*
+        let ctn = gate.ctn
+        this.putGameobject(ctn, gate)  
+        gate.initGraphics()
+        this.scene.add(gate.obj)
+        if (!gate.worldpos) {
+          gate.worldpos = gate.obj.position
+        }
+        gate.worldpos.set(ctn.x, ctn.y, ctn.z)
+        gate.ready()
+        */
+        
+        // For the time being, I want gates which unlock by progress to be visible, but non-obstructing.        
+        if (ggroup.code) {
+          delete gate.SpatialClass
+        }
+      }
+    }
+    //console.log(gategroups)
   }).bind(this)
   loadData()
   
@@ -1622,6 +1715,8 @@ orthot.Zone = function(ekvx, override_startloc) {
     cmdSequences_realtime = [] 
     tmp_tickListeners = []
     tickListeners = []
+
+    sigReceivers = {}
     
     vxc.resetData()
     vxc.default = orthot.Container

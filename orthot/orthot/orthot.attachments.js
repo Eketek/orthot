@@ -44,29 +44,28 @@ orthot.Icefloor = function(align) {
   
   Object.assign(this, align)
 }
-orthot.SmallButton = function(align, color) {
+orthot.Button = function(zone, align, color, size, press) {
   this.type = "button"
-  this.minForce = orthot.strength.NORMAL    //Can be pressed by player
+  let mdlname
+  switch(size) {
+    case "small":   //Can be pressed by player
+      mdlname = "smallbutton_up"
+      this.minForce = orthot.strength.NORMAL
+      break
+    case "large":   //Can not be pressed by player
+      mdlname = "bigbutton_up"
+      this.minForce = orthot.strength.HARD
+      break
+  }
+  this.push = function() {
+    zone.signal(press)
+  }
   this.mdlgen = function() {
-    let r = libek.getAsset("smallbutton_up")
+    let r = libek.getAsset(mdlname)
     if (color) {
       libek.assignMaterials(r, color)
     }
     return r
-  }
-  
-  Object.assign(this, align)
-}
-orthot.BigButton = function(align, color) {
-  this.type = "button"
-  this.minForce = orthot.strength.HARD      //require assistance to press
-  this.objgen = function() {
-    let r = libek.getAsset("bigbutton_up")
-    if (color) {
-      libek.assignMaterials(r, color)
-    }
-    return r
-  }
-  
+  }  
   Object.assign(this, align)
 }

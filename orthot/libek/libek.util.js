@@ -30,7 +30,7 @@ libek.util = {
     }
     return r
   },
-  property:function(name, objects, defaultVal, transform,) {
+  property:function(name, objects, defaultVal, transform) {
     if (!Array.isArray(objects)) {
       objects = [objects]
     }
@@ -45,6 +45,13 @@ libek.util = {
       }
     }
     return defaultVal
+  },
+  mergeObjects:function(objs) {
+    let r = {}
+    for (let obj of objs) {
+      Object.assign(r, obj)
+    }
+    return r
   },
   properties_fromstring:function(data, entry_separator=':', field_separator='=') {
     let entries = data.split(entry_separator)

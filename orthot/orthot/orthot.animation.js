@@ -3,9 +3,6 @@
    the animation system needs to be able to duplicate and delete objects, use multiple instances of the same [internal] animation controller, and be able to
    directly manipulate the camera.  
 */
-
-
-
 orthot.AnimateBlock = function(zone, blk) {
   let MDL = new libek.Model({default:blk.mdlgen})
   blk.obj = MDL.obj
@@ -46,15 +43,18 @@ orthot.AnimateBlock = function(zone, blk) {
     let _transient = transient 
         
     let main_txSHIFT = new libek.Transform(matrix)
+        main_txSHIFT.orient(orientation)
         main_txSHIFT.translate(relpos)
         main_txSHIFT.translate(worldpos)
     
     let main_txIMPULSESHIFT = new libek.Transform(matrix)
+        main_txIMPULSESHIFT.orient(orientation)
         main_txIMPULSESHIFT.scale(scale)
         main_txIMPULSESHIFT.translate(relpos)
         main_txIMPULSESHIFT.translate(worldpos)
     
     let main_txIMPACTDOWN = new libek.Transform(matrix)
+        main_txIMPACTDOWN.orient(orientation)
         main_txIMPACTDOWN.scale(scale)
         main_txIMPACTDOWN.translate(worldpos)
     
@@ -379,7 +379,7 @@ orthot.AnimateBlock = function(zone, blk) {
   }
   
   blk.animCTL = {
-    //orientation:mainINST.ctl.orientation,    
+    orientation:mainINST.ctl.orientation,    
     
     destroy:function() {
       MDL.destroy()

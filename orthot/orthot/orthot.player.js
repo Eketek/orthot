@@ -205,6 +205,14 @@ orthot.Player = function(zone, align, init_fpmode) {
           zone.addForce(force)  
         }
         break
+      case orthot.state.PANIC:
+        // Panic is caused by getting caught by something that pushes with crushing force.  
+        // Panic doesn't help much.  for now.
+        // Maybe allow escape if there is something solid on the side to push against
+        if (dir) {    
+          setFWD(dir)
+        }
+        break
       case orthot.state.WALKING:
         if (dir) {    
           //this.forward = dir.code
@@ -375,8 +383,49 @@ orthot.Player = function(zone, align, init_fpmode) {
       this.ready()
     }
   }  
+  
+  
+  this.propagateForce = function(force) {
+    if (this.state == orthot.state.DEFEATED) {
+      return
+    }
+    
+    force.OBJ.strike(force, this, orthot.collision.SIMPLE)
+    this.struck(force, force.OBJ, orthot.collision.SIMPLE)
+    
+    if (force.strength >= orthot.strength.CRUSHING) {
+      let cf = orthot.topology.scan_simple(zone, this.ctn, this, force.toHEADING, libek.direction.code.SOUTH, libek.direction.code.UP)      
+      cf.pusher = force.OBJ
+      cf.initiator = force.initiator
+      cf.action = "crushed"     
+      cf.priority = 500
+      zone.addForce(cf)
+    }
+    
+  }
+  
   this.move = function(force) { 
     switch(force.action) {
+      case "crushed":
+        if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) { 
+          setFWD(force.toHEADING)
+        }
+        
+        if (force.isTraversable()) {
+          if (force.toBLOCKINGRAMP) {
+            this.defeat()
+          }
+          else {
+            this.state = orthot.state.SHOVED
+            zone.putGameobject(force.toCTN, this)
+            this.animCTL.slide(force)
+          }
+        }
+        else {
+          this.defeat()
+        }
+        return trit.TRUE          
+        break
       case "slide":
         if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) { 
           setFWD(force.toHEADING)
@@ -433,7 +482,7 @@ orthot.Player = function(zone, align, init_fpmode) {
           }
           return trit.FALSE
         }
-      break
+        break
       case "fall":
         if (force.isTraversable()) {
           if (this.state != orthot.state.DEFEATED) {        
@@ -460,7 +509,7 @@ orthot.Player = function(zone, align, init_fpmode) {
         else {
           return trit.FALSE
         }
-      break
+        break
       case "climbup":
         if ( (force.toFORWARD != libek.direction.code.UP) && (force.toFORWARD != libek.direction.code.DOWN) ) {  
           //this.forward = force.toFORWARD          
@@ -488,7 +537,7 @@ orthot.Player = function(zone, align, init_fpmode) {
             this.state = orthot.state.IDLE
           }
         }
-      break
+        break
       case "climbdown":
         if ( (force.toFORWARD != libek.direction.UP) && (force.toFORWARD != libek.direction.DOWN) ) {  
           //this.forward = force.toFORWARD      
@@ -515,7 +564,10 @@ orthot.Player = function(zone, align, init_fpmode) {
           this.animCTL.hopoffLadder(this.forward, this.up)  
           this.state = orthot.state.IDLE
         }
-      break
+        break
+      default:
+        console.log(force)
+        break
     }
     return trit.FALSE
   }

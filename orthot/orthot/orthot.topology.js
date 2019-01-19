@@ -61,6 +61,39 @@ orthot.topology = {
     return r
   },
   
+  /* A shim to allow the movement engine to handle movement of gates.  
+      If and when it is decided that gates should pass through portals, scan_simple() will suffice */
+  scan_gate:function(zone, loc, obj, heading, forward, up=libek.direction.code.UP) {
+            
+    let adjCTN = zone.getAdjacentCTN(loc, heading)
+    
+    let hop = {
+      adjCTN:adjCTN,
+      fromCTN:loc,
+      fromHEADING:heading,
+      fromFORWARD:forward,
+      fromUP:up,
+      toCTN:adjCTN,
+      toHEADING:heading,
+      toFORWARD:forward,
+      toUP:up,
+      isPortaljump:false,
+    }
+    
+    
+    let r = Object.assign( {
+      OBJ:obj,
+      priority:0,
+      path:[hop],
+      isPortaljump:false,
+      isTraversable:function() {
+        return true
+      },
+    }, hop )
+    
+    return r
+  },
+  
   /*  topological scan that checks spaces needed by ramp-enabled movers
    *
    *  Scan:

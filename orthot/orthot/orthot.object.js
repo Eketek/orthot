@@ -61,6 +61,7 @@ orthot.OrthotObject = function(THIS, zone) {
   
   // Called when a push from this object and pointed directly at another object either causes the object to leave or results in its destruction.
   THIS.notify_PushClearedObstruction = function(force, other) { }
+  THIS.notify_CrushClearedObstruction = function(force, other) { }
   
   THIS.defeat = function() {
     delete THIS.SpatialClass    //A reasonably simple way to disappear the object
@@ -194,14 +195,13 @@ orthot.StandardObject = function(THIS, zone) {
   
   THIS.attach = function(sideobj) {
     sideobj.host = THIS
-    THIS.sides[sideobj.up].push(sideobj)
+    //THIS.sides[sideobj.up].push(sideobj)
     if (sideobj.surfacetype) {
       THIS.surfaces[sideobj.up] = sideobj.surfacetype
     }
   }
-  
-  
 }
+
 orthot.MovableObject = function(THIS, zone) { 
   orthot.StandardObject(THIS, zone)
   

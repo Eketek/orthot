@@ -18,6 +18,13 @@ orthot.collision = {
 	                    //    This is also similar to EDGE_RAM (the target object is moving into the destination instead of out)
 }
 
+orthot.gatestate = {
+  RETRACTED:0,
+  RETRACTING:1,
+  EXTENDED:2,
+  EXTENDING:3,
+}
+
 orthot.state = {
   IDLE:0,
   WALKING:1,
@@ -25,7 +32,8 @@ orthot.state = {
   SLIDING:3,
   DEFEATED:4,
   PICKEDUP:5,
-  MAYBEFALL:6
+  MAYBEFALL:6,
+  PANIC:7
 }
 
 // Force-strength values.  Enumerated with large values because this should be closely related to composite stresses (weight/tension).

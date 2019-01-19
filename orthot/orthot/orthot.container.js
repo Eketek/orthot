@@ -10,19 +10,26 @@ orthot.Container = function(x,y,z) {
     z:z, 
     content:[], 
     id:`${x}|${y}|${z}`,
-    /*
-    bump:function() {
-      let falltriggered = false
-      for (let internalOBJ of r.content) {
-        falltriggered |= internalOBJ.bump()
-      }
-      return falltriggered
-    },*/
+    
+    // Somewhat lazy adjacentcy test.  Returns true if one of the other container's coordinates differs by 1.  This assumes that coordinates have integer values.
+    isAdjacent:function(other) {
+      return ((Math.abs(x-other.x) + Math.abs(y-other.y) + Math.abs(z-other.z)) == 1)
+    },
+    
     push:function(force) {
       let internalOBJ_moved
       for (let internalOBJ of r.content) {        
         if (internalOBJ.push(force)) {
           internalOBJ_moved = internalOBJ
+        }
+        else if (internalOBJ.hasSides) {
+          let pside = libek.direction.invert[force.toHEADING]
+          let attachments = internalOBJ.sides[pside]
+          for (let sobj of attachments) {
+            if (sobj.push) {
+              sobj.push()
+            }
+          }
         }
       }
       if (internalOBJ_moved) {

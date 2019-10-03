@@ -1,4 +1,16 @@
-orthot.GateGroup = function(zone, _gate) {
+export { Gate, GateGroup }
+
+import { getAsset, Material } from '../libek/libek.js'
+import { direction, crossDirections, setOrientation } from '../libek/direction.js'
+import { parseColor } from '../libek/util.js'
+
+import { StandardObject } from './object.js'
+import { Surface } from './surface.js'
+import { GateState, Strength } from './enums.js'
+import { AnimateBlock } from './animation.js'
+import { scan_gate } from './topology.js'
+
+var GateGroup = function(zone, _gate) {
   this.gates = [_gate]
   this.up = _gate.up
   this.right = _gate.forward
@@ -9,8 +21,8 @@ orthot.GateGroup = function(zone, _gate) {
   this.toggle_code = _gate.toggle
   this.code = _gate.code
   
-  this.backward = libek.direction.cross(_gate.forward, _gate.up)
-  this.forward = libek.direction.invert[this.backward]
+  this.backward = crossDirections(_gate.forward, _gate.up)
+  this.forward = direction.invert[this.backward]
   
   this.before = zone.getAdjacentCTN(this.gates[0].ctn, this.backward)
   
@@ -73,14 +85,14 @@ orthot.GateGroup = function(zone, _gate) {
     switch(this.initial_state) {
       case "open":
       case "retracted":
-        this.state = orthot.gatestate.RETRACTED
+        this.state = GateState.RETRACTED
         position = 0
         break
       case "closed":
       case "close":
       case "extended":
       default:
-        this.state = orthot.gatestate.EXTENDED
+        this.state = GateState.EXTENDED
         position = this.gates.length
         for (let gate of this.gates) {
           zone.putGameobject(gate.ctn, gate)
@@ -92,52 +104,52 @@ orthot.GateGroup = function(zone, _gate) {
     let extend = (function() {
     
       switch(this.state) {
-        case orthot.gatestate.RETRACTED:
-          this.state = orthot.gatestate.EXTENDING
+        case GateState.RETRACTED:
+          this.state = GateState.EXTENDING
           this.update()
           zone.addTickListener(this.update)
           break
-        case orthot.gatestate.RETRACTING:
-          this.state = orthot.gatestate.EXTENDING
+        case GateState.RETRACTING:
+          this.state = GateState.EXTENDING
           break
       }      
       
-      this.state = orthot.gatestate.EXTENDING
-      if (this.state != orthot.gatestate.EXTENDED) {
+      this.state = GateState.EXTENDING
+      if (this.state != GateState.EXTENDED) {
         zone.addTickListener(this.update)
       }
     }).bind(this)
     
     let retract = (function() {
       switch(this.state) {
-        case orthot.gatestate.EXTENDED:
-          this.state = orthot.gatestate.RETRACTING
+        case GateState.EXTENDED:
+          this.state = GateState.RETRACTING
           this.update()
           zone.addTickListener(this.update)
           break
-        case orthot.gatestate.EXTENDING:
-          this.state = orthot.gatestate.RETRACTING
+        case GateState.EXTENDING:
+          this.state = GateState.RETRACTING
           break
       }      
     }).bind(this)
     
     let toggle = (function() {
       switch(this.state) {
-        case orthot.gatestate.EXTENDED:
-          this.state = orthot.gatestate.RETRACTING
+        case GateState.EXTENDED:
+          this.state = GateState.RETRACTING
           this.update()
           zone.addTickListener(this.update)
           break
-        case orthot.gatestate.EXTENDING:
-          this.state = orthot.gatestate.RETRACTING
+        case GateState.EXTENDING:
+          this.state = GateState.RETRACTING
           break
-        case orthot.gatestate.RETRACTED:
-          this.state = orthot.gatestate.EXTENDING
+        case GateState.RETRACTED:
+          this.state = GateState.EXTENDING
           this.update()
           zone.addTickListener(this.update)
           break
-        case orthot.gatestate.RETRACTING:
-          this.state = orthot.gatestate.EXTENDING
+        case GateState.RETRACTING:
+          this.state = GateState.EXTENDING
           break
       }
     }).bind(this)
@@ -163,15 +175,15 @@ orthot.GateGroup = function(zone, _gate) {
     this.update = (function() {
       let gate
       switch(this.state) {
-        case orthot.gatestate.EXTENDED:
+        case GateState.EXTENDED:
           zone.removeTickListener(this.update)
           break
-        case orthot.gatestate.RETRACTED:
+        case GateState.RETRACTED:
           zone.removeTickListener(this.update)
           break
-        case orthot.gatestate.EXTENDING:
+        case GateState.EXTENDING:
           if (position == this.gates.length) {
-            this.state = orthot.gatestate.EXTENDED
+            this.state = GateState.EXTENDED
             zone.removeTickListener(this.update)
             break
           }
@@ -180,27 +192,27 @@ orthot.GateGroup = function(zone, _gate) {
           zone.scene.add(gate.obj)
           for (let i = this.gates.length-position-1; i < this.gates.length; i++) {
             gate = this.gates[i]
-            let force = orthot.topology.scan_gate(zone, gate.ctn, gate, this.forward, gate.forward, gate.up)
+            let force = scan_gate(zone, gate.ctn, gate, this.forward, gate.forward, gate.up)
             force.action = "extend"
-            force.strength = orthot.strength.CRUSHING
+            force.strength = Strength.CRUSHING
             zone.addForce(force)
           }
           position++
           break
-        case orthot.gatestate.RETRACTING: 
+        case GateState.RETRACTING: 
           if (position != this.gates.length) {
             gate = this.gates[this.gates.length-position-1]
             zone.removeGameobject(gate, false)
             zone.scene.remove(gate.obj)
           }
           if (position == 0) {
-            this.state = orthot.gatestate.RETRACTED
+            this.state = GateState.RETRACTED
             zone.removeTickListener(this.update)
             break
           }          
           for (let i = this.gates.length-position; i < this.gates.length; i++) {
             gate = this.gates[i]
-            let force = orthot.topology.scan_gate(zone, gate.ctn, gate, this.backward, gate.forward, gate.up)
+            let force = scan_gate(zone, gate.ctn, gate, this.backward, gate.forward, gate.up)
             force.action = "retract"
             zone.addForce(force)
           }
@@ -211,8 +223,8 @@ orthot.GateGroup = function(zone, _gate) {
   }).bind(this)
 }
 
-orthot.Gate = function(zone, ctn, color, align, data) {
-  orthot.StandardObject(this, zone)
+var Gate = function(zone, ctn, color, align, data) {
+  StandardObject.call(this, zone)
   this.ctn = ctn
   
   if (data.e) {
@@ -240,38 +252,37 @@ orthot.Gate = function(zone, ctn, color, align, data) {
   this.code = data.code
   
   this.hasSides = true
-  this.setBaseSurface(orthot.surface.type.SMOOTH)
+  this.setBaseSurface(Surface.type.SMOOTH)
     
   this.SpatialClass = "solid"  
   
   this.forward = align.forward
   this.up = align.up
   
-  this.behind = libek.direction.cross(this.forward, this.up)
+  this.behind = crossDirections(this.forward, this.up)
   
   let ss = [0,0,0,0,0,0,0]
-  ss[this.up] = orthot.strength.HARD
-  ss[libek.direction.invert[this.up]] = orthot.strength.HARD
-  //ss[this.behind] = orthot.strength.HARD
-  ss[libek.direction.invert[this.behind]] = orthot.strength.HARD
+  ss[this.up] = Strength.HARD
+  ss[direction.invert[this.up]] = Strength.HARD
+  ss[direction.invert[this.behind]] = Strength.HARD
   this.shearStrength = ss
   
   if (!color) {
     color = "white"
   }
   if (!color.isColor) {
-    color = libek.util.color.parse(color)
+    color = parseColor(color)
   }
   
   this.mdlgen = function() {
-    let mdl = libek.getAsset("gate")
-    mdl.children[0].material = libek.Material(color)    
+    let mdl = getAsset("gate")
+    mdl.children[0].material = Material(color)    
     return mdl
   }
     
   this.initGraphics = function() {
-    orthot.AnimateBlock(zone, this)
-    libek.direction.setOrientation(this.animCTL.orientation, this.forward, this.up)   
+    AnimateBlock(zone, this)
+    setOrientation(this.animCTL.orientation, this.forward, this.up)   
     this.ready()
     return true
   }

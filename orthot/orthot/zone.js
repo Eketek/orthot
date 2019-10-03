@@ -1,16 +1,32 @@
-orthot.Zone = function(ekvx, override_startloc) {
+export { Zone }
+import { trit, T, assets, getAsset, storeAsset, Material } from '../libek/libek.js'
+import { property, properties_fromstring, mergeObjects, parseVec3, parseColor } from '../libek/util.js'
+import { BoxTerrain, DECAL_UVTYPE } from '../libek/gen.js'
+import { VxScene } from '../libek/scene.js'
+import { Reticle } from '../libek/reticle.js'
+
+import { renderCTL, sviewCTL, inputCTL, orthotCTL } from './orthot.js'
+import { parseO2Orientation } from './util.js'
+import { Container } from './container.js'
+import { direction, rotateDirection_bydirections } from '../libek/direction.js'
+import { Wall, ScenePortal, Stair, PushBlock, Crate, IceBlock, Key, Lock } from './simpleobjects.js'
+import { Ladder, Portal, Button, Icefloor } from './attachments.js'
+import { Gate, GateGroup } from './gate.js'
+import { Player } from './player.js'
+import { Collision } from './enums.js'
+var Zone = function(ekvx, override_startloc) {
   this.isZone = true
   let isGeomValid = true
   
-  bxtbldr = new libek.gen.BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
-  let vxc = new libek.VxScene({
+  let bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
+  let vxc = new VxScene({
     boxterrain:bxtbldr,
     chunks_per_tick:4
   })
 
   this.scene = vxc.scene
   
-  vxc.default = orthot.Container
+  vxc.default = Container
   
   
   let rawdata = {}
@@ -57,14 +73,14 @@ orthot.Zone = function(ekvx, override_startloc) {
     reticlemat = baseReticleOBJ.children[0].material
   }
   else {
-    baseReticleOBJ = libek.getAsset("CubeMark")
+    baseReticleOBJ = getAsset("CubeMark")
     assets.cubereticle = baseReticleOBJ
-    reticlemat = libek.Material({color:"green", emissive:"green", emissiveIntensity:0.333}) 
+    reticlemat = Material({color:"green", emissive:"green", emissiveIntensity:0.333}) 
     baseReticleOBJ.children[0].material = reticlemat
-    libek.storeAsset("cubereticle", baseReticleOBJ)
+    storeAsset("cubereticle", baseReticleOBJ)
   }
-  let keyReticle = new libek.Reticle(baseReticleOBJ)
-  let lockReticle = new libek.Reticle(baseReticleOBJ)
+  let keyReticle = new Reticle(baseReticleOBJ)
+  let lockReticle = new Reticle(baseReticleOBJ)
   this.scene.add(keyReticle.obj)
   this.scene.add(lockReticle.obj)
   
@@ -318,7 +334,7 @@ orthot.Zone = function(ekvx, override_startloc) {
       i++
     }
     
-    r = [x,y,z, ctn]
+    let r = [x,y,z, ctn]
     
     if (args.length > i) {      
       r = r.concat(args.splice(i))
@@ -376,6 +392,7 @@ orthot.Zone = function(ekvx, override_startloc) {
         return true
       }
     }
+    console.log("FAILED to attach something...", args)
     return false
   }
   this.putGameobject = function(...args) {
@@ -461,12 +478,12 @@ orthot.Zone = function(ekvx, override_startloc) {
   
   this.getAdjacentCTN = function(ctn, dir) {    
     switch(dir) {
-      case libek.direction.code.UP: return vxc.get(ctn.x, ctn.y+1, ctn.z)
-      case libek.direction.code.DOWN: return vxc.get(ctn.x, ctn.y-1, ctn.z)
-      case libek.direction.code.NORTH: return vxc.get(ctn.x, ctn.y, ctn.z+1)
-      case libek.direction.code.EAST: return vxc.get(ctn.x-1, ctn.y, ctn.z)
-      case libek.direction.code.SOUTH: return vxc.get(ctn.x, ctn.y, ctn.z-1)
-      case libek.direction.code.WEST: return vxc.get(ctn.x+1, ctn.y, ctn.z)
+      case direction.code.UP: return vxc.get(ctn.x, ctn.y+1, ctn.z)
+      case direction.code.DOWN: return vxc.get(ctn.x, ctn.y-1, ctn.z)
+      case direction.code.NORTH: return vxc.get(ctn.x, ctn.y, ctn.z+1)
+      case direction.code.EAST: return vxc.get(ctn.x-1, ctn.y, ctn.z)
+      case direction.code.SOUTH: return vxc.get(ctn.x, ctn.y, ctn.z-1)
+      case direction.code.WEST: return vxc.get(ctn.x+1, ctn.y, ctn.z)
     }
   }
   
@@ -495,7 +512,7 @@ orthot.Zone = function(ekvx, override_startloc) {
           toHEADING = dportal.up
           toCTN = this.getAdjacentCTN(dportal.host.ctn, toHEADING)
           
-          nportal = adjCTN.getSideobject_bytype(libek.direction.invert[toHEADING], "portal")
+          nportal = adjCTN.getSideobject_bytype(direction.invert[toHEADING], "portal")
           if (nportal) {
             if (visited.indexOf(nportal) == -1) {
               let _dportal = getPortalTarget(nportal, fromCTN, fromHEADING, obj, visited)
@@ -539,7 +556,7 @@ orthot.Zone = function(ekvx, override_startloc) {
       toCTN = this.getAdjacentCTN(dportal.host.ctn, toHEADING)
     }
     if (dportal) {
-      nportal = toCTN.getSideobject_bytype(libek.direction.invert[toHEADING], "portal")
+      nportal = toCTN.getSideobject_bytype(direction.invert[toHEADING], "portal")
       if (nportal) {
         if (visited.indexOf(nportal) == -1) {
           return getPortalTarget(nportal, fromCTN, fromHEADING, obj, visited)
@@ -582,7 +599,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     let outHEADING = fromHEADING
     let isPortaljump = false
     
-    let invHeading = libek.direction.invert[fromHEADING]
+    let invHeading = direction.invert[fromHEADING]
     let portal = adjCTN.getSideobject_bytype(invHeading, "portal")
     if (portal) {
       let dportal = getPortalTarget(portal, fromCTN, fromHEADING, obj)
@@ -591,28 +608,28 @@ orthot.Zone = function(ekvx, override_startloc) {
         outHEADING = dportal.up
         //outFORWARD = dportal.up
         //outUP = dportal.forward
-        let sv = (portal.up == libek.direction.code.UP) || (portal.up == libek.direction.code.DOWN)
-        let dv = (dportal.up == libek.direction.code.UP) || (dportal.up == libek.direction.code.DOWN)
+        let sv = (portal.up == direction.code.UP) || (portal.up == direction.code.DOWN)
+        let dv = (dportal.up == direction.code.UP) || (dportal.up == direction.code.DOWN)
         if (sv && dv) {
           outFORWARD = dportal.up
-          outUP = libek.direction.invert[fromUP]
+          outUP = direction.invert[fromUP]
         }
         else if (!sv && !dv) {
           outFORWARD = dportal.up
           outUP = fromUP
         }        
         else if (sv && !dv) {
-          outFORWARD = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromFORWARD, portal.up, portal.forward, dportal.up, dportal.forward)]
-          outUP = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromUP, libek.direction.invert[portal.up], portal.forward, dportal.up, dportal.forward)]
+          outFORWARD = direction.invert[rotateDirection_bydirections(fromFORWARD, portal.up, portal.forward, dportal.up, dportal.forward)]
+          outUP = direction.invert[rotateDirection_bydirections(fromUP, direction.invert[portal.up], portal.forward, dportal.up, dportal.forward)]
         }
         else {
-          outFORWARD = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromFORWARD, portal.up, portal.forward, dportal.up, dportal.forward)]
-          outUP = libek.direction.invert[libek.direction.rotateDirection_bydirections(fromUP, libek.direction.invert[portal.up], portal.forward, dportal.up, dportal.forward)]
+          outFORWARD = direction.invert[rotateDirection_bydirections(fromFORWARD, portal.up, portal.forward, dportal.up, dportal.forward)]
+          outUP = direction.invert[rotateDirection_bydirections(fromUP, direction.invert[portal.up], portal.forward, dportal.up, dportal.forward)]
         }
         outCTN = this.getAdjacentCTN(dportal.host.ctn, outHEADING)
       }
     }
-    traversable = this.isTraversable(fromCTN, fromHEADING, outCTN, outHEADING, obj)
+    let traversable = this.isTraversable(fromCTN, fromHEADING, outCTN, outHEADING, obj)
     return [adjCTN, outCTN, outHEADING, outFORWARD, outUP, isPortaljump, traversable]
   }
   
@@ -626,7 +643,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     let r = []
     
     let evaluateSide = (function(dir) {  
-      let invdir = libek.direction.invert[dir]
+      let invdir = direction.invert[dir]
       let otherCTN = this.getAdjacentCTN(thisCTN, dir)
       if (!thisCTN.getSideobject_bytype(dir, "portal")) {
         let otherPortal = otherCTN.getSideobject_bytype(invdir, "portal")
@@ -636,7 +653,7 @@ orthot.Zone = function(ekvx, override_startloc) {
           for (let portal of sourcePortals) {
             if (portals.indexOf(portal) == -1) {
               portals.push(portal)
-              let invsrcpdir = libek.direction.invert[portal.up]
+              let invsrcpdir = direction.invert[portal.up]
               r.push({ctn:this.getAdjacentCTN(portal.host.ctn, portal.up), dir:invsrcpdir, fromdir:dir, sourcePortal:portal, targetPortal:otherPortal})
             }
           }
@@ -646,7 +663,7 @@ orthot.Zone = function(ekvx, override_startloc) {
         }
       }      
     }).bind(this)
-    for (let dir of Object.values(libek.direction.code)) {
+    for (let dir of Object.values(direction.code)) {
       if (dir != excludeDIR) {
         evaluateSide(dir)
       }
@@ -670,7 +687,7 @@ orthot.Zone = function(ekvx, override_startloc) {
         visited.push(portal)
         let pCTN = portal.host.ctn
         let adjCTN = this.getAdjacentCTN(pCTN, portal.up)
-        let adjPortal = adjCTN.getSideobject_bytype(libek.direction.invert[portal.up], "portal")
+        let adjPortal = adjCTN.getSideobject_bytype(direction.invert[portal.up], "portal")
         if (adjPortal) {
           if (visited.indexOf(adjPortal == -1)) {
             // get THAT portal's sources too.  I must, Must, MUST have them!
@@ -695,7 +712,7 @@ orthot.Zone = function(ekvx, override_startloc) {
         if (visited.indexOf(portal) == -1) {
           let pCTN = portal.host.ctn
           let adjCTN = this.getAdjacentCTN(pCTN, portal.up)
-          let adjPortal = adjCTN.getSideobject_bytype(libek.direction.invert[portal.up], "portal")
+          let adjPortal = adjCTN.getSideobject_bytype(direction.invert[portal.up], "portal")
           if (adjPortal) {
             if (visited.indexOf(adjPortal == -1)) {
               // get THAT portal's sources too.  I must, Must, MUST have them!
@@ -727,10 +744,10 @@ orthot.Zone = function(ekvx, override_startloc) {
       //NOTE:  This also is a wild guess.  I am unsure whether or not this even should give a *correct* transformation of a secondary force
       // through an inverse portal.  
       let heading = path.sourcePortal ? 
-        libek.direction.rotateDirection_bydirections(
+        rotateDirection_bydirections(
           force.fromHEADING, 
-          libek.direction.invert[path.targetPortal.up],
-          libek.direction.invert[path.targetPortal.forward],
+          direction.invert[path.targetPortal.up],
+          direction.invert[path.targetPortal.forward],
           path.sourcePortal.up,
           path.sourcePortal.forward
         ) 
@@ -741,13 +758,13 @@ orthot.Zone = function(ekvx, override_startloc) {
     }
     
     // inbound secondary forces - these apply to neighbors of force.toCTN     
-    let to_nbrpaths = getInboundNeighbors(force.toCTN, libek.direction.invert[force.toHEADING])
+    let to_nbrpaths = getInboundNeighbors(force.toCTN, direction.invert[force.toHEADING])
     for (let path of to_nbrpaths) {
       let heading = path.sourcePortal ? 
-        libek.direction.rotateDirection_bydirections(
+        rotateDirection_bydirections(
           force.fromHEADING, 
-          libek.direction.invert[path.targetPortal.up],
-          libek.direction.invert[path.targetPortal.forward],
+          direction.invert[path.targetPortal.up],
+          direction.invert[path.targetPortal.forward],
           path.sourcePortal.up,
           path.sourcePortal.forward
         ) 
@@ -896,22 +913,22 @@ orthot.Zone = function(ekvx, override_startloc) {
                 //stackfall!
               }
               else {
-                let ocol = {target:tgtForce, type:orthot.collision.CHASE}
+                let ocol = {target:tgtForce, type:Collision.CHASE}
                 force.outgoing.push( ocol )
                 tgtForce.incoming.push({source:force, collision:ocol})
               }
             }
             
             //If the directions are opposite, the source and target are ramming each other
-            else if (force.toHEADING == libek.direction.opposite[tgtForce.fromHEADING]) {              
-              let ocol = {target:tgtForce, type:orthot.collision.NEAR_RAM}
+            else if (force.toHEADING == direction.invert[tgtForce.fromHEADING]) {              
+              let ocol = {target:tgtForce, type:Collision.NEAR_RAM}
               force.outgoing.push( ocol )
               tgtForce.incoming.push({source:force, collision:ocol})
             }
             
             //If the directions are neither, the source is striking the target's side
             else {
-              let ocol = {target:tgtForce, type:orthot.collision.EDGE_RAM}
+              let ocol = {target:tgtForce, type:Collision.EDGE_RAM}
               force.outgoing.push( ocol )
               tgtForce.incoming.push({source:force, collision:ocol})
             }
@@ -930,13 +947,13 @@ orthot.Zone = function(ekvx, override_startloc) {
                 //stackfall!
               }
               else {
-                let ocol = {target:force, type:orthot.collision.CHASE}
+                let ocol = {target:force, type:Collision.CHASE}
                 srcForce.outgoing.push( ocol )
                 force.incoming.push({source:srcForce, collision:ocol})
               }
             }
-            else if (srcForce.toHEADING != libek.direction.opposite[force.fromHEADING]) {
-              let ocol = {target:force, type:orthot.collision.EDGE_RAM}
+            else if (srcForce.toHEADING != direction.invert[force.fromHEADING]) {
+              let ocol = {target:force, type:Collision.EDGE_RAM}
               srcForce.outgoing.push( ocol )
               force.incoming.push({source:srcForce, collision:ocol})
             }
@@ -953,22 +970,22 @@ orthot.Zone = function(ekvx, override_startloc) {
             let tgtForce = otherForce
             
             // Two forces separated by one space moving toward that space
-            if (force.toHEADING == libek.direction.opposite[otherForce.toHEADING]) {
-              let ocol = {target:otherForce, type:orthot.collision.FAR_RAM}
+            if (force.toHEADING == direction.invert[otherForce.toHEADING]) {
+              let ocol = {target:otherForce, type:Collision.FAR_RAM}
               force.outgoing.push( ocol )
               otherForce.incoming.push({source:force, collision:ocol})
               
-              ocol = {target:force, type:orthot.collision.FAR_RAM}
+              ocol = {target:force, type:Collision.FAR_RAM}
               otherForce.outgoing.push( ocol )
               force.incoming.push({source:otherForce, collision:ocol})
             }
             // Two diagonally adjacent forces headed toward a common adjacent space
             else if (force.toHEADING != tgtForce.toHEADING) {
-              let ocol = {target:otherForce, type:orthot.collision.CORNER_RAM}
+              let ocol = {target:otherForce, type:Collision.CORNER_RAM}
               force.outgoing.push( ocol )
               otherForce.incoming.push( {source:force, collision:ocol})
               
-              ocol = {target:force, type:orthot.collision.CORNER_RAM}
+              ocol = {target:force, type:Collision.CORNER_RAM}
               otherForce.outgoing.push( ocol )
               force.incoming.push({source:otherForce, collision:ocol})
             }
@@ -1046,7 +1063,7 @@ orthot.Zone = function(ekvx, override_startloc) {
                 //  does force-A with its priority over force-B get respected?
                 if (!force.OBJ.hasMovementPriority(force, collision.target, collision.type)) {              
                   priorityResolve = false
-                  if (collision.type != orthot.collision.NONE) {
+                  if (collision.type != Collision.NONE) {
                     simpleResolve = false
                     if (!deferTO) {
                       deferTO = collision.target
@@ -1089,7 +1106,7 @@ orthot.Zone = function(ekvx, override_startloc) {
                   if (force.deferred) {
                     //If the move gets deferred a second time, panic-fail to prevent it from turning into an infinite loop.
                     console.log("  Movement Engine PANIC:  Force deferred a second time!", force)
-                    mover.strike(force, undefined, orthot.collision.FAKE)                
+                    mover.strike(force, undefined, Collision.FAKE)                
                     resolvedAny = true
                     force.cancelled = true
                     mover.shift()
@@ -1137,15 +1154,15 @@ orthot.Zone = function(ekvx, override_startloc) {
                     let incForce = incCollision.target
                     
                     switch(incCollision.type) {
-                      case orthot.collision.CHASE:
-                        incCollision.type = orthot.collision.NONE   
+                      case Collision.CHASE:
+                        incCollision.type = Collision.NONE   
                         break
                       // If the object has movement priority, it wins FAR_RAM and CORNER_RAM collisions.
-                      case orthot.collision.FAR_RAM:
-                        incCollision.type = orthot.collision.PRIORITY_RAM       //POWER!!! 
+                      case Collision.FAR_RAM:
+                        incCollision.type = Collision.PRIORITY_RAM       //POWER!!! 
                         break
-                      case orthot.collision.CORNER_RAM:
-                        incCollision.type = orthot.collision.PRIORITY_STEAL
+                      case Collision.CORNER_RAM:
+                        incCollision.type = Collision.PRIORITY_STEAL
                         break
                     }
                   }
@@ -1158,14 +1175,14 @@ orthot.Zone = function(ekvx, override_startloc) {
                     let incCollision = collisionRef.collision
                     let incForce = incCollision.target
                     switch(incCollision.type) {
-                      case orthot.collision.EDGE_RAM:
-                      case orthot.collision.NEAR_RAM:
-                      case orthot.collision.CHASE:
-                        incCollision.type = orthot.collision.SIMPLE
+                      case Collision.EDGE_RAM:
+                      case Collision.NEAR_RAM:
+                      case Collision.CHASE:
+                        incCollision.type = Collision.SIMPLE
                         break
-                      case orthot.collision.FAR_RAM:
-                      case orthot.collision.CORNER_RAM:
-                        incCollision.type = orthot.collision.NONE
+                      case Collision.FAR_RAM:
+                      case Collision.CORNER_RAM:
+                        incCollision.type = Collision.NONE
                         break
                     }
                   }
@@ -1304,7 +1321,7 @@ orthot.Zone = function(ekvx, override_startloc) {
   
     
   ekvx.loadConfig( (id, rawtemplate) => {    
-    let template = libek.util.properties_fromstring(rawtemplate.data)
+    let template = properties_fromstring(rawtemplate.data)
     
     if (!template.type) {
       return undefined
@@ -1324,11 +1341,11 @@ orthot.Zone = function(ekvx, override_startloc) {
   	    
   	    bxtbldr.defineSurface_8bit(id, {
   	      color:template.color, 
-  	      uv2info:{type:libek.gen.DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
+  	      uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
   	    })
   	    bxtbldr.defineSurface_8bit(id+'H', {
   	      color:template.color, 
-  	      uv2info:{type:libek.gen.DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
+  	      uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
   	    })
         bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
         
@@ -1377,7 +1394,7 @@ orthot.Zone = function(ekvx, override_startloc) {
 	    if (z>_max.z) _max.z=z
       
       if (data) {
-        data = libek.util.properties_fromstring(data)
+        data = properties_fromstring(data)
       }
       
       let datas = [template, data]
@@ -1390,61 +1407,61 @@ orthot.Zone = function(ekvx, override_startloc) {
         switch(template.type) {
           case 'wall':
             vxc.loadTerrain(x,y,z, template.id)
-            this.putGameobject(loc, new orthot.Wall(this))            
+            this.putGameobject(loc, new Wall(this))            
             break
           case 'stairs': {
-              color = libek.util.property("color", datas, "white", libek.util.color.parse)
-              align = libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation)
-              gobj = new orthot.Stair(this,  color, align)
-              adjctn = this.getAdjacentCTN(loc, libek.direction.invert[align.up])
+              color = property("color", datas, "white", parseColor)
+              align = property("align", datas, undefined, parseO2Orientation)
+              gobj = new Stair(this,  color, align)
+              adjctn = this.getAdjacentCTN(loc, direction.invert[align.up])
               vxc.setTerrainKnockout(adjctn, align.up)
-              adjctn = this.getAdjacentCTN(loc, libek.direction.invert[align.forward])
+              adjctn = this.getAdjacentCTN(loc, direction.invert[align.forward])
               vxc.setTerrainKnockout(adjctn, align.forward)
               
             }
             break          
           case 'key': {
-              color = libek.util.property("color", datas, "white") 
-              let code = libek.util.property("code", datas)                  
-              gobj = new orthot.Key(this, color, code)        
+              color = property("color", datas, "white") 
+              let code = property("code", datas)                  
+              gobj = new Key(this, color, code)        
               keys.push(gobj)    
             }
             break          
           case 'lock': {
-              color = libek.util.property("color", datas, "white") 
-              let code = libek.util.property("code", datas)                  
-              gobj = new orthot.Lock(this, color, code)   
+              color = property("color", datas, "white") 
+              let code = property("code", datas)                  
+              gobj = new Lock(this, color, code)   
               locks.push(gobj)         
             }
             break
           case 'target': {
-            let campos = libek.util.property("camPos", datas, undefined, libek.util.parseVec3)
+            let campos = property("camPos", datas, undefined, parseVec3)
             if (flipWorld) {
               campos.z *= -1
             }
             campos.x = campos.x - x
             campos.y = campos.y - y + 0.5
             campos.z = campos.z - z
-            targets[libek.util.property("name", datas)] = { 
+            targets[property("name", datas)] = { 
               loc:loc, 
               campos:campos
             }
           }
             break
           case 'pblock':
-            color = libek.util.property("color", datas, "red", libek.util.color.parse) 
-            gobj = new orthot.PushBlock(this, color)
+            color = property("color", datas, "red", parseColor) 
+            gobj = new PushBlock(this, color)
             break
           case 'crate':
-            gobj = new orthot.Crate(this)
+            gobj = new Crate(this)
             break
           case 'iceblock':
-            gobj = new orthot.Iceblock(this)
+            gobj = new IceBlock(this)
             break
           case 'sceneportal':
-            gobj = new orthot.ScenePortal(this)
-            gobj.destination = libek.util.property("dest", datas)
-            gobj.target = libek.util.property("target", datas)
+            gobj = new ScenePortal(this)
+            gobj.destination = property("dest", datas)
+            gobj.target = property("target", datas)
             break
           case 'space_light':
           case 'face_light':
@@ -1454,9 +1471,9 @@ orthot.Zone = function(ekvx, override_startloc) {
           //  For now, going with a global directional light
             /*
             let light = new THREE.PointLight(
-              libek.util.property( "color", 16, libek.util.color.toBinary, data, template), 
-              libek.util.property( "intensity", 1, Number.parseFloat, data, template),
-              libek.util.property( "range", 16, Number.parseFloat, data, template)/5,
+              property( "color", 16, libek.util.color.toBinary, data, template), 
+              property( "intensity", 1, Number.parseFloat, data, template),
+              property( "range", 16, Number.parseFloat, data, template)/5,
               1
             )
             light.position.set( x,y,z );
@@ -1470,12 +1487,12 @@ orthot.Zone = function(ekvx, override_startloc) {
             break
           case "start": {   
               //console.log(datas)       
-              let campos = libek.util.property("camPos", datas, undefined, libek.util.parseVec3)
+              let campos = property("camPos", datas, undefined, parseVec3)
               if (flipWorld) {
                 campos.z *= -1
               }
-              start_align = libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation)
-              start_fpmode = libek.util.property("camPos", datas) == "fp"
+              start_align = property("align", datas, undefined, parseO2Orientation)
+              start_fpmode = property("camPos", datas) == "fp"
               campos.x = campos.x - x
               campos.y = campos.y - y + 0.5
               campos.z = campos.z - z
@@ -1489,11 +1506,11 @@ orthot.Zone = function(ekvx, override_startloc) {
             console.log(datas)  
           break
           case "gate": {
-            color = libek.util.property("color", datas, "white", libek.util.color.parse)
-            align = libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation)
-            let mprops = libek.util.mergeObjects(datas)  
-            let gate = new orthot.Gate(this, loc, color, align, mprops)             
-            gategroups.push(new orthot.GateGroup(this, gate))
+            color = property("color", datas, "white", parseColor)
+            align = property("align", datas, undefined, parseO2Orientation)
+            let mprops = mergeObjects(datas)  
+            let gate = new Gate(this, loc, color, align, mprops)             
+            gategroups.push(new GateGroup(this, gate))
           }
           break
         }
@@ -1501,15 +1518,15 @@ orthot.Zone = function(ekvx, override_startloc) {
       else {
         switch(template.type) {               
           case "paneportal": {
-					    let p_class = libek.util.property("class", datas)
-					    let p_name = libek.util.property("name", datas)
-					    let p_target = libek.util.property("target", datas)
+					    let p_class = property("class", datas)
+					    let p_name = property("name", datas)
+					    let p_target = property("target", datas)
 					    
-              align = libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation)
+              align = property("align", datas, undefined, parseO2Orientation)
               vxc.setTerrainKnockout(loc, align.up)
-					    let portal = new orthot.Portal(
+					    let portal = new Portal(
                 align,
-                libek.util.property("color", datas, "white", libek.util.color.parse),
+                property("color", datas, "white", parseColor),
                 p_class, p_name, p_target
               )
               this.attach(x,y,z, portal)
@@ -1535,25 +1552,25 @@ orthot.Zone = function(ekvx, override_startloc) {
             break   
           case "icefloor":
             //console.log("icefloor", datas)
-            align = libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation)
+            align = property("align", datas, undefined, parseO2Orientation)
             vxc.setTerrainKnockout(loc, align.up)
-				    let icefloor = new orthot.Icefloor( align )
-            this.attach(x,y,z, icefloor)
+				    let icf = new Icefloor( align )
+            this.attach(x,y,z, icf)
             break            
           case "ladder":
-            let ldr = new orthot.Ladder(
-              libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation),
-              libek.util.property("color", datas, "white", libek.util.color.parse)
+            let ldr = new Ladder(
+              property("align", datas, undefined, parseO2Orientation),
+              property("color", datas, "white", parseColor)
             )
             this.attach(x,y,z, ldr)
             break
           case "button":
-            let btn = new orthot.Button( this,
-              libek.util.property("align", datas, undefined, orthot.util.parseO2Orientation),
-              libek.util.property("color", datas, "white", libek.util.color.parse),
-              libek.util.property("size", datas, "small"),
-              libek.util.property("press", datas),              
-              libek.util.property("release", datas)
+            let btn = new Button( this,
+              property("align", datas, undefined, parseO2Orientation),
+              property("color", datas, "white", parseColor),
+              property("size", datas, "small"),
+              property("press", datas),              
+              property("release", datas)
             )
             this.attach(x,y,z, btn)
             break
@@ -1597,12 +1614,12 @@ orthot.Zone = function(ekvx, override_startloc) {
     let pl_align
     if (start_align) {
       pl_align = {
-        forward:libek.direction.invert[start_align.forward],
+        forward:direction.invert[start_align.forward],
         up:start_align.up
       }
     }
     
-    player = new orthot.Player(this, pl_align, start_fpmode)    
+    player = new Player(this, pl_align, start_fpmode)    
     
     player.initGraphics()
     this.putGameobject(start_target.loc, player) 
@@ -1729,7 +1746,7 @@ orthot.Zone = function(ekvx, override_startloc) {
     sigReceivers = {}
     
     vxc.resetData()
-    vxc.default = orthot.Container
+    vxc.default = Container
     loadData()
   }
 }

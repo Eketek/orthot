@@ -1,5 +1,17 @@
-orthot.Player = function(zone, align, init_fpmode) {   
-  orthot.StandardObject(this, zone)
+export { Player }
+
+import { trit, delay } from '../libek/libek.js'
+import { direction, setOrientation, getKeyDirection } from '../libek/direction.js'
+
+import { sviewCTL, renderCTL, orthotCTL } from './orthot.js'
+import { StandardObject } from './object.js'
+import { ObjectState, Strength, Collision } from './enums.js'
+import { Surface, getSurfaceInteraction } from './surface.js'
+import { AnimateCreature } from './animation.js'
+import { scan_simple, scan_ramp, scan_downladder, scan_upladder } from './topology.js'
+
+var Player = function(zone, align, init_fpmode) {   
+  StandardObject.call(this, zone)
   this.isPlayer = true
   this.types.push("creature")
   this.types.push("player")
@@ -8,17 +20,17 @@ orthot.Player = function(zone, align, init_fpmode) {
 
   this.SpatialClass = "player"
     
-  this.state = orthot.state.IDLE
+  this.state = ObjectState.IDLE
   
-  this.forward = libek.direction.code.SOUTH
-  this.up = libek.direction.code.UP
+  this.forward = direction.code.SOUTH
+  this.up = direction.code.UP
   
   if (align) {
     this.forward = align.forward
     this.up = align.up
   }
   let orientation = {}
-  libek.direction.setOrientation(orientation, this.forward, this.up)
+  setOrientation(orientation, this.forward, this.up)
   
   let dir_rad = [
     0,0,0,
@@ -84,13 +96,13 @@ orthot.Player = function(zone, align, init_fpmode) {
     }
   }
   
-  this.shoe_sfctype = orthot.surface.type.SMOOTH
+  this.shoe_sfctype = Surface.type.SMOOTH
   this.can_skate = false
   
   this.initGraphics = (function() {
-    orthot.AnimateCreature(zone, this, nmap_walk, orientation, true)
+    AnimateCreature(zone, this, nmap_walk, orientation, true)
     
-    libek.direction.setOrientation(this.animCTL.orientation, this.forward, this.up)   
+    setOrientation(this.animCTL.orientation, this.forward, this.up)   
     this.ready()
     
     if (init_fpmode) {
@@ -105,19 +117,19 @@ orthot.Player = function(zone, align, init_fpmode) {
     sviewCTL.refocustarget.set(this.ctn.x, this.ctn.y + (this.ctn.getObject_bytype("ramp") ? 1 : 0.5), this.ctn.z)
   }
   
-  let getSFCinteraction = (function(fgrav) {
+  let getGravShearSurfaceinteraction = (function(fgrav) {
     if (!fgrav) {
-      fgrav = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
+      fgrav = scan_simple(zone, this.ctn, this, direction.code.DOWN, this.forward, this.up)
     }
     let gravOBJ = zone.getObstructor(this, fgrav.toCTN)
     if (gravOBJ) {
-      return orthot.surface.interact(this.shoe_sfctype, gravOBJ.surfaces[libek.direction.invert[fgrav.toHEADING]])
+      return getSurfaceInteraction(this.shoe_sfctype, gravOBJ.surfaces[direction.invert[fgrav.toHEADING]])
     }
-    return orthot.surface.interaction.NONE
+    return Surface.interaction.NONE
   }).bind(this)
   
   this.recvInput = function(inputs) {
-    if (this.state == orthot.state.DEFEATED) {
+    if (this.state == ObjectState.DEFEATED) {
       return
     }
     
@@ -132,10 +144,10 @@ orthot.Player = function(zone, align, init_fpmode) {
     
     if (fpmode) {    
       // override FP-mode view-manipulation while on ladders
-      if (this.state != orthot.state.CLIMBING) {
+      if (this.state != ObjectState.CLIMBING) {
       
         if (iUP) {
-          dir = libek.direction.getKeyDirection("up", sviewCTL.campos.theta).code
+          dir = direction.getKeyDirection("up", sviewCTL.campos.theta).code
           this.forward = dir
         }
         else {
@@ -158,56 +170,56 @@ orthot.Player = function(zone, align, init_fpmode) {
     else {
       //If an arrow key is down, determine where it points [in relation to where the camera is pointing]
       if (iDOWN) {    
-        dir = libek.direction.getKeyDirection("down", sviewCTL.campos.theta).code
+        dir = getKeyDirection("down", sviewCTL.campos.theta).code
       }
       else if (iUP) {
-        dir = libek.direction.getKeyDirection("up", sviewCTL.campos.theta).code
+        dir = getKeyDirection("up", sviewCTL.campos.theta).code
       }
       else if (iRIGHT) {
-        dir = libek.direction.getKeyDirection("right", sviewCTL.campos.theta).code
+        dir = getKeyDirection("right", sviewCTL.campos.theta).code
       }
       else if (iLEFT) {
-        dir = libek.direction.getKeyDirection("left", sviewCTL.campos.theta).code
+        dir = getKeyDirection("left", sviewCTL.campos.theta).code
       }
     }
         
     //If gravity is valid (or eventually "enabled"), set up a high-priority downward force.  
     let force_gravity
-    if (this.state != orthot.state.CLIMBING) {
-      force_gravity = orthot.topology.scan_simple(zone, this.ctn, this, libek.direction.code.DOWN, this.forward, this.up)
+    if (this.state != ObjectState.CLIMBING) {
+      force_gravity = scan_simple(zone, this.ctn, this, direction.code.DOWN, this.forward, this.up)
       force_gravity.priority = 100
       force_gravity.initiator = this
       force_gravity.action = "fall"
       //force_gravity.inputDIR = dir
-      force_gravity.strength = orthot.strength.NORMAL
+      force_gravity.strength = Strength.NORMAL
       zone.addForce(force_gravity)
     }
-    let sfc_interaction = getSFCinteraction(force_gravity)
+    let sfc_interaction = getGravShearSurfaceinteraction(force_gravity)
     
     //process input
     switch(this.state) {
-      case orthot.state.IDLE:
+      case ObjectState.IDLE:
         if (dir) {
           //this.forward = dir.code
           setFWD(dir)
-          let force = orthot.topology.scan_ramp(zone, this.ctn, this, dir, this.forward, this.up)
+          let force = scan_ramp(zone, this.ctn, this, dir, this.forward, this.up)
           force.initiator = this
           this.animCTL.setNMAP(nmap_walk)
           
-          if (sfc_interaction == orthot.surface.interaction.SLIDE) {
-            force.strength = orthot.strength.LIGHT
-            //this.state = orthot.state.SLIDING
+          if (sfc_interaction == Surface.interaction.SLIDE) {
+            force.strength = Strength.LIGHT
+            //this.state = ObjectState.SLIDING
             force.action = "slide"
           }
           else {
-            force.strength = orthot.strength.NORMAL
-            this.state = orthot.state.WALKING         
+            force.strength = Strength.NORMAL
+            this.state = ObjectState.WALKING         
             force.action = "walk" 
           }
           zone.addForce(force)  
         }
         break
-      case orthot.state.PANIC:
+      case ObjectState.PANIC:
         // Panic is caused by getting caught by something that pushes with crushing force.  
         // Panic doesn't help much.  for now.
         // Maybe allow escape if there is something solid on the side to push against
@@ -215,22 +227,22 @@ orthot.Player = function(zone, align, init_fpmode) {
           setFWD(dir)
         }
         break
-      case orthot.state.WALKING:
+      case ObjectState.WALKING:
         if (dir) {    
           //this.forward = dir.code
           setFWD(dir)
-          let force = orthot.topology.scan_ramp(zone, this.ctn, this, dir, this.forward, this.up)
+          let force = scan_ramp(zone, this.ctn, this, dir, this.forward, this.up)
           force.initiator = this
           //force.inputDIR = dir
           this.animCTL.setNMAP(nmap_walk)
           
-          if (sfc_interaction == orthot.surface.interaction.SLIDE) {
-            force.strength = orthot.strength.LIGHT    
-            //this.state = orthot.state.SLIDING
+          if (sfc_interaction == Surface.interaction.SLIDE) {
+            force.strength = Strength.LIGHT    
+            //this.state = ObjectState.SLIDING
             force.action = "slide"
           }
           else {
-            force.strength = orthot.strength.NORMAL  
+            force.strength = Strength.NORMAL  
             force.action = "walk"
           }
           zone.addForce(force)
@@ -238,55 +250,55 @@ orthot.Player = function(zone, align, init_fpmode) {
         else {
           this.animCTL.setNMAP(nmap_walk)
           this.ready()
-          this.state = orthot.state.IDLE
+          this.state = ObjectState.IDLE
         }
         break
-      case orthot.state.CLIMBING:   
+      case ObjectState.CLIMBING:   
         if (inputs.Space) {
           this.animCTL.hopoffLadder(this.forward, this.up)  
-          this.state = orthot.state.IDLE
+          this.state = ObjectState.IDLE
         }
         else if (iDOWN) {
-          let force = orthot.topology.scan_downladder(zone, this.ctn, this, this.forward, this.up)
+          let force = scan_downladder(zone, this.ctn, this, this.forward, this.up)
           force.initiator = this
           force.action = "climbdown"
           //force.inputDIR = dir
-          force.strength = orthot.strength.NORMAL
+          force.strength = Strength.NORMAL
           zone.addForce(force)
         }    
         else if (iUP || iLEFT || iRIGHT) {
-          let force = orthot.topology.scan_upladder(zone, this.ctn, this, this.forward, this.up)
+          let force = scan_upladder(zone, this.ctn, this, this.forward, this.up)
           force.initiator = this
           force.action = "climbup"
           //force.inputDIR = dir
-          force.strength = orthot.strength.NORMAL
+          force.strength = Strength.NORMAL
           zone.addForce(force)
         }  
         break
       // SLIDING - Player-avatar very gracefully continues moves forward, regardless of player input or intent, until he smacks into something.
-      case orthot.state.SLIDING:
+      case ObjectState.SLIDING:
         if (this.can_skate && dir) {
           this.slideHEADING = dir
           setFWD(dir)
         }
-        let force = orthot.topology.scan_ramp(zone, this.ctn, this, this.slideHEADING, this.forward, this.up)
+        let force = scan_ramp(zone, this.ctn, this, this.slideHEADING, this.forward, this.up)
         force.initiator = this
         this.animCTL.setNMAP(nmap_walk)
         
-        if (sfc_interaction == orthot.surface.interaction.SLIDE) {
-          force.strength = orthot.strength.NORMAL
+        if (sfc_interaction == Surface.interaction.SLIDE) {
+          force.strength = Strength.NORMAL
           //this.state = orthot.state.SLIDING
           force.action = "slide"
           zone.addForce(force)  
         }
         else {
-          this.state = orthot.state.IDLE
+          this.state = ObjectState.IDLE
           this.ready() 
         }
         break
-      case orthot.state.FALLING:
+      case ObjectState.FALLING:
         if (dir) {          
-          libek.direction.setOrientation(this.animCTL.orientation, dir, "up")   
+          setOrientation(this.animCTL.orientation, dir, "up")   
           this.ready()
         }
         break
@@ -300,10 +312,10 @@ orthot.Player = function(zone, align, init_fpmode) {
     let color = item.color ? item.color : new THREE.Color("white")
     let callbacks = {
       mouseenter: evt => {
-        orthot.showDescription(item)
+        orthotCTL.showDescription(item)
       },
       mouseleave: evt => {
-        orthot.hideDescription(item)
+        orthotCTL.hideDescription(item)
       },
       click: evt => {
         if (item.activate) {
@@ -311,7 +323,7 @@ orthot.Player = function(zone, align, init_fpmode) {
         }
       }
     }
-    item.domELEM = renderCTL.build_domOBJ(orthot.tiles[itype], color, "#leftside", "btn_item", callbacks)
+    item.domELEM = renderCTL.build_domOBJ(orthotCTL.tiles[itype], color, "#leftside", "btn_item", callbacks)
   }
   
   this.removeItem = function(item) {    
@@ -321,13 +333,13 @@ orthot.Player = function(zone, align, init_fpmode) {
     if (typeof(item.quantity) == "number") {
       item.quanity--
       if (item.quantity > 0) {
-        orthot.updateDescription(item)
+        orthotCTL.updateDescription(item)
         doRemove = false
       }
     }
         
     if (doRemove) {      
-      orthot.hideDescription(item)
+      orthotCTL.hideDescription(item)
       let idx = inventory.indexOf(item)
       inventory.splice(idx,1)
       item.domELEM.remove()
@@ -351,23 +363,23 @@ orthot.Player = function(zone, align, init_fpmode) {
   }
   
   this.defeat = async function() {
-    if (this.state != orthot.state.DEFEATED) {
-      this.state = orthot.state.DEFEATED
+    if (this.state != ObjectState.DEFEATED) {
+      this.state = ObjectState.DEFEATED
       this.animCTL.defeat()
     }
-    await libek.delay(4000)
+    await delay(4000)
     zone.reset()
     
   }
   
   this.notify_ForcePropagationClearedObstruction = function(force, other) { 
-    if (this.state == orthot.state.WALKING) {
+    if (this.state == ObjectState.WALKING) {
       this.animCTL.setNMAP(nmap_push)
     }
   }
   
   this.notify_PushClearedObstruction = function(force, other) { 
-    if (this.state == orthot.state.WALKING) {
+    if (this.state == ObjectState.WALKING) {
       this.animCTL.setNMAP(nmap_push)
     }
   }
@@ -381,22 +393,22 @@ orthot.Player = function(zone, align, init_fpmode) {
       this.animCTL.setNMAP(nmap_walk)
       this.animCTL.slidestrike(force)
       force.cancelled = true
-      this.state = orthot.state.IDLE
+      this.state = ObjectState.IDLE
       this.ready()
     }
   }  
   
   
   this.propagateForce = function(force) {
-    if (this.state == orthot.state.DEFEATED) {
+    if (this.state == ObjectState.DEFEATED) {
       return
     }
     
-    force.OBJ.strike(force, this, orthot.collision.SIMPLE)
-    this.struck(force, force.OBJ, orthot.collision.SIMPLE)
+    force.OBJ.strike(force, this, Collision.SIMPLE)
+    this.struck(force, force.OBJ, Collision.SIMPLE)
     
-    if (force.strength >= orthot.strength.CRUSHING) {
-      let cf = orthot.topology.scan_simple(zone, this.ctn, this, force.toHEADING, libek.direction.code.SOUTH, libek.direction.code.UP)      
+    if (force.strength >= Strength.CRUSHING) {
+      let cf = scan_simple(zone, this.ctn, this, force.toHEADING, direction.code.SOUTH, direction.code.UP)      
       cf.pusher = force.OBJ
       cf.initiator = force.initiator
       cf.action = "crushed"     
@@ -409,7 +421,7 @@ orthot.Player = function(zone, align, init_fpmode) {
   this.move = function(force) { 
     switch(force.action) {
       case "crushed":
-        if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) { 
+        if ( (force.toHEADING != direction.code.UP) && (force.toHEADING != direction.code.DOWN) ) { 
           setFWD(force.toHEADING)
         }
         
@@ -418,7 +430,7 @@ orthot.Player = function(zone, align, init_fpmode) {
             this.defeat()
           }
           else {
-            this.state = orthot.state.SHOVED
+            this.state = ObjectState.SHOVED
             zone.putGameobject(force.toCTN, this)
             this.animCTL.slide(force)
           }
@@ -429,25 +441,25 @@ orthot.Player = function(zone, align, init_fpmode) {
         return trit.TRUE          
         break
       case "slide":
-        if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) { 
+        if ( (force.toHEADING != direction.code.UP) && (force.toHEADING != direction.code.DOWN) ) { 
           setFWD(force.toHEADING)
         }
         if (force.isTraversable()) {
           if (force.toBLOCKINGRAMP) {
             this.animCTL.slidestrike(force)
-            this.state = orthot.state.IDLE
+            this.state = ObjectState.IDLE
           }
           else {
             zone.putGameobject(force.toCTN, this)
             this.animCTL.slide(force)
-            this.state = orthot.state.SLIDING
+            this.state = ObjectState.SLIDING
             this.slideHEADING = force.toHEADING
             return trit.TRUE
           }
         }
         break
       case "walk":
-        if ( (force.toHEADING != libek.direction.code.UP) && (force.toHEADING != libek.direction.code.DOWN) ) { 
+        if ( (force.toHEADING != direction.code.UP) && (force.toHEADING != direction.code.DOWN) ) { 
           setFWD(force.toHEADING)
         }
         if (force.isTraversable()) {
@@ -458,10 +470,10 @@ orthot.Player = function(zone, align, init_fpmode) {
             zone.putGameobject(force.toCTN, this)
             this.animCTL.walk(force)
             
-            if ( (force.toHEADING != libek.direction.code.DOWN) && (force.toHEADING != libek.direction.code.UP) ) {
-              let sfc_interaction = getSFCinteraction()
-              if (sfc_interaction == orthot.surface.interaction.SLIDE) {
-                this.state = orthot.state.SLIDING
+            if ( (force.toHEADING != direction.code.DOWN) && (force.toHEADING != direction.code.UP) ) {
+              let sfc_interaction = getGravShearSurfaceinteraction()
+              if (sfc_interaction == Surface.interaction.SLIDE) {
+                this.state = ObjectState.SLIDING
                 this.slideHEADING = force.toHEADING
               }
             }
@@ -474,10 +486,10 @@ orthot.Player = function(zone, align, init_fpmode) {
         }
         else {
           this.animCTL.setNMAP(nmap_walk)
-          let ldr = force.toCTN.getSideobject_bytype(libek.direction.invert[force.toHEADING], "ladder")
+          let ldr = force.toCTN.getSideobject_bytype(direction.invert[force.toHEADING], "ladder")
           if (ldr) {
             this.animCTL.grabLadder(force)  
-            this.state = orthot.state.CLIMBING
+            this.state = ObjectState.CLIMBING
           }
           else {
             this.animCTL.pushfixedobjectAnim(force)            
@@ -487,18 +499,18 @@ orthot.Player = function(zone, align, init_fpmode) {
         break
       case "fall":
         if (force.isTraversable()) {
-          if (this.state != orthot.state.DEFEATED) {        
+          if (this.state != ObjectState.DEFEATED) {        
             zone.putGameobject(force.toCTN, this)
             this.animCTL.fall(force)
             
-            if ( (force.toHEADING != libek.direction.code.DOWN) && (force.toHEADING != libek.direction.code.UP) ) {
-              let sfc_interaction = getSFCinteraction()
-              if (sfc_interaction == orthot.surface.interaction.SLIDE) {
-                this.state = orthot.state.SLIDING
+            if ( (force.toHEADING != direction.code.DOWN) && (force.toHEADING != direction.code.UP) ) {
+              let sfc_interaction = getGravShearSurfaceinteraction()
+              if (sfc_interaction == Surface.interaction.SLIDE) {
+                this.state = ObjectState.SLIDING
                 this.slideHEADING = force.toHEADING
               }
               else {
-                this.state = orthot.state.IDLE
+                this.state = ObjectState.IDLE
               }
             }
           }
@@ -513,7 +525,7 @@ orthot.Player = function(zone, align, init_fpmode) {
         }
         break
       case "climbup":
-        if ( (force.toFORWARD != libek.direction.code.UP) && (force.toFORWARD != libek.direction.code.DOWN) ) {  
+        if ( (force.toFORWARD != direction.code.UP) && (force.toFORWARD != direction.code.DOWN) ) {  
           //this.forward = force.toFORWARD          
           setFWD(force.toFORWARD)
         }
@@ -525,7 +537,7 @@ orthot.Player = function(zone, align, init_fpmode) {
           if (force.isLADDEREXIT) {
             zone.putGameobject(force.toCTN, this)
             this.animCTL.exitLadder(force)
-            this.state = orthot.state.WALKING
+            this.state = ObjectState.WALKING
             return trit.TRUE
           }
           else if (force.isLADDER) {
@@ -536,12 +548,12 @@ orthot.Player = function(zone, align, init_fpmode) {
           else {
             //isLADDERTERMINAL
             this.animCTL.hopoffLadder(this.forward, this.up)  
-            this.state = orthot.state.IDLE
+            this.state = ObjectState.IDLE
           }
         }
         break
       case "climbdown":
-        if ( (force.toFORWARD != libek.direction.UP) && (force.toFORWARD != libek.direction.DOWN) ) {  
+        if ( (force.toFORWARD != direction.UP) && (force.toFORWARD != direction.DOWN) ) {  
           //this.forward = force.toFORWARD      
           setFWD(force.toFORWARD)
         }
@@ -558,13 +570,13 @@ orthot.Player = function(zone, align, init_fpmode) {
           else {
             //isLADDERTERMINAL
             this.animCTL.hopoffLadder(this.forward, this.up)  
-            this.state = orthot.state.IDLE
+            this.state = ObjectState.IDLE
           }
         }
         else {
           //isLADDERTERMINAL
           this.animCTL.hopoffLadder(this.forward, this.up)  
-          this.state = orthot.state.IDLE
+          this.state = ObjectState.IDLE
         }
         break
       default:
@@ -574,7 +586,6 @@ orthot.Player = function(zone, align, init_fpmode) {
     return trit.FALSE
   }
 }
-//orthot.Player.prototype = orthot.OrthotObject
 
 
 

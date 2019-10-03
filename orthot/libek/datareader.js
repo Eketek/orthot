@@ -1,5 +1,7 @@
+export { DataReader }
+
 // Reader object to handle binary data generated with C# System.IO.BinaryWriter
-libek.DataReader = function x(dview, little_endian=true) {
+var DataReader = function x(dview, little_endian=true) {
   this.dview = dview
   this.pos = 0
   let e8 = 2**8

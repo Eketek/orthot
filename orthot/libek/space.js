@@ -1,8 +1,10 @@
+export { Space }
+
 // Discrete-space Volumetric Container
 //  Basically voxel-based storage
 //   This was somethign just hacked out without regard for performance testing (or even a comparison to just converting the coordinates to a string to index
 //   a basic associative array)
-libek.Space = function() {
+var Space = function() {
 
   let e30 = 1<<30
   
@@ -11,7 +13,11 @@ libek.Space = function() {
   let blocks = {}
   this.bks = blocks
   
-  this.default = function(_x, _y, _z) { return {x:_x, y:_y, z:_z} }
+  this.default = function(_x, _y, _z) {
+    this.x = _x
+    this.y = _y
+    this.z = _z
+  }
   
   this.forAll = (function(func) {
     for (let blk of Object.values(blocks)) {
@@ -37,7 +43,7 @@ libek.Space = function() {
     resolve() 
     let r = block[addr]
     if (!r) {
-      r = this.default(_x, _y, _z)
+      r = new this.default(_x, _y, _z)
       block[addr] = r
     }
     return r     

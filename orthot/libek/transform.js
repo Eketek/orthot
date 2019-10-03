@@ -1,3 +1,5 @@
+export { Transform }
+
 /*  Parameterized matrix transformations
  *
  *  
@@ -6,7 +8,7 @@
  *  2.  Call the various transformation functions to define how the Transform works (Transform will retain references to all input parameters)
  *  3.  Then, every time the Transform should update, call Transform.apply()
 */
-libek.Transform = function(matrix, base) {
+var Transform = function(matrix, base) {
 
   if (!matrix) {
     matrix = new THREE.Matrix4()

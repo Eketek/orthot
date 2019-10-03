@@ -1,4 +1,4 @@
-
+export { CommandSequence }
 /*
   Command Sequence Executor
 
@@ -55,7 +55,7 @@
     
   Example CommandSequence usage:
   
-  let seq = new libek.CommandSequence(
+  let seq = new CommandSequence(
     init => { console.log("START") },
     end  => { console.log("END") },
     [ (d,t) => { console.log("time:", t, " {") } ],
@@ -73,7 +73,7 @@
   ADDENDUM:  THREE.js animation may be controlled from a CommandSequence fairly easily - An AnimationMixer.update callback may be used directly as a track,
               as a frame entry, or invoked from a command.
 */
-libek.CommandSequence = function(init, end, length, ... tracks) {
+var CommandSequence = function(init, end, length, ... tracks) {
   let t = 0
   this.active = false
   this.isCommandSequence = true

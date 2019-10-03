@@ -1,3 +1,6 @@
+export { loadEKVX, EkvxLoader }
+import { DataReader } from './datareader.js'
+
 /*  Parser for the Eketech Voxel Format (presently only used for puzzles for Orthot)
  *
  *  The Eketech Voxel format uses packed voxels (integer 3d bit x,y,z coordinate triplets compressed to a 16 bit int) and templates (propery lists bound to an 
@@ -9,19 +12,19 @@
     The Eketech Voxel Format also contain additional data which was used for vertex-lighting by Orthot II (but which for now is just parsed over and ignored)
 */
 
-libek.loader.ekvx = {
+var loadEKVX = {
   load:async function(arg, cb) {
     if (typeof(arg) == "string") {
-      cb(new libek.EkvxLoader(await libek.load_to_ArrayBuffer(arg)))
+      cb(new EkvxLoader(await load_to_ArrayBuffer(arg)))
     }
     else {
-      cb(new libek.EkvxLoader(arg))
+      cb(new EkvxLoader(arg))
     }
   }
 }
 
-libek.EkvxLoader = function (data_ab) {
-  let data = new libek.DataReader(new DataView(data_ab), true)
+var EkvxLoader = function (data_ab) {
+  let data = new DataReader(new DataView(data_ab), true)
   
   //let ekvx = {ekvx:true, importedSwatches:{}}
   

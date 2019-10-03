@@ -1,14 +1,21 @@
+export { Ladder, Portal, Button, Icefloor }
+
+import { assignMaterials, getAsset } from '../libek/libek.js'
+
+import { Surface } from './surface.js'
+
 /*  Objects that get attached to the sides/faces of solid objects and terrain
     These generally should only be params objects to hold properties and 3D model generators
       (rather than proper objects which handle their own stated functions)
 */
 
-orthot.Ladder = function(align, color) {
+var Ladder = function(align, color) {
   this.type = "ladder"
+  this.surfacetype = Surface.type.SMOOTH
   this.mdlgen = function() {
-    let r = libek.getAsset("ladder")
+    let r = getAsset("ladder")
     if (color) {
-      libek.assignMaterials(r, color)
+      assignMaterials(r, color)
     }
     return r
   }
@@ -16,17 +23,17 @@ orthot.Ladder = function(align, color) {
   Object.assign(this, align)
 }
 
-orthot.Portal = function(align, color, pclass, pname, ptarget) {
+var Portal = function(align, color, pclass, pname, ptarget) {
   this.pclass = pclass
   this.pname = name
   this.ptarget = ptarget
   this.type = "portal"
   this.sources = []
-  this.surfacetype = orthot.surface.type.FRICTIONLESS
+  this.surfacetype = Surface.type.FRICTIONLESS
   this.mdlgen = function() {
-    let r = libek.getAsset("portal_pane")
+    let r = getAsset("portal_pane")
     if (color) {
-      libek.assignMaterials(r, color)
+      assignMaterials(r, color)
     }
     return r
   }
@@ -34,14 +41,13 @@ orthot.Portal = function(align, color, pclass, pname, ptarget) {
   Object.assign(this, align)
 }
 
-orthot.Icefloor = function(align) {
+var Icefloor = function(align) {
   this.type = "icefloor"
   this.sources = []
-  this.surfacetype = orthot.surface.type.SLICK
+  this.surfacetype = Surface.type.SLICK
   this.mdlgen = function() {
-    return libek.getAsset("icefloor")
+    return getAsset("icefloor")
   }
-  
   Object.assign(this, align)
 }
 
@@ -50,18 +56,19 @@ orthot.Icefloor = function(align) {
    
    Button "animation" is a lazy hack because buttons are the only planned side-attached puzzle element that needs to be animated.
 */
-orthot.Button = function(zone, align, color, size, pressSIG, releaseSIG) {
+var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
   this.type = "button"
   let mdlname
   let models = []
+  this.surfacetype = Surface.type.SMOOTH
   switch(size) {
     case "small":   //Can be pressed by player
       mdlname = "smallbutton_up"
-      this.minForce = orthot.strength.NORMAL
+      this.minForce = Strength.NORMAL
       break
     case "large":   //Can not be pressed by player
       mdlname = "bigbutton_up"
-      this.minForce = orthot.strength.HARD
+      this.minForce = Strength.HARD
       break
   }
   
@@ -113,7 +120,7 @@ orthot.Button = function(zone, align, color, size, pressSIG, releaseSIG) {
           zone.signal(pressSIG)
         }
         for (let mdl of models) {
-          mdl.position.y -= 0.125
+          mdl.position.y = 0
         }
       }
       else {
@@ -121,7 +128,7 @@ orthot.Button = function(zone, align, color, size, pressSIG, releaseSIG) {
           zone.signal(releaseSIG)
         }
         for (let mdl of models) {
-          mdl.position.y += 0.125
+          mdl.position.y = 0.125
         }
       }
       prevpressed = pressed
@@ -129,9 +136,10 @@ orthot.Button = function(zone, align, color, size, pressSIG, releaseSIG) {
   }).bind(this)
   
   this.mdlgen = function() {
-    let mdl = libek.getAsset(mdlname)
+    let mdl = getAsset(mdlname)
+    mdl.position.y = 0.125
     if (color) {
-      libek.assignMaterials(mdl, color)
+      assignMaterials(mdl, color)
     }
     models.push(mdl)
     let r = new THREE.Object3D()

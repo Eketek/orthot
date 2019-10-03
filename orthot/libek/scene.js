@@ -1,7 +1,10 @@
+export { VxScene }
+import { Space } from './space.js'
+import { direction } from './direction.js'
 /* 
 
 */
-libek.VxScene = function(params={}) {
+let VxScene = function(params={}) {
   let chunksize = params.chunksize ? parmas.chunksize : 8  
   let half_chunksize = chunksize/2
   let chunks_per_tick = params.chunks_per_tick ? params.chunks_per_tick : .1 
@@ -19,7 +22,7 @@ libek.VxScene = function(params={}) {
     if (space) {
       let _default = space.default
     }
-    space = new libek.Space()
+    space = new Space()
     this.get = space.get
     this.put = space.put
     this.remove = space.remove
@@ -112,22 +115,22 @@ libek.VxScene = function(params={}) {
       ctn.terrain = {}
     }
     switch(dir) {
-      case libek.direction.code.UP:
+      case direction.code.UP:
         ctn.terrain.koU = val
       break
-      case libek.direction.code.DOWN:
+      case direction.code.DOWN:
         ctn.terrain.koD = val
       break
-      case libek.direction.code.NORTH:
+      case direction.code.NORTH:
         ctn.terrain.koN = val
       break
-      case libek.direction.code.EAST:
+      case direction.code.EAST:
         ctn.terrain.koE = val
       break
-      case libek.direction.code.SOUTH:
+      case direction.code.SOUTH:
         ctn.terrain.koS = val
       break
-      case libek.direction.code.WEST:
+      case direction.code.WEST:
         ctn.terrain.koW = val
       break
     }

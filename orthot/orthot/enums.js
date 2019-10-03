@@ -1,8 +1,10 @@
+export { Collision, GateState, ObjectState, Strength }
+
 // Various enumerations
 
 // Enumeration representing the different types of collisions between pairs of objects
 // For now, the only major use of Collision classification is by the movement engine when determining how to resolve collisions
-orthot.collision = {
+var Collision = {
 	NONE:0,			        //no collision
 	SIMPLE:1,		      	//an object striking a stationary object
 	NEAR_RAM:2,	      	//Two adjacent objects move toward each other and collide
@@ -18,14 +20,14 @@ orthot.collision = {
 	                    //    This is also similar to EDGE_RAM (the target object is moving into the destination instead of out)
 }
 
-orthot.gatestate = {
+var GateState = {
   RETRACTED:0,
   RETRACTING:1,
   EXTENDED:2,
   EXTENDING:3,
 }
 
-orthot.state = {
+var ObjectState = {
   IDLE:0,
   WALKING:1,
   FALLING:2,
@@ -37,7 +39,7 @@ orthot.state = {
 }
 
 // Force-strength values.  Enumerated with large values because this should be closely related to composite stresses (weight/tension).
-orthot.strength = {
+var Strength = {
   NONE:            0,
   LIGHT:        5000,
   NORMAL:      25000,

@@ -1,4 +1,10 @@
 0.3.0:
+  2 Oct 2019
+    Converted all scripts to ES6 modules
+    Shortened all script names
+    Various code consistancy adjustments
+    removed libek.direction.opposite (duplicate of direction.invert)
+
   17-19 Jan 2019
     Partial implementation of gates and buttons
     Modified tick handler to allow deferred actions.

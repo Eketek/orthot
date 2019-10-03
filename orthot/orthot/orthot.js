@@ -1,10 +1,22 @@
+export { renderCTL, inputCTL, sviewCTL, orthotCTL }
+
+import { assets, tt, initLIBEK, Display, loadMuch, loadZIP, assignMaterials, pickPlanepos, debug_tip } from '../libek/libek.js'
+import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
+import { Manager } from '../libek/event.js'
+import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
+import { direction } from '../libek/direction.js'
+
+import { Zone } from './zone.js'
+
+
+
 /*  Orthot III application logic
     This prepares global controls, loads game data, configures base objects (default materials),
 */
 
 // Global rendering properties & controls (Mainly, materials and managed shader properties)
 var renderCTL = {
-  uv2:new libek.shader.UVspec()
+  uv2:new UVspec()
 }
 
 //Input controller.  Mouse & keyboard
@@ -14,7 +26,7 @@ var inputCTL = {}
 var sviewCTL
 
 //Level data, high-level state, and "Orthot" functions
-var orthot = {
+var orthotCTL = {
   zones:{},
   tiles:{},  
   version:"0.3.0"
@@ -22,12 +34,12 @@ var orthot = {
 
 $(async function() {
 
-  libek.init() 
+  initLIBEK() 
   
   let disp_elem = $("#test").attr("tabindex", "0").get(0)
   disp_elem.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )  
   disp_elem.focus()
-  renderCTL.display = libek.Display(disp_elem)
+  renderCTL.display = Display(disp_elem)
   
   //console.log(renderCTL)
   
@@ -36,15 +48,15 @@ $(async function() {
     anisotropy:4,
   }
   
-  await libek.loadMuch( 
+  await loadMuch( 
     {url:"orthot/textures/patterns.png", properties:TextureProps},
     {url:"orthot/textures/wall_8bit_fg.png", properties:TextureProps},
     {url:"orthot/textures/symbols.png", properties:TextureProps},
   )
-  await libek.loadZIP('orthot/models.zip')
-  await libek.loadZIP('orthot/ekvxdat.zip')
+  await loadZIP('orthot/models.zip')
+  await loadZIP('orthot/ekvxdat.zip')
     
-  orthot.tiles.key = {
+  orthotCTL.tiles.key = {
     source:assets.symbols.image,
     x:0, y:0, w:64, h:64
   }
@@ -55,11 +67,11 @@ $(async function() {
   let UI_TILESHADOW_OFFSET = [5,3]
   let UI_TILE_SIZE = [37,35]
     
-  renderCTL.fg = new libek.shader.ManagedColor("yellow")
-  renderCTL.bg1 = new libek.shader.ManagedColor("orange")
-  renderCTL.bg2 = new libek.shader.ManagedColor("green")
+  renderCTL.fg = new ManagedColor("yellow")
+  renderCTL.bg1 = new ManagedColor("orange")
+  renderCTL.bg2 = new ManagedColor("green")
          
-  renderCTL.vxlMAT = libek.shader.buildVariantMaterial("standard", {
+  renderCTL.vxlMAT = buildVariantMaterial("standard", {
     map:assets.wall_8bit_fg, 
     bkgtex:assets.patterns,
     uv2:renderCTL.uv2, 
@@ -76,56 +88,56 @@ $(async function() {
   
   let manmats = ["hsl(25, 80%, 60%)", "blue", "brown", "black", {color:"black", metalness:1}, {color:"white", emissive:"yellow", emissiveIntensity:1}]
   
-  libek.assignMaterials(assets.man, manmats)
-  libek.assignMaterials(assets.man2, manmats)
-  libek.assignMaterials(assets.man_walk, manmats)
-  libek.assignMaterials(assets.man_push, manmats)
-  libek.assignMaterials(assets.man_pushwalk, manmats)
-  libek.assignMaterials(assets.man_climb, manmats)
-  libek.assignMaterials(assets.man_leap, manmats)
-  libek.assignMaterials(assets.man_pushleap, manmats)
-  libek.assignMaterials(assets.man_slide1, manmats)
-  libek.assignMaterials(assets.man_slide2, manmats)
-  libek.assignMaterials(assets.man_slide3, manmats)
-  libek.assignMaterials(assets.man_slide4, manmats)
-  libek.assignMaterials(assets.man_slide5, manmats)
+  assignMaterials(assets.man, manmats)
+  assignMaterials(assets.man2, manmats)
+  assignMaterials(assets.man_walk, manmats)
+  assignMaterials(assets.man_push, manmats)
+  assignMaterials(assets.man_pushwalk, manmats)
+  assignMaterials(assets.man_climb, manmats)
+  assignMaterials(assets.man_leap, manmats)
+  assignMaterials(assets.man_pushleap, manmats)
+  assignMaterials(assets.man_slide1, manmats)
+  assignMaterials(assets.man_slide2, manmats)
+  assignMaterials(assets.man_slide3, manmats)
+  assignMaterials(assets.man_slide4, manmats)
+  assignMaterials(assets.man_slide5, manmats)
   
-  libek.assignMaterials(assets.scene_portal, {color:"white", emissive:"white", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
-  libek.assignMaterials(assets.portal_pane, "white", "yellow", {color:"blue", transparent:true, opacity:0.25}, "white" )
-  libek.assignMaterials(assets.pushblock, ["white", "red", "black"])
-  libek.assignMaterials(assets.lock, ["white", "black"])
-  libek.assignMaterials(assets.crate, ["hsl(20, 100%, 50%)", "black", "hsl(25, 90%, 25%)", "hsl(22, 100%, 55%)" ])  
-  libek.assignMaterials(assets.iceblock, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}])
-  libek.assignMaterials(assets.icefloor, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}, "black"])
+  assignMaterials(assets.scene_portal, {color:"white", emissive:"white", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
+  assignMaterials(assets.portal_pane, "white", "yellow", {color:"blue", transparent:true, opacity:0.25}, "white" )
+  assignMaterials(assets.pushblock, ["white", "red", "black"])
+  assignMaterials(assets.lock, ["white", "black"])
+  assignMaterials(assets.crate, ["hsl(20, 100%, 50%)", "black", "hsl(25, 90%, 25%)", "hsl(22, 100%, 55%)" ])  
+  assignMaterials(assets.iceblock, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}])
+  assignMaterials(assets.icefloor, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}, "black"])
   
   let markmats = [{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
   let cursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
   
-  libek.assignMaterials(assets.CubeMark, markmats)
-  libek.assignMaterials(assets.FaceMark, markmats)
-  libek.assignMaterials(assets.CubeCursor, cursormats)
-  libek.assignMaterials(assets.FaceCursor, cursormats)
+  assignMaterials(assets.CubeMark, markmats)
+  assignMaterials(assets.FaceMark, markmats)
+  assignMaterials(assets.CubeCursor, cursormats)
+  assignMaterials(assets.FaceCursor, cursormats)
   
-  var evtman = new libek.event.Manager( disp_elem )
+  var evtman = new Manager( disp_elem )
   inputCTL.EventManager = evtman
   
-  inputCTL.keystate = new libek.control.QueryTriggeredButtonControl({
+  inputCTL.keystate = new QueryTriggeredButtonControl({
     buttons:"arrows space keys:w a s d",
     eventmanager:evtman,
     readheldbuttons:true,
     onInputAvailable:function() {
-      if (orthot.ActiveZone) {
-        orthot.ActiveZone.inputAvailable()
+      if (orthotCTL.ActiveZone) {
+        orthotCTL.ActiveZone.inputAvailable()
       }
     }
   })
   inputCTL.keystate.run()
     
-  sviewCTL = new libek.control.SceneviewController({
+  sviewCTL = new SceneviewController({
     camtarget:new THREE.Vector3(0,0,0),
     display:renderCTL.display,
     eventmanager:evtman,
-    pickplane:new THREE.Plane(libek.direction.vector.UP, 0),
+    pickplane:new THREE.Plane(direction.vector.UP, 0),
     UpdcamUpdatepickplane:true,
     followspeed:1/60,
     campos_maxphi:Math.PI * 0.85,
@@ -143,14 +155,14 @@ $(async function() {
     fpmode_abs_offset:new THREE.Vector3(0,0.25,0),
     fpmode_z_offset:-0.5,
     fpmode_notify:function(fpmode_on, fpmode_moused) {
-      if (orthot.ActiveZone) {
-        orthot.ActiveZone.setFPmode(fpmode_on, fpmode_moused)
+      if (orthotCTL.ActiveZone) {
+        orthotCTL.ActiveZone.setFPmode(fpmode_on, fpmode_moused)
       }
     }
   })    
   sviewCTL.run()
   
-  orthot.loadScene = function(arg, loc) {
+  orthotCTL.loadScene = function(arg, loc) {
     let ekvx = arg
     if (typeof(arg) == "string") {    
       ekvx = assets[arg]
@@ -162,19 +174,19 @@ $(async function() {
     else if (!arg) {
       ekvx = assets.MainArea
     }
-    if (orthot.ActiveZone) {
-      renderCTL.display.scene.remove(orthot.ActiveZone.scene)
-      orthot.ActiveZone.unload()
+    if (orthotCTL.ActiveZone) {
+      renderCTL.display.scene.remove(orthotCTL.ActiveZone.scene)
+      orthotCTL.ActiveZone.unload()
     }
-    orthot.ActiveZone = new orthot.Zone(ekvx, loc)
-    renderCTL.display.scene.add(orthot.ActiveZone.scene)
+    orthotCTL.ActiveZone = new Zone(ekvx, loc)
+    renderCTL.display.scene.add(orthotCTL.ActiveZone.scene)
   }
   
-  orthot.loadScene("MainArea")
+  orthotCTL.loadScene("MainArea")
   
   let resetELEM = $("<div>").addClass("btn_active").text("RESET").click(function() {
-    if (orthot.ActiveZone) {
-      orthot.ActiveZone.reset()
+    if (orthotCTL.ActiveZone) {
+      orthotCTL.ActiveZone.reset()
       disp_elem.focus()
       
     }
@@ -184,7 +196,7 @@ $(async function() {
   
   renderCTL.build_domOBJ = function(tile, color, location, css_class, event_handlers) {
     if (typeof(tile) == "string") {
-      tile = orthot.tiles[tile]
+      tile = orthotCTL.tiles[tile]
     }
     if (!tile) {
       return
@@ -243,9 +255,9 @@ $(async function() {
   // visualizarion routines.  These are called as objects or interface-elements are moused-over and moused-out
   let shownItem
   let tiptext = ""
-  orthot.showDescription = function(item) {
+  orthotCTL.showDescription = function(item) {
     if (shownItem && shownItem != item) {
-      orthot.hideDescription(shownItem)
+      orthotCTL.hideDescription(shownItem)
     }
     shownItem = item
     tiptext = item.description ? item.description : ""
@@ -253,7 +265,7 @@ $(async function() {
       item.visualizer(true)
     }
   }
-  orthot.updateDescription = function(item) {
+  orthotCTL.updateDescription = function(item) {
     if (item != shownItem) {
       return
     }
@@ -263,7 +275,7 @@ $(async function() {
     }
   }
   
-  orthot.hideDescription = function(item) {
+  orthotCTL.hideDescription = function(item) {
     if (item != shownItem) {
       return
     }
@@ -278,13 +290,13 @@ $(async function() {
 		requestAnimationFrame( run );
 		evtman.dispatch_libek_event("frame")
   	
-  	if (orthot.ActiveZone) {  	 
-  	  orthot.ActiveZone.onFrame()
+  	if (orthotCTL.ActiveZone) {  	 
+  	  orthotCTL.ActiveZone.onFrame()
   	}  	
 	  renderCTL.display.render()
 	  
-	  let mpos3d = libek.pick.planepos(renderCTL.display, evtman.mpos, sviewCTL.pickplane)
-		libek.debug_tip(`${tiptext}<br>
+	  let mpos3d = pickPlanepos(renderCTL.display, evtman.mpos, sviewCTL.pickplane)
+		debug_tip(`${tiptext}<br>
 		Mouse position:  x=${mpos3d.x}, y=${mpos3d.y}, z=${mpos3d.z}`)
 	}	
 	run()

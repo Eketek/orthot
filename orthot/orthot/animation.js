@@ -1,10 +1,22 @@
+export { AnimateBlock, AnimateCreature, VanishAnim }
+
+import { T, getChildrenRecursive, releaseAsset } from '../libek/libek.js'
+import { Model } from '../libek/model.js'
+import { Transform } from '../libek/transform.js'
+import { direction, crossDirections, setOrientation } from '../libek/direction.js'
+import { CommandSequence } from '../libek/sequence.js'
+
+import { orthotCTL, sviewCTL, inputCTL } from './orthot.js'
+
+var doNothing = function() {}
+
 /* Animation functions and animation controller generators
    This gets a bit crude, but due to a design quirk (insistance upon having regular objects treat movement the same for portals as for everywhere else),
    the animation system needs to be able to duplicate and delete objects, use multiple instances of the same [internal] animation controller, and be able to
    directly manipulate the camera.  
 */
-orthot.AnimateBlock = function(zone, blk) {
-  let MDL = new libek.Model({default:blk.mdlgen})
+var AnimateBlock = function(zone, blk) {
+  let MDL = new Model({default:blk.mdlgen})
   blk.obj = MDL.obj
   blk.mdl = MDL
     
@@ -25,7 +37,7 @@ orthot.AnimateBlock = function(zone, blk) {
     
     // offset and rotation to position object 
     let orientation = ctl.orientation = {}
-    libek.direction.setOrientation(orientation,  "south", "up")
+    setOrientation(orientation,  "south", "up")
     
     // heading vectors
     let behind = new THREE.Vector3()
@@ -42,18 +54,18 @@ orthot.AnimateBlock = function(zone, blk) {
     
     let _transient = transient 
         
-    let main_txSHIFT = new libek.Transform(matrix)
+    let main_txSHIFT = new Transform(matrix)
         main_txSHIFT.orient(orientation)
         main_txSHIFT.translate(relpos)
         main_txSHIFT.translate(worldpos)
     
-    let main_txIMPULSESHIFT = new libek.Transform(matrix)
+    let main_txIMPULSESHIFT = new Transform(matrix)
         main_txIMPULSESHIFT.orient(orientation)
         main_txIMPULSESHIFT.scale(scale)
         main_txIMPULSESHIFT.translate(relpos)
         main_txIMPULSESHIFT.translate(worldpos)
     
-    let main_txIMPACTDOWN = new libek.Transform(matrix)
+    let main_txIMPACTDOWN = new Transform(matrix)
         main_txIMPACTDOWN.orient(orientation)
         main_txIMPACTDOWN.scale(scale)
         main_txIMPACTDOWN.translate(worldpos)
@@ -71,7 +83,7 @@ orthot.AnimateBlock = function(zone, blk) {
         let sidegrp = blk.sides[i]
         
         if (sidegrp.length > 0) {
-          let side_orientation = libek.direction.sideorientations[i]   
+          let side_orientation = direction.sideorientations[i]   
           //console.log("ORIENT", i, orientation)
           let sideCMP = new inst.Component()
           let txmat = sideCMP.matrix
@@ -79,19 +91,19 @@ orthot.AnimateBlock = function(zone, blk) {
             sideCMP.setObject(sobj.type, sobj.mdlgen)
           }                 
           
-          let txSIDE_SHIFT = new libek.Transform(txmat)
+          let txSIDE_SHIFT = new Transform(txmat)
               txSIDE_SHIFT.orient(side_orientation)
               txSIDE_SHIFT.translate(relpos)
               txSIDE_SHIFT.translate(worldpos)
           
-          let txSIDE_IMPULSESHIFT = new libek.Transform(txmat)
+          let txSIDE_IMPULSESHIFT = new Transform(txmat)
               //txSIDE_IMPULSESHIFT.orient(orientation)
               txSIDE_IMPULSESHIFT.orient(side_orientation)
               txSIDE_IMPULSESHIFT.scalePosition(scale)
               txSIDE_IMPULSESHIFT.translate(relpos)
               txSIDE_IMPULSESHIFT.translate(worldpos)
               
-          let txSIDE_IMPACTDOWN = new libek.Transform(txmat)
+          let txSIDE_IMPACTDOWN = new Transform(txmat)
               txSIDE_IMPACTDOWN.orient(side_orientation)
               txSIDE_IMPACTDOWN.scale(scale)
               txSIDE_IMPACTDOWN.translate(worldpos)
@@ -188,16 +200,16 @@ orthot.AnimateBlock = function(zone, blk) {
         worldpos.copy(_position)
       }
       
-      libek.direction.setOrientation(orientation, _forward, _up)      
-      forward.copy(libek.direction.vector[_forward])
-      backward.copy(libek.direction.vector[libek.direction.invert[_forward]])
-      up.copy(libek.direction.vector[_up])
-      down.copy(libek.direction.vector[libek.direction.invert[_up]])
-      let _right = libek.direction.cross(_forward, _up)
-      right.copy(libek.direction.vector[_right])
-      left.copy(libek.direction.vector[libek.direction.invert[_right]])
-      ahead.copy(libek.direction.vector[_heading])
-      behind.copy(libek.direction.vector[libek.direction.invert[_heading]])
+      setOrientation(orientation, _forward, _up)      
+      forward.copy(direction.vector[_forward])
+      backward.copy(direction.vector[direction.invert[_forward]])
+      up.copy(direction.vector[_up])
+      down.copy(direction.vector[direction.invert[_up]])
+      let _right = crossDirections(_forward, _up)
+      right.copy(direction.vector[_right])
+      left.copy(direction.vector[direction.invert[_right]])
+      ahead.copy(direction.vector[_heading])
+      behind.copy(direction.vector[direction.invert[_heading]])
     }
     
     ctl.cancelActiveAnim = function() {      
@@ -207,7 +219,7 @@ orthot.AnimateBlock = function(zone, blk) {
       }
     }
     
-    ctl.shift = new libek.CommandSequence(
+    ctl.shift = new CommandSequence(
       init, end, 1,
       
       (d,t) => { 
@@ -219,7 +231,7 @@ orthot.AnimateBlock = function(zone, blk) {
     
     let exg = 0.125
     // Orthot III blocks are ... "high-tech"
-    ctl.impulseShift = new libek.CommandSequence(
+    ctl.impulseShift = new CommandSequence(
       init, end, 1, 
       [ {at:0.00, cmd: d => {
           vec2.set(1,1,1)
@@ -244,7 +256,7 @@ orthot.AnimateBlock = function(zone, blk) {
       }
     )
     
-    ctl.squeezethroughportal = new libek.CommandSequence(
+    ctl.squeezethroughportal = new CommandSequence(
       init, end, 1, 
       [ {at:0.00, cmd: d => {
           lerpscale_startscale.set(1,1,1)
@@ -274,7 +286,7 @@ orthot.AnimateBlock = function(zone, blk) {
       txIMPULSESHIFT
     )
     
-    ctl.impactDown = new libek.CommandSequence(
+    ctl.impactDown = new CommandSequence(
       init, end, 1,
       [ {at:0.00, cmd: d => {  
           vec.set(1,1,1)
@@ -297,7 +309,7 @@ orthot.AnimateBlock = function(zone, blk) {
       ]
     )
     
-    ctl.pickedup = new libek.CommandSequence(      
+    ctl.pickedup = new CommandSequence(      
       (d,t) => {
         relpos.set(0,0,0)
         scale.set(1,1,1)
@@ -342,7 +354,7 @@ orthot.AnimateBlock = function(zone, blk) {
       }
       
       let invpivot      
-      let tx = new libek.Transform(matrix)
+      let tx = new Transform(matrix)
       
       if (pivot) {
         invpivot = pivot.clone().negate()
@@ -356,7 +368,7 @@ orthot.AnimateBlock = function(zone, blk) {
       }
       tx.translate(worldpos)
       
-      return new libek.CommandSequence(
+      return new CommandSequence(
         doNothing, doNothing, Number.MAX_VALUE,
         (d,t) => {
           for (let i = 0; i < speed.length; i++) {
@@ -432,14 +444,14 @@ orthot.AnimateBlock = function(zone, blk) {
       activeAnim = rotator
     },
     pickedup(grabber_heading) {
-      mainINST.ctl.configure(blk.worldpos, grabber_heading,  libek.direction.code.SOUTH,  libek.direction.code.UP)
+      mainINST.ctl.configure(blk.worldpos, grabber_heading,  direction.code.SOUTH,  direction.code.UP)
       zone.addCommandsequence_short(mainINST.ctl.pickedup)
     }
   }
 }
 
-orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
-  let MDL = new libek.Model({nmap:nmap})
+var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
+  let MDL = new Model({nmap:nmap})
   cr.obj = MDL.obj  
   
   let main_pos = cr.worldpos = new THREE.Vector3()
@@ -462,7 +474,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     
     // offset and rotation to position object
     let orientation = ctl.orientation = {}
-    libek.direction.setOrientation(orientation,  "south", "up")
+    setOrientation(orientation,  "south", "up")
     
     // heading vectors
     let behind = new THREE.Vector3()
@@ -496,7 +508,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     // These are libek.Transform (parameterized transformations) which pose the animated object
     // On each frame, the active Animation controller adjusts any number of Transform parameters and updates the transform, causing it
     // to re-calculate the THREE.Matrix4 for the displayed object.
-    let txMAIN = new libek.Transform(mainCMP.matrix)
+    let txMAIN = new Transform(mainCMP.matrix)
     txMAIN.scale(scale)
     txMAIN.orient(orientation)
     txMAIN.translate(relpos)
@@ -504,7 +516,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     
     let relrot = new THREE.Quaternion()
     
-    let txMAIN_WITH_RELROT = new libek.Transform(mainCMP.matrix)
+    let txMAIN_WITH_RELROT = new Transform(mainCMP.matrix)
     txMAIN_WITH_RELROT.scale(scale)
     txMAIN_WITH_RELROT.orient(orientation)
     txMAIN_WITH_RELROT.rotate(relrot)
@@ -787,24 +799,24 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       if (_position) {
         worldpos.copy(_position)
       }
-      libek.direction.setOrientation(orientation, _forward, _up)
+      setOrientation(orientation, _forward, _up)
       
-      forward.copy(libek.direction.vector[_forward])
-      backward.copy(libek.direction.vector[libek.direction.invert[_forward]])
-      up.copy(libek.direction.vector[_up])
-      down.copy(libek.direction.vector[libek.direction.invert[_up]])
-      let _right = libek.direction.cross(_forward, _up)
-      right.copy(libek.direction.vector[_right])
-      left.copy(libek.direction.vector[libek.direction.invert[_right]])
-      ahead.copy(libek.direction.vector[_heading])
-      behind.copy(libek.direction.vector[libek.direction.invert[_heading]])
+      forward.copy(direction.vector[_forward])
+      backward.copy(direction.vector[direction.invert[_forward]])
+      up.copy(direction.vector[_up])
+      down.copy(direction.vector[direction.invert[_up]])
+      let _right = crossDirections(_forward, _up)
+      right.copy(direction.vector[_right])
+      left.copy(direction.vector[direction.invert[_right]])
+      ahead.copy(direction.vector[_heading])
+      behind.copy(direction.vector[direction.invert[_heading]])
     }
     
     // Procedural Animation controllers.  Each manages one animated action.
     // REMINDER:  THREE.AnimationMixer may be used directly by these controllers to implement an animation.
     //            (libek.CommandSequence passes time-delta as the first parameter)
         
-    ctl.fallAnim = new libek.CommandSequence(
+    ctl.fallAnim = new CommandSequence(
       init, end, 1,
       begin_trackCam, 
       [{at:0.00, cmd: d => {     
@@ -817,7 +829,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       txMAIN.update,
       end_trackCam, 
     )
-    ctl.halfdownfallAnim = new libek.CommandSequence(
+    ctl.halfdownfallAnim = new CommandSequence(
       init, end_up, 1,
       begin_trackCam, 
       [ {at:0.00, cmd: d => {     
@@ -834,7 +846,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       txMAIN.update,
       end_trackCam
     )
-    ctl.flopoutofportal = new libek.CommandSequence(
+    ctl.flopoutofportal = new CommandSequence(
       init, (d,t) => {
         relpos.copy(lerprelpos_endpos)
         end_generic(d,t)
@@ -859,7 +871,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_flat_popupfromgroundportal = new libek.CommandSequence(
+    ctl.walk_flat_popupfromgroundportal = new CommandSequence(
       init, end, 1,
       begin_trackCam,
       [ 
@@ -890,7 +902,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_flatflat = new libek.CommandSequence(
+    ctl.walk_flatflat = new CommandSequence(
       init, end, 1,
       begin_trackCam,
       [ {at:0.10, cmd: d => { mainCMP.setObject("creature", "walk"); scale.x = 1; scale.y = 0.97; }},
@@ -903,7 +915,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_flatuportal = new libek.CommandSequence(
+    ctl.walk_flatuportal = new CommandSequence(
       init, end, 1,
       begin_trackCam,
       [ {at:0, cmd: d=> { 
@@ -922,7 +934,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_urampuramp = new libek.CommandSequence(
+    ctl.walk_urampuramp = new CommandSequence(
       init_up, end_up, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {     
@@ -943,7 +955,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_rampupdown = new libek.CommandSequence(
+    ctl.walk_rampupdown = new CommandSequence(
       init_up, end_up, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {     
@@ -970,7 +982,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_rampdownup = new libek.CommandSequence(
+    ctl.walk_rampdownup = new CommandSequence(
       init_up, end_up, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {     
@@ -996,7 +1008,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_flathop = new libek.CommandSequence(
+    ctl.walk_flathop = new CommandSequence(
       init, end, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {       
@@ -1027,7 +1039,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_urampup = new libek.CommandSequence(
+    ctl.walk_urampup = new CommandSequence(
       init_up, end_up, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {       
@@ -1059,7 +1071,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_urampgap = new libek.CommandSequence(
+    ctl.walk_urampgap = new CommandSequence(
       init_up, end, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {       
@@ -1091,7 +1103,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_flatup = new libek.CommandSequence(
+    ctl.walk_flatup = new CommandSequence(
       init, end_up, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {              
@@ -1117,7 +1129,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_flatdown = new libek.CommandSequence(
+    ctl.walk_flatdown = new CommandSequence(
       init_uphigh, end_up, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {              
@@ -1144,7 +1156,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_rampdownflat = new libek.CommandSequence(
+    ctl.walk_rampdownflat = new CommandSequence(
       init_up, end, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {              
@@ -1171,7 +1183,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_rampupflat = new libek.CommandSequence(
+    ctl.walk_rampupflat = new CommandSequence(
       init_down, end, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {              
@@ -1197,7 +1209,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       txMAIN.update,
       end_trackCam
     )
-    ctl.walk_rampuphop = new libek.CommandSequence(
+    ctl.walk_rampuphop = new CommandSequence(
       init_down, end, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {                
@@ -1225,7 +1237,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_rampupup = new libek.CommandSequence(
+    ctl.walk_rampupup = new CommandSequence(
       init_down, end_up, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {                 
@@ -1247,7 +1259,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.walk_rampdowndown = new libek.CommandSequence(
+    ctl.walk_rampdowndown = new CommandSequence(
       init_uphigher, end_up, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {              
@@ -1269,7 +1281,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam,
     )
     
-    ctl.pushstandAnim = new libek.CommandSequence(
+    ctl.pushstandAnim = new CommandSequence(
       init_still, end_still, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {
@@ -1300,7 +1312,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       txMAIN.update,
       end_trackCam
     )
-    ctl.halfuppushstandAnim = new libek.CommandSequence(
+    ctl.halfuppushstandAnim = new CommandSequence(
       init_still_up, end_still_up, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {
@@ -1337,7 +1349,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
     // ladder_offset_start
     // ladder_offset_end
     
-    ctl.grabladder_flat = new libek.CommandSequence(
+    ctl.grabladder_flat = new CommandSequence(
       init_flat_to_ladder, end_ladder, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {
@@ -1355,7 +1367,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.hopoffladder = new libek.CommandSequence(
+    ctl.hopoffladder = new CommandSequence(
       init_ladder_still, end_still, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {
@@ -1395,7 +1407,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.exitladder = new libek.CommandSequence(
+    ctl.exitladder = new CommandSequence(
       init_ladder_exit, end, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {
@@ -1446,7 +1458,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.climbupladder = new libek.CommandSequence(
+    ctl.climbupladder = new CommandSequence(
       init_ladder, end_ladder, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {
@@ -1475,7 +1487,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.climbdownladder = new libek.CommandSequence(
+    ctl.climbdownladder = new CommandSequence(
       init_ladder_high, end_ladder, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {
@@ -1509,7 +1521,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       scale.x = (Math.random() > 0.5 ? 1 : -1)
     }
     
-    ctl.slide_flatflat = new libek.CommandSequence(
+    ctl.slide_flatflat = new CommandSequence(
       init, end, 1,
       begin_trackCam,
       [ {at:0.125, cmd:randslidepose},
@@ -1522,7 +1534,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
 
-    ctl.slide_flatdown = new libek.CommandSequence(
+    ctl.slide_flatdown = new CommandSequence(
       init_uphigh, end_up, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {              
@@ -1550,7 +1562,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
     
-    ctl.slide_flatup = new libek.CommandSequence(
+    ctl.slide_flatup = new CommandSequence(
       init, end_up, 1,
       begin_trackCam,
       [ {at:0.00, cmd: d => {              
@@ -1577,7 +1589,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       end_trackCam
     )
         
-    ctl.slidestrike = new libek.CommandSequence(
+    ctl.slidestrike = new CommandSequence(
       init_still, end_still, 1,
       begin_trackCam,
       [ {at:0,     cmd:d=>{
@@ -1650,11 +1662,11 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP)   
            
       switch(force.toHEADING) {      
-        case libek.direction.code.UP:  
+        case direction.code.UP:  
             zone.addCommandsequence_short(mainINST.ctl.fallAnim)       
           break
           
-        case libek.direction.code.DOWN:   
+        case direction.code.DOWN:   
           if (force.toCTN.getObject_bytype("ramp")) { 
             zone.addCommandsequence_short(mainINST.ctl.halfdownfallAnim)
           }
@@ -1675,7 +1687,7 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       }
     },
     defeat:function() {
-      orthot.VanishAnim(zone, mainINST.ctl.mainCMP.getObject("creature"), {scale:mainINST.ctl.scale, orientation:mainINST.ctl.orientation, pos:mainINST.ctl.worldpos})
+      VanishAnim(zone, mainINST.ctl.mainCMP.getObject("creature"), {scale:mainINST.ctl.scale, orientation:mainINST.ctl.orientation, pos:mainINST.ctl.worldpos})
     },
       
     pushfixedobjectAnim:function(force) {   
@@ -1850,11 +1862,11 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP)        
       switch(force.toHEADING) {
         //walk through a vertical portal -> pop up out of a horizontal/ground portal
-        case libek.direction.code.UP:
+        case direction.code.UP:
           zone.addCommandsequence_short(mainINST.ctl.walk_flat_popupfromgroundportal)   
           break     
         //walk through a vertical portal -> fall out of a horizontal/ceiling portal
-        case libek.direction.code.DOWN:
+        case direction.code.DOWN:
           zone.addCommandsequence_short(mainINST.ctl.walk_flat_falloutofceilingportal) 
           break 
         default:
@@ -1873,11 +1885,11 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP)        
       switch(force.toHEADING) {
         //walk through a vertical portal -> pop up out of a horizontal/ground portal
-        case libek.direction.code.UP:
+        case direction.code.UP:
           zone.addCommandsequence_short(mainINST.ctl.walk_flat_popupfromgroundportal)   
           break     
         //walk through a vertical portal -> fall out of a horizontal/ceiling portal
-        case libek.direction.code.DOWN:
+        case direction.code.DOWN:
           zone.addCommandsequence_short(mainINST.ctl.walk_flat_falloutofceilingportal) 
           break 
         default:
@@ -1921,12 +1933,12 @@ orthot.AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
 }
 
 
-orthot.VanishAnim = function(zone, obj, params = {}) {
+var VanishAnim = function(zone, obj, params = {}) {
   if (obj.isOrthotObject) {
     obj = obj.obj
   }
   let parent = obj.parent
-  let chldrn = libek.getChildrenRecursive(obj)
+  let chldrn = getChildrenRecursive(obj)
   for (let ii = 0; ii < chldrn.length; ii++) {
     let mdl = chldrn[ii]
     let worldpos = params.pos
@@ -1934,7 +1946,7 @@ orthot.VanishAnim = function(zone, obj, params = {}) {
     let orientation = params.orientation
     if (!orientation) {
       orientation = {}
-      libek.direction.setOrientation(orientation,  "south", "up")
+      setOrientation(orientation,  "south", "up")
     }
     
     let instA_TX, instA_mdl, instA_matrix, instA_mats, instA_colors, instA_colors_hsl, instA_scale, instA_rotation, instA_rotaxis, instA_rotspd
@@ -1960,7 +1972,7 @@ orthot.VanishAnim = function(zone, obj, params = {}) {
     
     let spdscale = 1
     let animlen = 750
-    zone.addCommandsequence_realtime(new libek.CommandSequence(
+    zone.addCommandsequence_realtime(new CommandSequence(
       (d,t) => {   
         
         let basematrix = mdl.matrixWorld.clone()
@@ -1969,7 +1981,7 @@ orthot.VanishAnim = function(zone, obj, params = {}) {
         basematrix.elements[14] -= worldpos.z
             
         if (mdl.parent) {
-          libek.releaseAsset(mdl)
+          releaseAsset(mdl)
         }      
         
         instA_mdl = mdl.clone()
@@ -2016,43 +2028,43 @@ orthot.VanishAnim = function(zone, obj, params = {}) {
         instD_rotaxis = new THREE.Vector3(Math.random()*2-1, Math.random()*2-1, Math.random()*2-1).normalize()
         instD_rotspd = (Math.random()*spdscale)**2
         
-        instA_TX = new libek.Transform(instA_matrix, basematrix)
+        instA_TX = new Transform(instA_matrix, basematrix)
         instA_TX.scale(scale)
         instA_TX.scale(instA_scale)
         instA_TX.orient(orientation)
         instA_TX.rotate(instA_rotation)
         instA_TX.translate(worldpos)
         instA_mdl.matrix = instA_matrix
-        orthot.ActiveZone.scene.add(instA_mdl)
+        orthotCTL.ActiveZone.scene.add(instA_mdl)
         
         
-        instB_TX = new libek.Transform(instB_matrix, basematrix)
+        instB_TX = new Transform(instB_matrix, basematrix)
         instB_TX.scale(scale)
         instB_TX.scale(instB_scale)
         instB_TX.orient(orientation)
         instB_TX.rotate(instB_rotation)
         instB_TX.translate(worldpos)
         instB_mdl.matrix = instB_matrix
-        orthot.ActiveZone.scene.add(instB_mdl)
+        orthotCTL.ActiveZone.scene.add(instB_mdl)
         
         
-        instC_TX = new libek.Transform(instC_matrix, basematrix)
+        instC_TX = new Transform(instC_matrix, basematrix)
         instC_TX.scale(scale)
         instC_TX.scale(instC_scale)
         instC_TX.orient(orientation)
         instC_TX.rotate(instC_rotation)
         instC_TX.translate(worldpos)
         instC_mdl.matrix = instC_matrix
-        orthot.ActiveZone.scene.add(instC_mdl)
+        orthotCTL.ActiveZone.scene.add(instC_mdl)
         
-        instD_TX = new libek.Transform(instD_matrix, basematrix)
+        instD_TX = new Transform(instD_matrix, basematrix)
         instD_TX.scale(scale)
         instD_TX.scale(instD_scale)
         instD_TX.orient(orientation)
         instD_TX.rotate(instD_rotation)
         instD_TX.translate(worldpos)
         instD_mdl.matrix = instD_matrix
-        orthot.ActiveZone.scene.add(instD_mdl)
+        orthotCTL.ActiveZone.scene.add(instD_mdl)
         
         for (let i = 0; i < mdl.children.length; i++) {
           let child = mdl.children[i]
@@ -2087,10 +2099,10 @@ orthot.VanishAnim = function(zone, obj, params = {}) {
         }
       }, 
       (d,t) => {  
-        orthot.ActiveZone.scene.remove(instA_mdl)
-        orthot.ActiveZone.scene.remove(instB_mdl)
-        orthot.ActiveZone.scene.remove(instC_mdl)
-        orthot.ActiveZone.scene.remove(instD_mdl)
+        orthotCTL.ActiveZone.scene.remove(instA_mdl)
+        orthotCTL.ActiveZone.scene.remove(instB_mdl)
+        orthotCTL.ActiveZone.scene.remove(instC_mdl)
+        orthotCTL.ActiveZone.scene.remove(instD_mdl)
         
         for (let mat of instA_mats) {
           mat.dispose()

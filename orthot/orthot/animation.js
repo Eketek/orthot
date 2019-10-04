@@ -16,7 +16,7 @@ var doNothing = function() {}
    directly manipulate the camera.  
 */
 var AnimateBlock = function(zone, blk) {
-  let MDL = new Model({default:blk.mdlgen})
+  let MDL = new Model(orthotCTL.assets, {default:blk.mdlgen})
   blk.obj = MDL.obj
   blk.mdl = MDL
     
@@ -451,7 +451,7 @@ var AnimateBlock = function(zone, blk) {
 }
 
 var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
-  let MDL = new Model({nmap:nmap})
+  let MDL = new Model(orthotCTL.assets, {nmap:nmap})
   cr.obj = MDL.obj  
   
   let main_pos = cr.worldpos = new THREE.Vector3()
@@ -1981,7 +1981,7 @@ var VanishAnim = function(zone, obj, params = {}) {
         basematrix.elements[14] -= worldpos.z
             
         if (mdl.parent) {
-          releaseAsset(mdl)
+          releaseAsset(orthotCTL.assets, mdl)
         }      
         
         instA_mdl = mdl.clone()

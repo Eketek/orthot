@@ -41,7 +41,7 @@ var Wall = function(zone) {
 var ScenePortal = function(zone) {  
   OrthotObject.call(this, zone)
   this.initGraphics = (function() {
-    this.obj = getAsset("scene_portal")
+    this.obj = getAsset(orthotCTL.assets, "scene_portal")
     return true
   }).bind(this)
   this.intruded = function(other) {
@@ -67,7 +67,7 @@ var Stair = function(zone, color, align) {
   this.types.push("ramp")
   
   this.initGraphics = function() {
-    this.obj = getAsset("stair_ramp")
+    this.obj = getAsset(orthotCTL.assets, "stair_ramp")
     this.obj.children[0].material = Material(color)
     let orientation = {}
     setOrientation(orientation, direction.invert[align.forward], align.up)
@@ -100,7 +100,7 @@ var PushBlock = function(zone, color) {
   this.slideStrength = Strength.NORMAL
     
   this.mdlgen = function() {
-    let mdl = getAsset("pushblock")
+    let mdl = getAsset(orthotCTL.assets, "pushblock")
     if (color) {
       mdl.children[1].material = Material(color)
     }
@@ -125,7 +125,7 @@ var Crate = function(zone) {
   
   
   this.mdlgen = function() {
-    let mdl = getAsset("crate")
+    let mdl = getAsset(orthotCTL.assets, "crate")
     return mdl
   }
 }
@@ -147,7 +147,7 @@ var IceBlock = function(zone) {
   
   
   this.mdlgen = function() {
-    let mdl = getAsset("iceblock")
+    let mdl = getAsset(orthotCTL.assets, "iceblock")
     return mdl
   }
 }
@@ -204,7 +204,7 @@ var Key = function(zone, color, code) {
   }
   
   this.mdlgen = function() {
-    let mdl = getAsset("key")
+    let mdl = getAsset(orthotCTL.assets, "key")
     mdl.children[0].material = Material(color)
     return mdl
   }
@@ -244,7 +244,7 @@ var Lock = function(zone, color, code) {
   this.code = code
   
   this.mdlgen = function() {
-    let mdl = getAsset("lock")
+    let mdl = getAsset(orthotCTL.assets, "lock")
     mdl.children[0].material = Material(color)    
     return mdl
   }

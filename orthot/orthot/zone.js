@@ -1,5 +1,5 @@
 export { Zone }
-import { trit, T, assets, getAsset, storeAsset, Material } from '../libek/libek.js'
+import { trit, T, getAsset, storeAsset, Material } from '../libek/libek.js'
 import { property, properties_fromstring, mergeObjects, parseVec3, parseColor } from '../libek/util.js'
 import { BoxTerrain, DECAL_UVTYPE } from '../libek/gen.js'
 import { VxScene } from '../libek/scene.js'
@@ -68,16 +68,16 @@ var Zone = function(ekvx, override_startloc) {
   let locks = []
   let reticlemat
   let activeReticle
-  let baseReticleOBJ = assets.cubereticle
+  let baseReticleOBJ = orthotCTL.assets.cubereticle
   if (baseReticleOBJ) {
     reticlemat = baseReticleOBJ.children[0].material
   }
   else {
-    baseReticleOBJ = getAsset("CubeMark")
-    assets.cubereticle = baseReticleOBJ
+    baseReticleOBJ = getAsset(orthotCTL.assets, "CubeMark")
+    orthotCTL.assets.cubereticle = baseReticleOBJ
     reticlemat = Material({color:"green", emissive:"green", emissiveIntensity:0.333}) 
     baseReticleOBJ.children[0].material = reticlemat
-    storeAsset("cubereticle", baseReticleOBJ)
+    storeAsset(orthotCTL.assets, "cubereticle", baseReticleOBJ)
   }
   let keyReticle = new Reticle(baseReticleOBJ)
   let lockReticle = new Reticle(baseReticleOBJ)

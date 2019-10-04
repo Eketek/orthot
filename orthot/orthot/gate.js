@@ -4,6 +4,7 @@ import { getAsset, Material } from '../libek/libek.js'
 import { direction, crossDirections, setOrientation } from '../libek/direction.js'
 import { parseColor } from '../libek/util.js'
 
+import { orthotCTL } from './orthot.js'
 import { StandardObject } from './object.js'
 import { Surface } from './surface.js'
 import { GateState, Strength } from './enums.js'
@@ -275,7 +276,7 @@ var Gate = function(zone, ctn, color, align, data) {
   }
   
   this.mdlgen = function() {
-    let mdl = getAsset("gate")
+    let mdl = getAsset(orthotCTL.assets, "gate")
     mdl.children[0].material = Material(color)    
     return mdl
   }

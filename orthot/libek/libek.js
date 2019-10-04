@@ -2,7 +2,7 @@ export {
   initLIBEK, getUID, Display,
   trit, tt, T, PI, rad_tosector, pickPlanepos, AXIS,
   delay,
-  assets, getAsset, storeAsset, releaseAsset, 
+  getAsset, storeAsset, releaseAsset, 
   Material, assignMaterials, 
   getChildrenRecursive,
   loadMuch, loadZIP,
@@ -30,11 +30,6 @@ var trit = {
   maybe:2,
   MAYBE:2
 }
-
-//  Global resources table
-//  Loaded Resources (textures, models, ekvx)
-var assets = { }
-
 
 var _uid = 0
 var getUID = function() {
@@ -105,7 +100,7 @@ var pickPlanepos = function(disp, pos, plane) {
   
 var AXIS = { X:1, Y:2, Z:3 }
   
-var storeAsset = function(name, obj) {
+var storeAsset = function(assets, name, obj) {
   obj.__LIBEK_INST_ASSET_ID = name
   assets[name] = obj
 }
@@ -120,7 +115,7 @@ var storeAsset = function(name, obj) {
       ALSO:  If any of the object's materials or transformation properties are altered or any such properties on any children, set the obj.__ISDIRTY flag 
               to ensure that it gets cleaned up when released(or clean it up manually)
   */
-var getAsset = function(arg, dup="clone") {
+var getAsset = function(assets, arg, dup="clone") {
   let name
   if (typeof(arg) == "string") {
     name = arg      
@@ -168,7 +163,7 @@ var getAsset = function(arg, dup="clone") {
   /*  Release an instance of an Asset
       This will store it in the instanced-assets pool
   */
-var releaseAsset = function(obj) {
+var releaseAsset = function(assets, obj) {
   if (obj.parent) {
     obj.parent.remove(obj)
   }    
@@ -435,7 +430,7 @@ var load = async function(url, loader) {
         loader:  [Optional] A function which accepts a URL and passes the result to a callback when it completes - If not specified, libek.load() will select 
                             one based on filename extension
   */
-var loadMuch = async function(... entries) {
+var loadMuch = async function(assets, ... entries) {
   entries = flatten(entries)
   let plist = new Array(entries.length)
   for (let i = 0; i < entries.length; i++) {
@@ -476,7 +471,7 @@ var loadMuch = async function(... entries) {
   })
 }
   
-var loadZIP = async function(url) { 
+var loadZIP = async function(assets, url) { 
   let buf = await load_to_ArrayBuffer(url)
   let jz = new JSZip()    
   let archive = await jz.loadAsync(buf)

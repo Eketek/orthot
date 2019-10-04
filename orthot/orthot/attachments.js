@@ -2,6 +2,7 @@ export { Ladder, Portal, Button, Icefloor }
 
 import { assignMaterials, getAsset } from '../libek/libek.js'
 
+import { orthotCTL } from './orthot.js'
 import { Surface } from './surface.js'
 
 /*  Objects that get attached to the sides/faces of solid objects and terrain
@@ -13,7 +14,7 @@ var Ladder = function(align, color) {
   this.type = "ladder"
   this.surfacetype = Surface.type.SMOOTH
   this.mdlgen = function() {
-    let r = getAsset("ladder")
+    let r = getAsset(orthotCTL.assets, "ladder")
     if (color) {
       assignMaterials(r, color)
     }
@@ -31,7 +32,7 @@ var Portal = function(align, color, pclass, pname, ptarget) {
   this.sources = []
   this.surfacetype = Surface.type.FRICTIONLESS
   this.mdlgen = function() {
-    let r = getAsset("portal_pane")
+    let r = getAsset(orthotCTL.assets, "portal_pane")
     if (color) {
       assignMaterials(r, color)
     }
@@ -46,7 +47,7 @@ var Icefloor = function(align) {
   this.sources = []
   this.surfacetype = Surface.type.SLICK
   this.mdlgen = function() {
-    return getAsset("icefloor")
+    return getAsset(orthotCTL.assets, "icefloor")
   }
   Object.assign(this, align)
 }
@@ -136,7 +137,7 @@ var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
   }).bind(this)
   
   this.mdlgen = function() {
-    let mdl = getAsset(mdlname)
+    let mdl = getAsset(orthotCTL.assets, mdlname)
     mdl.position.y = 0.125
     if (color) {
       assignMaterials(mdl, color)

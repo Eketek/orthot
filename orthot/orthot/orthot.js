@@ -1,6 +1,6 @@
 export { renderCTL, inputCTL, sviewCTL, orthotCTL }
 
-import { assets, tt, initLIBEK, Display, loadMuch, loadZIP, assignMaterials, pickPlanepos, debug_tip } from '../libek/libek.js'
+import { tt, initLIBEK, Display, loadMuch, loadZIP, assignMaterials, pickPlanepos, debug_tip } from '../libek/libek.js'
 import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
 import { Manager } from '../libek/event.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
@@ -27,6 +27,7 @@ var sviewCTL
 
 //Level data, high-level state, and "Orthot" functions
 var orthotCTL = {
+  assets:{},
   zones:{},
   tiles:{},  
   version:"0.3.0"
@@ -49,15 +50,16 @@ $(async function() {
   }
   
   await loadMuch( 
+    orthotCTL.assets,
     {url:"orthot/textures/patterns.png", properties:TextureProps},
     {url:"orthot/textures/wall_8bit_fg.png", properties:TextureProps},
     {url:"orthot/textures/symbols.png", properties:TextureProps},
   )
-  await loadZIP('orthot/models.zip')
-  await loadZIP('orthot/ekvxdat.zip')
+  await loadZIP(orthotCTL.assets, 'orthot/models.zip')
+  await loadZIP(orthotCTL.assets, 'orthot/ekvxdat.zip')
     
   orthotCTL.tiles.key = {
-    source:assets.symbols.image,
+    source:orthotCTL.assets.symbols.image,
     x:0, y:0, w:64, h:64
   }
     
@@ -72,8 +74,8 @@ $(async function() {
   renderCTL.bg2 = new ManagedColor("green")
          
   renderCTL.vxlMAT = buildVariantMaterial("standard", {
-    map:assets.wall_8bit_fg, 
-    bkgtex:assets.patterns,
+    map:orthotCTL.assets.wall_8bit_fg, 
+    bkgtex:orthotCTL.assets.patterns,
     uv2:renderCTL.uv2, 
     roughness:0.76, 
     metalness:0.05,
@@ -88,35 +90,35 @@ $(async function() {
   
   let manmats = ["hsl(25, 80%, 60%)", "blue", "brown", "black", {color:"black", metalness:1}, {color:"white", emissive:"yellow", emissiveIntensity:1}]
   
-  assignMaterials(assets.man, manmats)
-  assignMaterials(assets.man2, manmats)
-  assignMaterials(assets.man_walk, manmats)
-  assignMaterials(assets.man_push, manmats)
-  assignMaterials(assets.man_pushwalk, manmats)
-  assignMaterials(assets.man_climb, manmats)
-  assignMaterials(assets.man_leap, manmats)
-  assignMaterials(assets.man_pushleap, manmats)
-  assignMaterials(assets.man_slide1, manmats)
-  assignMaterials(assets.man_slide2, manmats)
-  assignMaterials(assets.man_slide3, manmats)
-  assignMaterials(assets.man_slide4, manmats)
-  assignMaterials(assets.man_slide5, manmats)
+  assignMaterials(orthotCTL.assets.man, manmats)
+  assignMaterials(orthotCTL.assets.man2, manmats)
+  assignMaterials(orthotCTL.assets.man_walk, manmats)
+  assignMaterials(orthotCTL.assets.man_push, manmats)
+  assignMaterials(orthotCTL.assets.man_pushwalk, manmats)
+  assignMaterials(orthotCTL.assets.man_climb, manmats)
+  assignMaterials(orthotCTL.assets.man_leap, manmats)
+  assignMaterials(orthotCTL.assets.man_pushleap, manmats)
+  assignMaterials(orthotCTL.assets.man_slide1, manmats)
+  assignMaterials(orthotCTL.assets.man_slide2, manmats)
+  assignMaterials(orthotCTL.assets.man_slide3, manmats)
+  assignMaterials(orthotCTL.assets.man_slide4, manmats)
+  assignMaterials(orthotCTL.assets.man_slide5, manmats)
   
-  assignMaterials(assets.scene_portal, {color:"white", emissive:"white", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
-  assignMaterials(assets.portal_pane, "white", "yellow", {color:"blue", transparent:true, opacity:0.25}, "white" )
-  assignMaterials(assets.pushblock, ["white", "red", "black"])
-  assignMaterials(assets.lock, ["white", "black"])
-  assignMaterials(assets.crate, ["hsl(20, 100%, 50%)", "black", "hsl(25, 90%, 25%)", "hsl(22, 100%, 55%)" ])  
-  assignMaterials(assets.iceblock, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}])
-  assignMaterials(assets.icefloor, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}, "black"])
+  assignMaterials(orthotCTL.assets.scene_portal, {color:"white", emissive:"white", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
+  assignMaterials(orthotCTL.assets.portal_pane, "white", "yellow", {color:"blue", transparent:true, opacity:0.25}, "white" )
+  assignMaterials(orthotCTL.assets.pushblock, ["white", "red", "black"])
+  assignMaterials(orthotCTL.assets.lock, ["white", "black"])
+  assignMaterials(orthotCTL.assets.crate, ["hsl(20, 100%, 50%)", "black", "hsl(25, 90%, 25%)", "hsl(22, 100%, 55%)" ])  
+  assignMaterials(orthotCTL.assets.iceblock, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}])
+  assignMaterials(orthotCTL.assets.icefloor, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}, "black"])
   
   let markmats = [{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
   let cursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
   
-  assignMaterials(assets.CubeMark, markmats)
-  assignMaterials(assets.FaceMark, markmats)
-  assignMaterials(assets.CubeCursor, cursormats)
-  assignMaterials(assets.FaceCursor, cursormats)
+  assignMaterials(orthotCTL.assets.CubeMark, markmats)
+  assignMaterials(orthotCTL.assets.FaceMark, markmats)
+  assignMaterials(orthotCTL.assets.CubeCursor, cursormats)
+  assignMaterials(orthotCTL.assets.FaceCursor, cursormats)
   
   var evtman = new Manager( disp_elem )
   inputCTL.EventManager = evtman
@@ -165,14 +167,14 @@ $(async function() {
   orthotCTL.loadScene = function(arg, loc) {
     let ekvx = arg
     if (typeof(arg) == "string") {    
-      ekvx = assets[arg]
+      ekvx = orthotCTL.assets[arg]
       if (ekvx == undefined) {  
         console.log(`No puzzle named "${arg}" to load...  Loading the default (MainArea)`)
-        ekvx = assets.MainArea
+        ekvx = orthotCTL.assets.MainArea
       }
     }
     else if (!arg) {
-      ekvx = assets.MainArea
+      ekvx = orthotCTL.assets.MainArea
     }
     if (orthotCTL.ActiveZone) {
       renderCTL.display.scene.remove(orthotCTL.ActiveZone.scene)

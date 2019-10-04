@@ -1,4 +1,7 @@
 0.3.0:
+  4 Oct 2019
+    move asset table to a more appropriate place (libek.assets -> orthotCTL.assets)
+    
   2 Oct 2019
     Converted all scripts to ES6 modules
     Shortened all script names

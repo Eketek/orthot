@@ -19,7 +19,7 @@ import { releaseAsset, getAsset } from './libek.js'
     
   This mainly is intended as an abstraction layer to allow animated 3D object-groups to render on both sides while passing through portals.
 */
-var Model = function(params={}) {
+var Model = function(assets, params={}) {
   this.isModelMain = true
   this.obj = new THREE.Object3D()
   this.instances = {}  
@@ -33,7 +33,7 @@ var Model = function(params={}) {
     for (let inst of Object.values(this.instances)) {
       for (let cmp of inst.components) {
         for (let obj of Object.values(cmp.content)) {
-          releaseAsset(obj)
+          releaseAsset(assets, obj)
         }
       }
     }
@@ -77,24 +77,24 @@ var Model = function(params={}) {
         
         let obj = this.content[objname]    
         if (obj) { 
-          releaseAsset(obj)
+          releaseAsset(assets, obj)
         }    
         if (mdlarg) {
           if (typeof(mdlarg) == "function") {
             obj = mdlarg()
           }
           else  if (typeof(mdlarg) == "string") {
-            obj = getAsset( model.nmap[mdlarg] ? model.nmap[mdlarg] :mdlarg )
+            obj = getAsset(assets, model.nmap[mdlarg] ? model.nmap[mdlarg] :mdlarg )
           }
           else if (typeof(mdlarg) == "object") { 
-            obj = getAsset( mdlarg )
+            obj = getAsset(assets, mdlarg )
           }
         }
         else if (typeof(model.default) == "function") {
           obj = model.default()
         }
         else {
-          obj = getAsset(model.default)
+          obj = getAsset(assets, model.default)
         }                
         this.obj.add(obj)
         this.content[objname] = obj
@@ -107,13 +107,13 @@ var Model = function(params={}) {
       this.removeObject = function(objname) {
         let obj = this.content[objname]    
         if (obj) {   
-          releaseAsset(obj)
+          releaseAsset(assets, obj)
         }    
         delete this.content[objname]        
       }
       this.clear = function() {
         for (let obj of this.obj.children) {
-          releaseAsset(obj)   
+          releaseAsset(assets, obj)   
         }
         this.content = {}
       } 
@@ -122,7 +122,7 @@ var Model = function(params={}) {
     
     this.removeComponent = function(cmp) {
       for (let obj of cmp.obj.children) {
-        releaseAsset(obj)   
+        releaseAsset(assets, obj)   
       }
       this.model.obj.remove(cmp.obj)
       this.components.splice(this.components.indexOf(cmp))

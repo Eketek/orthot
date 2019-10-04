@@ -3,6 +3,7 @@ export { OrthotObject, StandardObject, MovableObject }
 import { getUID, releaseAsset, trit } from '../libek/libek.js'
 import { direction } from '../libek/direction.js'
 
+import { orthotCTL } from './orthot.js'
 import { Surface, getSurfaceInteraction } from './surface.js'
 import { Strength, Collision, ObjectState } from './enums.js'
 import { AnimateBlock, VanishAnim } from './animation.js'
@@ -174,13 +175,13 @@ var OrthotObject = function(zone) {
       if (this.obj.parent) {
         this.obj.parent.remove(this.obj)
       }
-      releaseAsset(this.obj)
+      releaseAsset(orthotCTL.assets, this.obj)
     }
     if (this.sides) {
       for (let i = 1; i < this.sides.length; i++) {
         for (let sideobj of this.sides[i]) {
           if (sideobj.obj) {
-            releaseAsset(sideobj.obj)
+            releaseAsset(orthotCTL.assets, sideobj.obj)
           }
         }
       }

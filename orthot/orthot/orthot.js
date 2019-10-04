@@ -25,13 +25,20 @@ var inputCTL = {}
 // Screen-view controller:  Camera controller which performs orbitting, following, and a bit of flying.
 var sviewCTL
 
+var MAIN_GDATA_PACK = {
+  name:"MainGdataPack",
+  mainAreaname:"MainArea",
+  zones:{}
+}
+
 //Level data, high-level state, and "Orthot" functions
 var orthotCTL = {
-  assets:{},
-  zones:{},
+  assets:{},      
+  gdatapack:MAIN_GDATA_PACK,
   tiles:{},  
   version:"0.3.0"
 }
+
 
 $(async function() {
 
@@ -56,7 +63,7 @@ $(async function() {
     {url:"orthot/textures/symbols.png", properties:TextureProps},
   )
   await loadZIP(orthotCTL.assets, 'orthot/models.zip')
-  await loadZIP(orthotCTL.assets, 'orthot/ekvxdat.zip')
+  await loadZIP(MAIN_GDATA_PACK.zones, 'orthot/ekvxdat.zip')
     
   orthotCTL.tiles.key = {
     source:orthotCTL.assets.symbols.image,
@@ -76,7 +83,7 @@ $(async function() {
   renderCTL.vxlMAT = buildVariantMaterial("standard", {
     map:orthotCTL.assets.wall_8bit_fg, 
     bkgtex:orthotCTL.assets.patterns,
-    uv2:renderCTL.uv2, 
+    uv2:renderCTL.uv2,
     roughness:0.76, 
     metalness:0.05,
     sample:tt`
@@ -166,15 +173,15 @@ $(async function() {
   
   orthotCTL.loadScene = function(arg, loc) {
     let ekvx = arg
-    if (typeof(arg) == "string") {    
-      ekvx = orthotCTL.assets[arg]
+    if (typeof(arg) == "string") {
+      ekvx = orthotCTL.gdatapack.zones[arg]
       if (ekvx == undefined) {  
         console.log(`No puzzle named "${arg}" to load...  Loading the default (MainArea)`)
-        ekvx = orthotCTL.assets.MainArea
+        ekvx = orthotCTL.gdatapack.zones[orthotCTL.gdatapack.mainAreaname]
       }
     }
     else if (!arg) {
-      ekvx = orthotCTL.assets.MainArea
+      ekvx = orthotCTL.gdatapack.zones[orthotCTL.gdatapack.mainAreaname]
     }
     if (orthotCTL.ActiveZone) {
       renderCTL.display.scene.remove(orthotCTL.ActiveZone.scene)
@@ -190,7 +197,6 @@ $(async function() {
     if (orthotCTL.ActiveZone) {
       orthotCTL.ActiveZone.reset()
       disp_elem.focus()
-      
     }
   })
   $("#rightside").append(resetELEM)

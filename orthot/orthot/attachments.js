@@ -4,6 +4,7 @@ import { assignMaterials, getAsset } from '../libek/libek.js'
 
 import { orthotCTL } from './orthot.js'
 import { Surface } from './surface.js'
+import { Strength } from './enums.js'
 
 /*  Objects that get attached to the sides/faces of solid objects and terrain
     These generally should only be params objects to hold properties and 3D model generators

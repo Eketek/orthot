@@ -171,17 +171,27 @@ $(async function() {
   })    
   sviewCTL.run()
   
+  let levelSelector = $("#loadPuzzle")[0]
+  for (let i = levelSelector.length-1; i >= 0; i--) {
+    levelSelector.remove(i)
+  }
+  for (let name in MAIN_GDATA_PACK.zones) {
+    levelSelector.add($("<option>").text(name)[0])
+  }
+
   orthotCTL.loadScene = function(arg, loc) {
     let ekvx = arg
     if (typeof(arg) == "string") {
       ekvx = orthotCTL.gdatapack.zones[arg]
       if (ekvx == undefined) {  
         console.log(`No puzzle named "${arg}" to load...  Loading the default (MainArea)`)
-        ekvx = orthotCTL.gdatapack.zones[orthotCTL.gdatapack.mainAreaname]
+        arg = orthotCTL.gdatapack.mainAreaname
+        ekvx = orthotCTL.gdatapack.zones[arg]
       }
     }
     else if (!arg) {
-      ekvx = orthotCTL.gdatapack.zones[orthotCTL.gdatapack.mainAreaname]
+      arg = orthotCTL.gdatapack.mainAreaname
+      ekvx = orthotCTL.gdatapack.zones[arg]
     }
     if (orthotCTL.ActiveZone) {
       renderCTL.display.scene.remove(orthotCTL.ActiveZone.scene)
@@ -189,7 +199,22 @@ $(async function() {
     }
     orthotCTL.ActiveZone = new Zone(ekvx, loc)
     renderCTL.display.scene.add(orthotCTL.ActiveZone.scene)
+    
+        for (let i = 0; i < levelSelector.length; i++) {
+      if (levelSelector.options[i].value == arg) {
+        levelSelector.selectedIndex = i
+        return
+      }
+    }
+    levelSelector.selectedIndex = -1
   }
+  
+ 
+  
+  $("#loadPuzzle").on("input", ()=>{  
+    let lvlName = levelSelector.options[levelSelector.selectedIndex].value
+    orthotCTL.loadScene(lvlName)
+  });
   
   orthotCTL.loadScene("MainArea")
   

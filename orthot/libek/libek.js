@@ -180,7 +180,7 @@ var releaseAsset = function(assets, obj) {
   }
   else {
     for (let subobj of obj.children) {
-      releaseAsset(subobj)
+      releaseAsset(assets, subobj)
     }
   }
 }

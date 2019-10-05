@@ -155,7 +155,7 @@ var SceneviewController = function(params = {}) {
   let fpmode_abs_offset = params.fpmode_abs_offset ? params.fpmode_abs_offset : new THREE.Vector3()         
   let fpmode_notify = params.fpmode_notify ? params.fpmode_notify : doNothing    
   let fpmode_defaultturnlen = params.fpmode_turnlen ? params.fpmode_turnlen : 200
-  let fp_turn_start, fp_turn_end
+  let fp_turn_start, fp_turn_end, fpmode_turnlen
   let fpmode = false
   let fpunlocked = true
   let fptarget = new THREE.Spherical()

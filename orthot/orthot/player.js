@@ -147,7 +147,7 @@ var Player = function(zone, align, init_fpmode) {
       if (this.state != ObjectState.CLIMBING) {
       
         if (iUP) {
-          dir = direction.getKeyDirection("up", sviewCTL.campos.theta).code
+          dir = getKeyDirection("up", sviewCTL.campos.theta).code
           this.forward = dir
         }
         else {

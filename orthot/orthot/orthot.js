@@ -200,7 +200,7 @@ $(async function() {
     orthotCTL.ActiveZone = new Zone(ekvx, loc)
     renderCTL.display.scene.add(orthotCTL.ActiveZone.scene)
     
-        for (let i = 0; i < levelSelector.length; i++) {
+    for (let i = 0; i < levelSelector.length; i++) {
       if (levelSelector.options[i].value == arg) {
         levelSelector.selectedIndex = i
         return
@@ -214,6 +214,7 @@ $(async function() {
   $("#loadPuzzle").on("input", ()=>{  
     let lvlName = levelSelector.options[levelSelector.selectedIndex].value
     orthotCTL.loadScene(lvlName)
+    disp_elem.focus()
   });
   
   orthotCTL.loadScene("MainArea")
@@ -319,7 +320,7 @@ $(async function() {
     }
   }
   
-	var run = function run () {
+	var run = function run () {	   
 		requestAnimationFrame( run );
 		evtman.dispatch_libek_event("frame")
   	

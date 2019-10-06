@@ -84,7 +84,7 @@ var Model = function(assets, params={}) {
             obj = mdlarg()
           }
           else  if (typeof(mdlarg) == "string") {
-            obj = getAsset(assets, model.nmap[mdlarg] ? model.nmap[mdlarg] :mdlarg )
+            obj = getAsset(assets, model.nmap[mdlarg] ? model.nmap[mdlarg] : mdlarg )
           }
           else if (typeof(mdlarg) == "object") { 
             obj = getAsset(assets, mdlarg )

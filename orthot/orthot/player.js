@@ -233,12 +233,10 @@ var Player = function(zone, align, init_fpmode) {
           setFWD(dir)
           let force = scan_ramp(zone, this.ctn, this, dir, this.forward, this.up)
           force.initiator = this
-          //force.inputDIR = dir
           this.animCTL.setNMAP(nmap_walk)
           
           if (sfc_interaction == Surface.interaction.SLIDE) {
             force.strength = Strength.LIGHT    
-            //this.state = ObjectState.SLIDING
             force.action = "slide"
           }
           else {
@@ -362,13 +360,16 @@ var Player = function(zone, align, init_fpmode) {
     return true
   }
   
-  this.defeat = async function() {
+  this.defeat = async function(reason) {
     if (this.state != ObjectState.DEFEATED) {
       this.state = ObjectState.DEFEATED
       this.animCTL.defeat()
+      if (reason) {
+        console.log(reason)
+      }
+      await delay(4000)
+      zone.reset()
     }
-    await delay(4000)
-    zone.reset()
     
   }
   
@@ -419,6 +420,9 @@ var Player = function(zone, align, init_fpmode) {
   }
   
   this.move = function(force) { 
+    if (this.state == ObjectState.DEFEATED) {
+      return trit.TRUE
+    }
     switch(force.action) {
       case "crushed":
         if ( (force.toHEADING != direction.code.UP) && (force.toHEADING != direction.code.DOWN) ) { 
@@ -426,14 +430,9 @@ var Player = function(zone, align, init_fpmode) {
         }
         
         if (force.isTraversable()) {
-          if (force.toBLOCKINGRAMP) {
-            this.defeat()
-          }
-          else {
-            this.state = ObjectState.SHOVED
-            zone.putGameobject(force.toCTN, this)
-            this.animCTL.slide(force)
-          }
+          this.state = ObjectState.SHOVED
+          zone.putGameobject(force.toCTN, this)
+          this.animCTL.slide(force)
         }
         else {
           this.defeat()
@@ -445,17 +444,15 @@ var Player = function(zone, align, init_fpmode) {
           setFWD(force.toHEADING)
         }
         if (force.isTraversable()) {
-          if (force.toBLOCKINGRAMP) {
-            this.animCTL.slidestrike(force)
-            this.state = ObjectState.IDLE
-          }
-          else {
-            zone.putGameobject(force.toCTN, this)
-            this.animCTL.slide(force)
-            this.state = ObjectState.SLIDING
-            this.slideHEADING = force.toHEADING
-            return trit.TRUE
-          }
+          zone.putGameobject(force.toCTN, this)
+          this.animCTL.slide(force)
+          this.state = ObjectState.SLIDING
+          this.slideHEADING = force.toHEADING
+          return trit.TRUE
+        }
+        else {
+          this.animCTL.slidestrike(force)
+          this.state = ObjectState.IDLE
         }
         break
       case "walk":
@@ -463,19 +460,14 @@ var Player = function(zone, align, init_fpmode) {
           setFWD(force.toHEADING)
         }
         if (force.isTraversable()) {
-          if (force.toBLOCKINGRAMP) {
-            this.animCTL.pushfixedobjectAnim(force)
-          }
-          else {
-            zone.putGameobject(force.toCTN, this)
-            this.animCTL.walk(force)
-            
-            if ( (force.toHEADING != direction.code.DOWN) && (force.toHEADING != direction.code.UP) ) {
-              let sfc_interaction = getGravShearSurfaceinteraction()
-              if (sfc_interaction == Surface.interaction.SLIDE) {
-                this.state = ObjectState.SLIDING
-                this.slideHEADING = force.toHEADING
-              }
+          zone.putGameobject(force.toCTN, this)
+          this.animCTL.walk(force)
+          
+          if ( (force.toHEADING != direction.code.DOWN) && (force.toHEADING != direction.code.UP) ) {
+            let sfc_interaction = getGravShearSurfaceinteraction()
+            if (sfc_interaction == Surface.interaction.SLIDE) {
+              this.state = ObjectState.SLIDING
+              this.slideHEADING = force.toHEADING
             }
           }
           return trit.TRUE

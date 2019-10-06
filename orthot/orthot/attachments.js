@@ -122,7 +122,7 @@ var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
           zone.signal(pressSIG)
         }
         for (let mdl of models) {
-          mdl.position.y = 0
+          mdl.position.y = -0.125
         }
       }
       else {
@@ -130,7 +130,7 @@ var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
           zone.signal(releaseSIG)
         }
         for (let mdl of models) {
-          mdl.position.y = 0.125
+          mdl.position.y = 0
         }
       }
       prevpressed = pressed
@@ -139,7 +139,7 @@ var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
   
   this.mdlgen = function() {
     let mdl = getAsset(orthotCTL.assets, mdlname)
-    mdl.position.y = 0.125
+    mdl.position.y = 0
     if (color) {
       assignMaterials(mdl, color)
     }

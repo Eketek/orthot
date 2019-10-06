@@ -1,9 +1,15 @@
 0.3.0:
+  5 Oct 2019
+    Move buttons to the surface they are attached to (puzzle element buttons, not GUI)
+    Added a "Creature" abstract type
+    Added two implacable foes:  Mouse and Moose
+    Various error corrections
+    Confused myself for a while by forgetting the distinction between heading and forward vectors.
+
   4 Oct 2019
     Move asset table to a more appropriate place (libek.assets -> orthotCTL.assets)
     Initial adjustment to make GameData modular.
     Added a puzzle selector
-    Fixed first-person mode controls
     
   2 Oct 2019
     Converted all scripts to ES6 modules

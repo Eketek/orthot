@@ -13,7 +13,8 @@ import { Wall, ScenePortal, Stair, PushBlock, Crate, IceBlock, Key, Lock } from 
 import { Ladder, Portal, Button, Icefloor } from './attachments.js'
 import { Gate, GateGroup } from './gate.js'
 import { Player } from './player.js'
-import { Collision } from './enums.js'
+import { Collision, ObjectState } from './enums.js'
+import { Mouse, Moose } from './creatures.js'
 var Zone = function(ekvx, override_startloc) {
   this.isZone = true
   let isGeomValid = true
@@ -395,9 +396,9 @@ var Zone = function(ekvx, override_startloc) {
     console.log("FAILED to attach something...", args)
     return false
   }
-  this.putGameobject = function(...args) {
-    let [x,y,z,ctn, o] = unpack_LOC_ARGS(args)    
-    
+  this.putGameobject = function(...args) { 
+    let [x,y,z,ctn, o] = unpack_LOC_ARGS(args)  
+         
     if (o.ctn) {
       let i = o.ctn.content.indexOf(o)
       if (i != -1) {
@@ -1511,6 +1512,18 @@ var Zone = function(ekvx, override_startloc) {
             let mprops = mergeObjects(datas)  
             let gate = new Gate(this, loc, color, align, mprops)             
             gategroups.push(new GateGroup(this, gate))
+          }
+          break
+          case "moose": {
+            align = property("align", datas, undefined, parseO2Orientation)
+            //let mprops = mergeObjects(datas)  
+            gobj = new Moose(this, align)
+          }
+          break
+          case "mouse": {
+            align = property("align", datas, undefined, parseO2Orientation)
+            //let mprops = mergeObjects(datas)  
+            gobj = new Mouse(this, align)
           }
           break
         }

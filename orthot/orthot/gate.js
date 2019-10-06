@@ -1,6 +1,6 @@
 export { Gate, GateGroup }
 
-import { getAsset, Material } from '../libek/libek.js'
+import { trit, getAsset, Material } from '../libek/libek.js'
 import { direction, crossDirections, setOrientation } from '../libek/direction.js'
 import { parseColor } from '../libek/util.js'
 

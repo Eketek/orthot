@@ -275,6 +275,8 @@ var direction = {
   },  
   
   invert:     [0, 2, 1, 5, 6, 3, 4],
+  right:      [0, 1, 2, 4, 5, 6, 3],
+  left:       [0, 1, 2, 6, 3, 4, 5],
 }
 direction.sideorientations = [
   0,

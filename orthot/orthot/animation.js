@@ -1644,7 +1644,7 @@ var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       }
     }
   }
-  
+    
   //The high-level animation controller.
   //In general, these select an animation, then configure the animation, then trigger it.
   //If a portal is involved, these will also enable dummy objects for each portal crossed and configure and trigger animations for the dummy objects
@@ -1657,7 +1657,7 @@ var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       MDL.destroy()
     },
     
-    fall:function(force) {   
+    fall:function(force) {  
       configurecam(force.isPortaljump)      
       mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP)   
            

@@ -349,6 +349,9 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
   }
   
   r.isTraversable = function() {
+    if (r.toBLOCKINGRAMP) {
+      return false
+    }
     for (let hop of r.path) {
       if (!zone.isTraversable(hop.fromCTN, hop.fromHEADING, hop.toCTN, hop.toHEADING, obj)) {
         return false

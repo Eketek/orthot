@@ -52,6 +52,8 @@ var Creature = function(zone, align, mdlName, victoryStatement) {
   this.shoe_sfctype = Surface.type.SMOOTH
   this.can_skate = false
   this.slideStrength = Strength.NORMAL
+  
+  this.setBaseSurface(Surface.type.ROUGH)
     
   this.state = ObjectState.IDLE
   
@@ -121,7 +123,12 @@ var Creature = function(zone, align, mdlName, victoryStatement) {
     }
     let gravOBJ = zone.getObstructor(this, fgrav.toCTN)
     if (gravOBJ) {
-      return getSurfaceInteraction(this.shoe_sfctype, gravOBJ.surfaces[direction.invert[fgrav.toHEADING]])
+      let sfci = getSurfaceInteraction(this.shoe_sfctype, gravOBJ.surfaces[direction.invert[fgrav.toHEADING]])
+      if (sfci == Surface.interaction.SLIDE) {
+        console.log(this, gravOBJ, this.shoe_sfctype, gravOBJ.surfaces[direction.invert[fgrav.toHEADING]])
+        zone.HALT("because")
+      }
+      return sfci
     }
     return Surface.interaction.NONE
   }).bind(this)

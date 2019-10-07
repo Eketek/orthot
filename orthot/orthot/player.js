@@ -12,6 +12,7 @@ import { scan_simple, scan_ramp, scan_downladder, scan_upladder } from './topolo
 
 var Player = function(zone, align, init_fpmode) {   
   StandardObject.call(this, zone)
+  this.setBaseSurface(Surface.type.ROUGH)
   this.isPlayer = true
   this.types.push("creature")
   this.types.push("player")

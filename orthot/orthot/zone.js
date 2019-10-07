@@ -164,6 +164,10 @@ var Zone = function(ekvx, override_startloc) {
     item:["player", "creature", "liquid", "gas"]
   }
   
+  this.HALT = function(reason) {
+    console.log("ZONE-HALT because:", reason)
+    HALTED = true
+  }
 	
   
   // Command sequences that are added at the beginning of a tick, end at the beginning of the next tick, and are measured in seconds (floating point values)
@@ -205,7 +209,12 @@ var Zone = function(ekvx, override_startloc) {
   setHueTarget()
  // col = new THREE.Color()
   
+  let HALTED = false
+  
   this.onFrame = function() {
+    if (HALTED) {
+      return
+    }
     //update geometry
     vxc.buildChunks()
     

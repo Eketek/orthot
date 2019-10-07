@@ -1695,6 +1695,7 @@ var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       mainINST.ctl.configure(force.fromCTN, force.toHEADING, force.toFORWARD, force.toUP)  
       if (force.fromCTN.getObject_bytype("ramp")) { 
         zone.addCommandsequence_short(mainINST.ctl.halfuppushstandAnim)
+        
       }    
       else {
         zone.addCommandsequence_short(mainINST.ctl.pushstandAnim)
@@ -1707,6 +1708,8 @@ var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       mainINST.ctl.configure(force.fromCTN, force.toHEADING, force.toFORWARD, force.toUP)  
       if (force.fromCTN.getObject_bytype("ramp")) { 
         //Impossible.  For now.  But...  maybe ice-ramps could be a fun way to get launched?
+        zone.HALT('Unimplemented Animation "halfupslidestrike" requested but is still supposed to be impossible...  Did DEVELOPER perhaps forget to assign surface types on an OrthotObject?')
+        console.log(cr, force)
         zone.addCommandsequence_short(mainINST.ctl.halfupslidestrike)
       }    
       else {

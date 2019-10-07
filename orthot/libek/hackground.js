@@ -1,8 +1,8 @@
 export { Hackground }
 import { clamp } from './util.js'
-//  Paints random gradients onto a canvas
-//
-
+//  Paint random gradients onto a canvas, with logic for scrolling and repainting
+//  This is intended to be computationally cheap, colorful, and crisp.  No effort has been made to make it accurate in a 3D context.
+//    If I want to do 3D, I'd probably prefer to output vertex-colored polygons with a cylindric arrangement
 let Hackground = function(canvas) {
   if (canvas.jquery) {
     canvas = canvas[0]

@@ -52,6 +52,7 @@ var Creature = function(zone, align, mdlName, victoryStatement) {
   this.shoe_sfctype = Surface.type.SMOOTH
   this.can_skate = false
   this.slideStrength = Strength.NORMAL
+  this.fallStrength = Strength.NORMAL
   
   this.setBaseSurface(Surface.type.ROUGH)
     

@@ -6,6 +6,7 @@
       (This would have resulted in an obscure quirk, but it raised an exception by requesting an unimplemented animation and got caught. Yay for work not done.)
     Update Reticles for recent changes to asset management
     Reposition generated inventory-item indicators 
+    Assigned a falling strength to Creatures (Also a fix for Mouse and Moose being unable to press buttons)
     
   5 Oct 2019
     Move buttons to the surface they are attached to (puzzle element buttons, not GUI)

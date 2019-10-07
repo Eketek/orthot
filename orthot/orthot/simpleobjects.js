@@ -92,7 +92,7 @@ var PushBlock = function(zone, color) {
   this.state = ObjectState.IDLE
   
   this.shearStrength = Strength.NORMAL  
-  this.fallStrength = Strength.LIGHT
+  this.fallStrength = Strength.NORMAL
   this.setBaseSurface(Surface.type.SMOOTH)  
   this.propforceMin = Strength.NORMAL
   this.propforceStrength = Strength.LIGHT
@@ -118,7 +118,7 @@ var Crate = function(zone) {
   this.state = ObjectState.IDLE
   
   this.shearStrength = Strength.NORMAL
-  this.fallStrength = Strength.LIGHT
+  this.fallStrength = Strength.NORMAL
   this.setBaseSurface(Surface.type.ROUGH)
   this.propforceMin = Strength.LIGHT
   this.crushingForce = Strength.CRUSHING
@@ -140,7 +140,7 @@ var IceBlock = function(zone) {
   this.state = ObjectState.IDLE
   
   this.shearStrength = Strength.NORMAL  
-  this.fallStrength = Strength.LIGHT
+  this.fallStrength = Strength.NORMAL
   this.setBaseSurface(Surface.type.SLICK)
   this.propforceMin = Strength.LIGHT
   this.crushingForce = Strength.CRUSHING

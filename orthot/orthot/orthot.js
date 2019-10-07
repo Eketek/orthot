@@ -324,19 +324,63 @@ $(async function() {
       item.visualizer(false)
     }
   }
+  
+  let rotate = function(val, amt) {
+    return (val<<amt)&0xffffffff | (val>>(32-amt))
+  }
+  let inthashRand = function(v) {
+    v += 0x01234567
+    v *= 0x811c9dc5
+    v &= 0xffffffff
+    v ^= rotate(v, 7)
+    v += 0x01234567
+    v &= 0xffffffff
+    v ^= rotate(v, 11)
+    v += 0x01234567
+    v &= 0xffffffff
+    v ^= rotate(v, 23)
+    v += 0x01234567
+    v &= 0xffffffff    
+    v /= (2**32)
+    v += 0.5
+    return v
+  }
+  
+  let pRandPlatues = function(... args) {
+    let tw = 0
+    for (let i = 0; i < args.length; i+= 2) {
+      tw += args[i+1]
+    }
+    return function(col, numCols) {
+      let x = col/numCols      
+      let r = 0
+      for (let i = 0; i < args.length; i+= 2) {
+        let f = args[i]
+        let w = args[i+1]
+        r += inthashRand(Math.floor(x*f))*w
+      }
+      return r/tw
+    }
+  }
+  
+  let mixRandSin = function(sinFrequency, sineWeight, randWeight) {
+    let tw = randWeight+sineWeight
+    sinFrequency = sinFrequency*Math.PI*2
+    return function(col, numCols) {
+      return (Math.sin(sinFrequency*col/numCols)/(Math.PI)*sineWeight + Math.random()*randWeight)/tw
+    }
+  }
 
   let hg = new Hackground(renderCTL.display.background)
   hg.yOFS = 0
   hg.bkgColor = "black"
   hg.layers = [
     { baseOfs:0,
-      baseGen:(col, numCols)=>{
-        return Math.sin(4*col/numCols)/(Math.PI)
-      },
-      range:0.1,
-      gradGen:(col, numCols)=> {
-        return (Math.sin(11*col/numCols)/(Math.PI)*4 + Math.random())/5
-      },
+      baseGen:mixRandSin(0.333,1,0), 
+      range:0.2,
+      auxGen:pRandPlatues(7,5,11,6,13,7,17,8,19,9),
+      auxRange:0.05,
+      gradGen:mixRandSin(3,4,3),
       gradients:[
         {
           pos:-1,
@@ -352,70 +396,71 @@ $(async function() {
           range:0.005
         },
         {
-          pos:0.00,
+          pos:-0.05,
           color:"pink",
           range:0.015
         },
         {
-          pos:0.1,
+          pos:0,
           color:"lightblue",
           startColor:"yellow",
           range:0.01
         },
         {
-          pos:0.1,
+          pos:0,
           color:"lightblue",
           startColor:"cyan",
           range:0.005
         },
         {
-          pos:0.2,
+          pos:0.05,
           color:"lightblue",
           range:0.02
         },
         {
-          pos:0.3,
+          pos:0.15,
           color:"darkblue",
           startColor:"blue",
           range:0.005
         },
         {
-          pos:0.55,
+          pos:0.35,
           color:"darkblue",
           startColor:"lime",
           range:0.025
         },
         {
-          pos:0.6,
+          pos:0.4,
           color:"green",
           startColor:"darkgreen",
           range:0.025
         },
         {
-          pos:0.64,
+          pos:0.45,
           color:"black",
           startColor:"yellow",
+          gen:mixRandSin(1,7,3),
           range:0.015
         },
         {
-          pos:0.65,
+          pos:0.45,
           color:"orange",
           startColor:"darkorange",
           range:0.005
         },
         {
-          pos:0.8,
+          pos:0.6,
           color:"black",
           range:0.005
         },
         {
-          pos:0.88,
+          pos:0.68,
           color:"black",
           startColor:"hsl(20,70%,40%)",
           range:0.015
         },
         {
-          pos:0.9,
+          pos:0.7,
           color:"hsl(20,70%,10%)",
           range:0.005
         },
@@ -428,6 +473,7 @@ $(async function() {
           pos:1.2,
           color:"black",
           startColor:"hsl(0,100%,5%)",
+          gen:mixRandSin(0.15,3,7),
           range:0.1
         },
         {

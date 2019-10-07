@@ -58,7 +58,7 @@ let Hackground = function(canvas) {
     }
     let reuseAMT = numCols - Math.abs(amt)
     if (reuseAMT <= 0) {
-      this.drawAll()
+      this.draw()
     }
     else {
       let sx, dx
@@ -104,6 +104,7 @@ let Hackground = function(canvas) {
     for (let layer of this.layers) {
       let layerOFS = ( layer.baseOfs != undefined ? layer.baseOfs : 0 )
       let mg = layer.baseGen
+      let auxMG = layer.auxGen
       //console.log(layer)
       let mg_range = layer.range != undefined ? layer.range : 0
       let mg_curve = layer.curve != undefined ? layer.curve : 1
@@ -112,6 +113,9 @@ let Hackground = function(canvas) {
       
       for (let col = startCOL; col < endCOL; col++) {
         let colOFS = layerOFS + (mg ? ((mg(col+this.offset, numCols)**mg_curve)*2*mg_range)-mg_range : 0)
+        if (auxMG) {
+          colOFS += auxMG(col+this.offset, numCols)*(layer.auxRange != undefined ? layer.auxRange : 0)
+        }
         //colOFS = 0
         //baseOFS = 0
         //console.log(mg)

@@ -233,7 +233,7 @@ var SceneviewController = function(params = {}) {
         }
       }
       if (this.onCamUpdate) {
-        this.onCamUpdate(dx, dy)
+        this.onCamUpdate()
       }
       if (updcam_adjust_pickplane) {
         this.pickplane.setFromNormalAndCoplanarPoint(this.pickplane.normal, this.camtarget)

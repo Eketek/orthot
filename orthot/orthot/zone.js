@@ -38,8 +38,11 @@ var Zone = function(ekvx, override_startloc) {
   
   // For now, lighting is simplified to global ambient + global directional light + player-held lantern + maybe one light-bearing object
   //  ANd...  just because there otherwise isn't much interesting about lighting, the global directional light rotates very slowly as time passes
-	var ambl = new THREE.AmbientLight(0xffffff, 0.075)
+  var amblCol = new THREE.Color("white")
+	var vambl = new THREE.AmbientLight(amblCol, 0.125)
+	var ambl = new THREE.AmbientLight(0xffffff, 0.125)
 	this.scene.add(ambl)	
+	this.scene.add(vambl)	
   let dlight = new THREE.DirectionalLight( 0xffffff, 1 )
   dlight.position.set(0,1000,0)
   this.scene.add(dlight)
@@ -191,6 +194,17 @@ var Zone = function(ekvx, override_startloc) {
   let cmdSequences_realtime = []
   
   
+  let tHue = 0, hue = 0, hueIncr = 0.001
+  let setHueTarget = function() {
+    tHue = Math.random()
+    hueIncr = Math.random() > 0.5 ? 1/6000 : -1/6000
+  }
+  hue = Math.random()
+  amblCol.setHSL ( hue, 1, 0.5 )
+  vambl.color = amblCol
+  setHueTarget()
+ // col = new THREE.Color()
+  
   this.onFrame = function() {
     //update geometry
     vxc.buildChunks()
@@ -199,6 +213,20 @@ var Zone = function(ekvx, override_startloc) {
     dlrot += 0.0003
     dlight.position.x = Math.cos(dlrot%T)*2000
     dlight.position.z = Math.sin(dlrot%T)*2000
+    
+    hue += hueIncr
+    amblCol.setHSL ( hue, 1, 0.5 )
+    vambl.color = amblCol
+    if (hueIncr > 0) {
+      if (hue >= tHue) {
+        setHueTarget()
+      }
+    }
+    else {
+      if (hue <= tHue) {
+        setHueTarget()
+      }
+    }
     
     //timekeeping
     let t = Date.now()

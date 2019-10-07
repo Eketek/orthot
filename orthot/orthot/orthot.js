@@ -5,6 +5,8 @@ import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
 import { Manager } from '../libek/event.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
 import { direction } from '../libek/direction.js'
+import { Hackground } from '../libek/hackground.js'
+import { clamp } from '../libek/util.js'
 
 import { Zone } from './zone.js'
 
@@ -44,11 +46,12 @@ $(async function() {
 
   initLIBEK() 
   
-  let disp_elem = $("#test").attr("tabindex", "0").get(0)
+  let disp_elem = $("#game").attr("tabindex", "0").get(0)
   disp_elem.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )  
   disp_elem.focus()
-  renderCTL.display = Display(disp_elem)
+  renderCTL.display = Display(disp_elem, true)
   
+  //renderCTL.display.renderer.setClearColor( "blue", 0.1 )
   //console.log(renderCTL)
   
   let TextureProps = {
@@ -321,7 +324,133 @@ $(async function() {
       item.visualizer(false)
     }
   }
-  
+
+  let hg = new Hackground(renderCTL.display.background)
+  hg.yOFS = 0
+  hg.bkgColor = "black"
+  hg.layers = [
+    [
+      {
+        pos:-0.5,
+        color:"black",
+        rndRange:0,
+        rndCurve:1
+      },
+      {
+        pos:-0.1,
+        color:"purple",
+        rndRange:0.015,
+        rndCurve:1
+      },
+      {
+        pos:0.00,
+        color:"pink",
+        rndRange:0.015,
+        rndCurve:1
+      },
+      {
+        pos:0.1,
+        color:"cyan",
+        rndRange:0.015,
+        rndCurve:1
+      },
+      {
+        pos:0.2,
+        color:"lightblue",
+        rndRange:0.005,
+        rndCurve:1
+      },
+      {
+        pos:0.3,
+        color:"blue",
+        rndRange:0.005,
+        rndCurve:1
+      },
+      {
+        pos:0.55,
+        color:"darkblue",
+        startColor:"lime",
+        rndRange:0.025,
+        rndCurve:1
+      },
+      {
+        pos:0.6,
+        color:"green",
+        startColor:"darkgreen",
+        rndRange:0.025,
+        rndCurve:1
+      },
+      {
+        pos:0.64,
+        color:"black",
+        startColor:"yellow",
+        rndRange:0.015,
+        rndCurve:1
+      },
+      {
+        pos:0.65,
+        color:"orange",
+        startColor:"darkorange",
+        rndRange:0.005,
+        rndCurve:1
+      },
+      {
+        pos:0.8,
+        color:"black",
+        rndRange:0.005,
+        rndCurve:1
+      },
+      {
+        pos:0.88,
+        color:"black",
+        startColor:"hsl(20,70%,40%)",
+        rndRange:0.01,
+        rndCurve:1
+      },
+      {
+        pos:0.9,
+        color:"hsl(20,70%,10%)",
+        rndRange:0.005,
+        rndCurve:1
+      },
+      {
+        pos:1,
+        color:"black",
+        rndRange:0.005,
+        rndCurve:1
+      },
+      {
+        pos:1.2,
+        color:"black",
+        startColor:"hsl(0,100%,5%)",
+        rndRange:0.1,
+        rndCurve:1
+      },
+      {
+        pos:1.4,
+        color:"hsl(330,100%,2.5%)",
+        rndRange:0.05,
+        rndCurve:1
+      },
+      {
+        pos:1.5,
+        color:"black",
+        rndRange:0,
+        rndCurve:1
+      }
+    ]
+  ]
+  hg.resolution = 12
+  //hg.update()
+  hg.draw()
+  let hgyscale = -1000
+  let hgxscale = 200
+  //hg.rotate(15)
+  let prevCamPhi = sviewCTL.campos.phi
+  let prevCamTheta = sviewCTL.campos.theta
+  hg.yOFS = (prevCamPhi/Math.PI-0.4) * hgyscale
+  hg.update()
+      
 	var run = function run () {	   
 		requestAnimationFrame( run );
 		evtman.dispatch_libek_event("frame")
@@ -330,6 +459,27 @@ $(async function() {
   	  orthotCTL.ActiveZone.onFrame()
   	}  	
 	  renderCTL.display.render()
+    //hg.rotate(17/16)
+    //console.log(sviewCTL.campos.phi)
+    let camTheta = sviewCTL.campos.theta
+    if (camTheta != prevCamTheta) {
+      let hgRotamt = ((camTheta - prevCamTheta) / (2*Math.PI)) * (-hgxscale)
+      prevCamTheta = camTheta
+      prevCamPhi = sviewCTL.campos.phi
+      //hg.offset += diff
+      hg.yOFS = (prevCamPhi/Math.PI-0.4) * hgyscale
+      hg.rotate(hgRotamt)    
+      hg.update()
+    }
+    else if ( (prevCamPhi != sviewCTL.campos.phi) ) {
+      prevCamPhi = sviewCTL.campos.phi
+      hg.yOFS = (prevCamPhi/Math.PI-0.4) * hgyscale
+      hg.update()
+    } 
+    
+    
+    //hg.update()
+    //hg.draw()
 	  
 	  let mpos3d = pickPlanepos(renderCTL.display, evtman.mpos, sviewCTL.pickplane)
 		debug_tip(`${tiptext}<br>

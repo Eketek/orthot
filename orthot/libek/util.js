@@ -1,4 +1,4 @@
-export { objprop, flatten, property, mergeObjects, properties_fromstring, parseVec3, parseColor, toBinColor }
+export { objprop, clamp, flatten, property, mergeObjects, properties_fromstring, parseVec3, parseColor, toBinColor }
 var objprop = function(obj, name, defaultVal) {
   if (obj[name]) {
     return obj[name]
@@ -7,6 +7,9 @@ var objprop = function(obj, name, defaultVal) {
     obj[name] = defaultVal
   }
   return defaultVal
+}
+var clamp = function(val, min, max) {
+  return ((val < min) ? min : ((val > max) ? max : val))
 }
 
 var flatten = function(arr, levels=1000) {

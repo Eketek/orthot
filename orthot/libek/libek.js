@@ -45,7 +45,7 @@ var getUID = function() {
   //    subordinate renderers (render to in-scene texture)
   //    rendering callbacks (drawing / rendering deferred to other code/libraries)
 var __Display = function disp(renderer, scene, camera) {
-  this.renderer = renderer ? renderer : new THREE.WebGLRenderer()
+  this.renderer = renderer ? renderer : new THREE.WebGLRenderer({alpha:true})
   this.scene = scene ? scene : new THREE.Scene()
   this.camera = camera ? camera : new THREE.PerspectiveCamera( 45, 1, .1, 500 )
   
@@ -55,7 +55,7 @@ var __Display = function disp(renderer, scene, camera) {
 }
 
   // Initialize a DOM-resident Display with somewhat OK defaults
-var Display = function( elem ) {
+var Display = function( elem, background=false, foreground=false ) {
   if (elem.dataset.display) {
     return elem.dataset.display
   }
@@ -67,7 +67,30 @@ var Display = function( elem ) {
   disp.camera.aspect = elem.clientWidth / elem.clientHeight
   disp.scene.add(disp.camera)
   disp.camera.updateProjectionMatrix()
+  
+  if (background) {
+    let backgroundElem = document.createElement("canvas")
+    backgroundElem.width = elem.clientWidth
+    backgroundElem.height = elem.clientHeight
+    backgroundElem.style.width = elem.clientWidth
+    backgroundElem.style.height = elem.clientHeight  
+    backgroundElem.style.position = "absolute"   
+    elem.appendChild( backgroundElem )
+    disp.background = backgroundElem  
+  }
+  disp.renderer.domElement.style.position = "absolute"
   elem.appendChild( disp.renderer.domElement )
+  
+  if (foreground) {
+    let foregroundElem = document.createElement("canvas")
+    foregroundElem.width = elem.clientWidth
+    foregroundElem.height = elem.clientHeight
+    foregroundElem.style.width = elem.clientWidth
+    foregroundElem.style.height = elem.clientHeight  
+    foregroundElem.style.position = "absolute"
+    elem.appendChild( foregroundElem )
+    disp.foreground = foregroundElem  
+  }
   return disp
 }
         

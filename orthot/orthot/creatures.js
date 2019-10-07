@@ -123,12 +123,7 @@ var Creature = function(zone, align, mdlName, victoryStatement) {
     }
     let gravOBJ = zone.getObstructor(this, fgrav.toCTN)
     if (gravOBJ) {
-      let sfci = getSurfaceInteraction(this.shoe_sfctype, gravOBJ.surfaces[direction.invert[fgrav.toHEADING]])
-      if (sfci == Surface.interaction.SLIDE) {
-        console.log(this, gravOBJ, this.shoe_sfctype, gravOBJ.surfaces[direction.invert[fgrav.toHEADING]])
-        zone.HALT("because")
-      }
-      return sfci
+      return getSurfaceInteraction(this.shoe_sfctype, gravOBJ.surfaces[direction.invert[fgrav.toHEADING]])
     }
     return Surface.interaction.NONE
   }).bind(this)

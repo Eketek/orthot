@@ -83,8 +83,8 @@ var Zone = function(ekvx, override_startloc) {
     baseReticleOBJ.children[0].material = reticlemat
     storeAsset(orthotCTL.assets, "cubereticle", baseReticleOBJ)
   }
-  let keyReticle = new Reticle(baseReticleOBJ)
-  let lockReticle = new Reticle(baseReticleOBJ)
+  let keyReticle = new Reticle(orthotCTL.assets, baseReticleOBJ)
+  let lockReticle = new Reticle(orthotCTL.assets, baseReticleOBJ)
   this.scene.add(keyReticle.obj)
   this.scene.add(lockReticle.obj)
   

@@ -247,7 +247,7 @@ $(async function() {
       color = new THREE.Color(color)
     }    
     if (!location) {
-      location = "#leftside"
+      location = "#inventory"
     }
     
     let cnv = document.createElement("canvas")

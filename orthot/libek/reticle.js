@@ -2,7 +2,7 @@ export { Reticle }
 import { getAsset, releaseAsset } from './libek.js'
 import { flatten } from './util.js'
 
-var Reticle = function(baseModel) {
+var Reticle = function(assets, baseModel) {
   this.obj = new THREE.Object3D()  
   let targets = {}
   let clear = function() {}
@@ -12,7 +12,7 @@ var Reticle = function(baseModel) {
     for (let arg of args) {    
       let id = `${arg.x}|${arg.y}|${arg.z}`
       if (!targets[id]) {
-        let t = getAsset(baseModel)
+        let t = getAsset(assets, baseModel)
         this.obj.add(t)
         t.position.copy(arg)
         targets[id] = t
@@ -32,7 +32,7 @@ var Reticle = function(baseModel) {
   }
   this.clear = function() {
     for (let t of Object.values(targets)) {
-      releaseAsset(t)
+      releaseAsset(assets, t)
     }
     targets = {}
   }

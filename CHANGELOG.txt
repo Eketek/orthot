@@ -1,4 +1,7 @@
 0.3.0:
+  8 Oct 2019
+    Added a brief description of the project to the container HTML document
+
   7 Oct 2019
     Added more light, more color, and a sky
     Added a panic-halt function to Zone, to aid in dealing with obscure/quirky misconduct

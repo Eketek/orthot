@@ -1,4 +1,4 @@
-export { objprop, clamp, flatten, property, mergeObjects, properties_fromstring, parseVec3, parseColor, toBinColor }
+export { objprop, clamp, flatten, property, mergeObjects, properties_fromstring, parseVec3, parseColor, toBinColor, putFloatingElement }
 var objprop = function(obj, name, defaultVal) {
   if (obj[name]) {
     return obj[name]
@@ -121,5 +121,46 @@ var toBinColor = function(arg) {
   let c = parseColor(arg)
   return (Math.round(c.r*255) << 16) | ( Math.round(c.g*255) << 8 ) | ( Math.round(c.b*255) )
 }
+
+var putFloatingElement = function(element, target) {  
+  let elementRect = element.getBoundingClientRect()
+  let targetRect = target.getBoundingClientRect()
+  let x = targetRect.left+window.scrollX
+  let y = targetRect.bottom+window.scrollY
+  let w = elementRect.width
+  let h = elementRect.height
+  
+  console.log(x,y,w,h, window.innerWidth)
+  if ( (x+w) > window.innerWidth) {
+    x = targetRect.right-elementRect.width
+  }
+  if (x < 0) {
+    x = 0
+  }
+  if (y < 0) {
+    y = 0
+  }
+  if (y+h > window.height) {
+    y = window.height - h
+  }
+  element.style.left = x + "px"
+  element.style.top = y + "px"
+  
+  console.log(elementRect, targetRect, x,y,w,h)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

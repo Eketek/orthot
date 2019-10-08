@@ -6,7 +6,7 @@ import { Manager } from '../libek/event.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
 import { direction } from '../libek/direction.js'
 import { Hackground } from '../libek/hackground.js'
-import { clamp } from '../libek/util.js'
+import { clamp, putFloatingElement } from '../libek/util.js'
 
 import { Zone } from './zone.js'
 
@@ -257,13 +257,26 @@ $(async function() {
   
   orthotCTL.loadScene("MainArea")
   
-  let resetELEM = $("<div>").addClass("btn_active").text("RESET").click(function() {
+  let resetBTN = $("<div>").addClass("btn_active").text("Reset").click(function() {
     if (orthotCTL.ActiveZone) {
       orthotCTL.ActiveZone.reset()
       disp_elem.focus()
     }
   })
-  $("#rightside").append(resetELEM)
+  
+  let aboutBTN
+  let toggleAboutBox = function() {
+    $("#about").toggle()
+    putFloatingElement($("#about")[0], aboutBTN)
+  }
+  
+  $("#hideabout").click( ()=>{$("#about").toggle()} )
+  
+  
+  aboutBTN = $("<div>").addClass("btn_active").text("About").click(toggleAboutBox)[0]
+  
+  $("#controls").append(resetBTN)
+  $("#controls").append(aboutBTN)
   
   
   renderCTL.build_domOBJ = function(tile, color, location, css_class, event_handlers) {

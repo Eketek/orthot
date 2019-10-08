@@ -294,31 +294,63 @@ $(async function() {
       }
     }
     
+    
     $(location).append(elem)
   
     cnv.width = UI_TILE_SIZE[0]
     cnv.height = UI_TILE_SIZE[1]
     
+    let hilight = false
+    
     //console.log(sz)
     let ctx = cnv.getContext('2d');
-    ctx.shadowColor = 'rgba(0, 0, 0, .33333)';
-    ctx.shadowOffsetX = UI_TILESHADOW_OFFSET[0]
-    ctx.shadowOffsetY = UI_TILESHADOW_OFFSET[1]
-    ctx.drawImage(tile.source, tile.x, tile.y, tile.w, tile.h, UI_TILEGRAPHIC_OFFSET[0], UI_TILEGRAPHIC_OFFSET[1], UI_TILEGRAPHIC_SIZE[0], UI_TILEGRAPHIC_SIZE[1]);
-    
-    let imgd = ctx.getImageData(0,0, UI_TILE_SIZE[0], UI_TILE_SIZE[1])
-    let buf = imgd.data
-    
-    let r = color.r
-    let g = color.g
-    let b = color.b
-    
-    for (let i = 0; i < buf.length; i+= 4) {
-      buf[i] =   buf[i]   * r
-      buf[i+1] = buf[i+1] * g
-      buf[i+2] = buf[i+2] * b
+    let draw = function() {
+      ctx.clearRect(0,0, UI_TILE_SIZE[0], UI_TILE_SIZE[1])
+      
+      if (hilight) {
+        ctx.shadowOffsetX = 0
+        ctx.shadowOffsetY = 0
+        
+        ctx.strokeStyle = "black"
+        ctx.lineWidth = 4
+        ctx.strokeRect(1,1, UI_TILE_SIZE[0]-2, UI_TILE_SIZE[1]-2)   
+             
+        ctx.strokeStyle = color.getStyle()
+        ctx.lineWidth = 2
+        ctx.strokeRect(1,1, UI_TILE_SIZE[0]-2, UI_TILE_SIZE[1]-2)       
+      }
+      
+      ctx.shadowColor = 'rgba(0, 0, 0, .33333)';
+      ctx.shadowOffsetX = UI_TILESHADOW_OFFSET[0]
+      ctx.shadowOffsetY = UI_TILESHADOW_OFFSET[1]
+      ctx.drawImage(tile.source, tile.x, tile.y, tile.w, tile.h, UI_TILEGRAPHIC_OFFSET[0], UI_TILEGRAPHIC_OFFSET[1], UI_TILEGRAPHIC_SIZE[0], UI_TILEGRAPHIC_SIZE[1]);
+      
+      let imgd = ctx.getImageData(0,0, UI_TILE_SIZE[0], UI_TILE_SIZE[1])
+      let buf = imgd.data
+      
+      let r = color.r
+      let g = color.g
+      let b = color.b
+      
+      for (let i = 0; i < buf.length; i+= 4) {
+        buf[i] =   buf[i]   * r
+        buf[i+1] = buf[i+1] * g
+        buf[i+2] = buf[i+2] * b
+      }
+      ctx.putImageData(imgd, 0, 0);
+      
     }
-    ctx.putImageData(imgd, 0, 0);
+    draw()
+    
+    elem.mouseover(function() {
+      hilight = true
+      draw()
+    })
+    elem.mouseout(function() {
+      hilight = false
+      draw()
+    });
+    
     return elem
   }
     

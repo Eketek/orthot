@@ -1,6 +1,6 @@
 export { renderCTL, inputCTL, sviewCTL, orthotCTL }
 
-import { tt, initLIBEK, Display, loadMuch, loadZIP, assignMaterials, pickPlanepos, debug_tip } from '../libek/libek.js'
+import { tt, initLIBEK, Display, loadMuch, loadZIP, assignMaterials, getAsset, storeAsset, pickPlanepos, debug_tip } from '../libek/libek.js'
 import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
 import { Manager } from '../libek/event.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
@@ -17,12 +17,12 @@ import { Zone } from './zone.js'
 */
 
 // Global rendering properties & controls (Mainly, materials and managed shader properties)
-var renderCTL = {
+var renderCTL = window.rctl = {
   uv2:new UVspec()
 }
 
 //Input controller.  Mouse & keyboard
-var inputCTL = {}
+var inputCTL = window.ictl = {}
 
 // Screen-view controller:  Camera controller which performs orbitting, following, and a bit of flying.
 var sviewCTL
@@ -30,11 +30,12 @@ var sviewCTL
 var MAIN_GDATA_PACK = {
   name:"MainGdataPack",
   mainAreaname:"MainArea",
-  zones:{}
+  zones:{},
+  progress:{}
 }
 
 //Level data, high-level state, and "Orthot" functions
-var orthotCTL = {
+var orthotCTL = window.octl = {
   assets:{},      
   gdatapack:MAIN_GDATA_PACK,
   tiles:{},  
@@ -114,7 +115,14 @@ $(async function() {
   assignMaterials(orthotCTL.assets.man_slide4, manmats)
   assignMaterials(orthotCTL.assets.man_slide5, manmats)
   
-  assignMaterials(orthotCTL.assets.scene_portal, {color:"white", emissive:"white", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
+  let flag = getAsset(orthotCTL.assets, "FlagPlain")
+  storeAsset(orthotCTL.assets, "flag", flag)
+  assignMaterials(flag, ["brown", "white"])
+  
+  assignMaterials(orthotCTL.assets.scene_portal, {color:"yellow", emissive:"yellow", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
+  assignMaterials(orthotCTL.assets.EndBlock, {color:"yellow", emissive:"yellow", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
+  orthotCTL.assets.EndBlock.children[0].scale.x *= -1
+  
   assignMaterials(orthotCTL.assets.portal_pane, "white", "yellow", {color:"blue", transparent:true, opacity:0.25}, "white" )
   assignMaterials(orthotCTL.assets.pushblock, ["white", "red", "black"])
   assignMaterials(orthotCTL.assets.lock, ["white", "black"])
@@ -147,7 +155,7 @@ $(async function() {
   })
   inputCTL.keystate.run()
     
-  sviewCTL = new SceneviewController({
+  sviewCTL = window.sctl = new SceneviewController({
     camtarget:new THREE.Vector3(0,0,0),
     display:renderCTL.display,
     eventmanager:evtman,
@@ -202,7 +210,7 @@ $(async function() {
       renderCTL.display.scene.remove(orthotCTL.ActiveZone.scene)
       orthotCTL.ActiveZone.unload()
     }
-    orthotCTL.ActiveZone = new Zone(ekvx, loc)
+    orthotCTL.ActiveZone = new Zone(ekvx, loc, arg)
     renderCTL.display.scene.add(orthotCTL.ActiveZone.scene)
     
     for (let i = 0; i < levelSelector.length; i++) {
@@ -214,7 +222,32 @@ $(async function() {
     levelSelector.selectedIndex = -1
   }
   
+ let loadProgress = function() {
+    let prgdata = window.localStorage["progress."+orthotCTL.gdatapack.name]
+    if (prgdata) {
+      orthotCTL.gdatapack.progress = JSON.parse(prgdata)
+    }
+    else {
+      orthotCTL.gdatapack.progress = {}
+    }
+ }
+ loadProgress()
  
+ let storeProgress = function() {
+    window.localStorage["progress."+orthotCTL.gdatapack.name] = JSON.stringify(orthotCTL.gdatapack.progress)
+ }
+ orthotCTL.addProgress = function(code) {
+   orthotCTL.gdatapack.progress[code] = true
+   storeProgress()
+ }
+ orthotCTL.unProgress = function(code) {
+   delete orthotCTL.gdatapack.progress[code]
+   storeProgress()
+ }
+ orthotCTL.nukeProgress = function() {
+   orthotCTL.gdatapack.progress = {}
+   storeProgress()
+ }
   
   $("#loadPuzzle").on("input", ()=>{  
     let lvlName = levelSelector.options[levelSelector.selectedIndex].value
@@ -372,6 +405,7 @@ $(async function() {
   }
 
   let hg = new Hackground(renderCTL.display.background)
+  renderCTL.bkg = hg
   hg.yOFS = 0
   hg.bkgColor = "black"
   hg.layers = [

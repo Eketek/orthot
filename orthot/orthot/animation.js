@@ -15,7 +15,7 @@ var doNothing = function() {}
    the animation system needs to be able to duplicate and delete objects, use multiple instances of the same [internal] animation controller, and be able to
    directly manipulate the camera.  
 */
-var AnimateBlock = function(zone, blk) {
+var AnimateBlock = function(zone, blk, orient) {
   let MDL = new Model(orthotCTL.assets, {default:blk.mdlgen})
   blk.obj = MDL.obj
   blk.mdl = MDL
@@ -35,9 +35,16 @@ var AnimateBlock = function(zone, blk) {
     let scale = new THREE.Vector3(1,1,1)  
     let worldpos = new THREE.Vector3()  
     
+    let orientation
     // offset and rotation to position object 
-    let orientation = ctl.orientation = {}
-    setOrientation(orientation,  "south", "up")
+    if (orient) {
+      orientation = orient
+      ctl.orientation = orient
+    }
+    else {
+      orientation = ctl.orientation = {}
+      setOrientation(orientation,  "south", "up")
+    }
     
     // heading vectors
     let behind = new THREE.Vector3()
@@ -379,6 +386,26 @@ var AnimateBlock = function(zone, blk) {
         }
       )
     }
+    
+    ctl.continuousrandomflipper = function(flip_threshold, decay, flip_cost) {
+      let tx = new Transform(matrix)
+      let scVec = new THREE.Vector3(1,1,1)
+      tx.scale(scVec)
+      tx.orient(orientation)
+      tx.translate(worldpos)
+      let state = flip_cost
+      return new CommandSequence(
+        doNothing, doNothing, Number.MAX_VALUE,
+        (d,t) => {
+          state -= Math.random()
+          if (state < flip_threshold) {
+            state += flip_cost
+            scVec.x *= -1
+            tx.update()
+          }
+        }
+      )
+    }
   }  
   
   let mainINST = new MDL.Instance("main", CFG)  
@@ -442,6 +469,12 @@ var AnimateBlock = function(zone, blk) {
       let rotator = mainINST.ctl.continuousmultiaxialrotator(speed, axis, pivot)
       zone.addCommandsequence_realtime(rotator)
       activeAnim = rotator
+    },
+    startContinuousRandomFlipper:function(flip_threshold, decay, flip_cost) {
+      mainINST.ctl.cancelActiveAnim()
+      let flipper = mainINST.ctl.continuousrandomflipper(flip_threshold, decay, flip_cost)
+      zone.addCommandsequence_realtime(flipper)
+      activeAnim = flipper
     },
     pickedup(grabber_heading) {
       mainINST.ctl.configure(blk.worldpos, grabber_heading,  direction.code.SOUTH,  direction.code.UP)

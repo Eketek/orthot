@@ -1,4 +1,4 @@
-export { Wall, ScenePortal, Stair, PushBlock, Crate, IceBlock, Key, Lock }
+export { Wall, ScenePortal, Stair, PushBlock, Crate, IceBlock, Key, Lock, Flag, Exit }
 
 import { getAsset, Material } from '../libek/libek.js'
 import { direction, setOrientation } from '../libek/direction.js'
@@ -38,7 +38,7 @@ var Wall = function(zone) {
   }
 }
 
-var ScenePortal = function(zone) {  
+var ScenePortal = function(zone, dest, target) {  
   OrthotObject.call(this, zone)
   this.initGraphics = (function() {
     this.obj = getAsset(orthotCTL.assets, "scene_portal")
@@ -47,7 +47,32 @@ var ScenePortal = function(zone) {
   this.intruded = function(other) {
     if (other.isPlayer) {
       //console.log("sceneportal-data", this._ekvxdata_)
-      orthotCTL.loadScene(this.destination, this.target)
+      orthotCTL.loadScene(dest, target)
+    }
+  }
+}
+
+var Exit = function(zone, align, dest, target) {
+  OrthotObject.call(this, zone)
+  if ((dest == "") || (dest == undefined)) {
+    dest = orthotCTL.gdatapack.mainAreaname
+  }
+    
+  this.initGraphics = function() {
+    this.obj = getAsset(orthotCTL.assets, "EndBlock")
+    let orientation = {}
+    setOrientation(orientation, direction.invert[align.forward], align.up)
+    this.obj.position.set(orientation.position)
+    this.obj.setRotationFromEuler(orientation.rotation)
+    return true
+  }
+  
+  this.intruded = function(other) {
+    if (other.isPlayer) {
+      console.log("Completed Puzzle '" + zone.name + "'")
+      orthotCTL.addProgress(zone.name)
+      //console.log("sceneportal-data", this._ekvxdata_)
+      orthotCTL.loadScene(dest, target)
     }
   }
 }
@@ -78,6 +103,45 @@ var Stair = function(zone, color, align) {
   
   this.ascendDIR = align.forward
   this.descendDIR = direction.invert[align.forward]
+}
+
+var Flag = function(zone, align, code) {
+  OrthotObject.call(this, zone)
+  
+  if ( code == undefined ) {
+    code = zone.name
+  }
+  
+  if (align) {
+    this.forward = align.forward
+    this.up = align.up
+  }
+  
+  let orientation = {}
+  setOrientation(orientation, this.forward, this.up)
+  
+  this.idle = function() {
+    this.animCTL.startContinuousRandomFlipper(1, 0.1, 25)
+  }
+      
+  this.initGraphics = (function() {
+    AnimateBlock(this.zone, this, orientation)
+    this.idle()
+    return true
+  }).bind(this)
+  
+  this.mdlgen = function() {
+    let mdl = getAsset(orthotCTL.assets, "flag")
+    if (orthotCTL.gdatapack.progress[code]) {
+    //assignMaterials(orthotCTL.assets.scene_portal, {color:"white", emissive:"white", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
+      mdl.children[1].material = Material({color:"green", emissive:"green", emissiveIntensity:0.3 })
+    }
+    else {
+      mdl.children[1].material = Material({color:"red", emissive:"red", emissiveIntensity:0.3 })
+    }
+    return mdl
+  }
+
 }
 
 // I still don't know what to call a pushblock.  A pushblock is a pushblock.

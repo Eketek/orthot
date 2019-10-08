@@ -17,7 +17,7 @@ var Player = function(zone, align, init_fpmode) {
   this.types.push("creature")
   this.types.push("player")
   
-  window.player = this
+  window.oplayer = this
 
   this.SpatialClass = "player"
     

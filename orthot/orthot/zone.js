@@ -9,15 +9,17 @@ import { renderCTL, sviewCTL, inputCTL, orthotCTL } from './orthot.js'
 import { parseO2Orientation } from './util.js'
 import { Container } from './container.js'
 import { direction, rotateDirection_bydirections } from '../libek/direction.js'
-import { Wall, ScenePortal, Stair, PushBlock, Crate, IceBlock, Key, Lock } from './simpleobjects.js'
+import { Wall, ScenePortal, Stair, PushBlock, Crate, IceBlock, Key, Lock, Flag, Exit } from './simpleobjects.js'
 import { Ladder, Portal, Button, Icefloor } from './attachments.js'
 import { Gate, GateGroup } from './gate.js'
 import { Player } from './player.js'
 import { Collision, ObjectState } from './enums.js'
 import { Mouse, Moose } from './creatures.js'
-var Zone = function(ekvx, override_startloc) {
+
+var Zone = function(ekvx, override_startloc, name) {
   this.isZone = true
   let isGeomValid = true
+  this.name = name
   
   let bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
   let vxc = new VxScene({
@@ -1496,11 +1498,13 @@ var Zone = function(ekvx, override_startloc) {
           case 'iceblock':
             gobj = new IceBlock(this)
             break
-          case 'sceneportal':
-            gobj = new ScenePortal(this)
-            gobj.destination = property("dest", datas)
-            gobj.target = property("target", datas)
-            break
+          case 'sceneportal': {
+            let dest = property("dest", datas)
+            let target = property("target", datas)
+            gobj = new ScenePortal(this, dest, target)
+          }
+          break
+          
           case 'space_light':
           case 'face_light':
           //  ...  Will have to re-think lighting.  Previous version used unrestricted dynamic lighting, computed it directly and baked it in as VertexColors,
@@ -1553,14 +1557,29 @@ var Zone = function(ekvx, override_startloc) {
           break
           case "moose": {
             align = property("align", datas, undefined, parseO2Orientation)
-            //let mprops = mergeObjects(datas)  
             gobj = new Moose(this, align)
           }
           break
           case "mouse": {
             align = property("align", datas, undefined, parseO2Orientation)
-            //let mprops = mergeObjects(datas)  
             gobj = new Mouse(this, align)
+          }
+          break
+          case "flag": {
+            let mprops = mergeObjects(datas)  
+            align = property("align", datas, undefined, parseO2Orientation)
+            let code = property("code", datas)
+            //console.log("FLAG", mprops)
+            gobj = new Flag(this, align, code)
+          }
+          break
+          case "exit": {
+            let mprops = mergeObjects(datas)  
+            align = property("align", datas, undefined, parseO2Orientation)
+            //let code = property("code", datas)
+            let dest = property("dest", datas)
+            let target = property("target", datas)
+            gobj = new Exit(this, align, dest, target)
           }
           break
         }
@@ -1623,6 +1642,9 @@ var Zone = function(ekvx, override_startloc) {
               property("release", datas)
             )
             this.attach(x,y,z, btn)
+            break
+          default:
+            //console.log(datas)
             break
         }
       }
@@ -1746,7 +1768,7 @@ var Zone = function(ekvx, override_startloc) {
     this.destroyObjects()
     this.destroyTerrain()
     if (this.scene.children.length > 0) {
-      console.log("Objects remaining on scene unload:", this.scene.children)
+      //console.log("Objects remaining on scene unload:", this.scene.children)
     }
     
   }

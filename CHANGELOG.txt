@@ -7,6 +7,7 @@
       (which are awarded by completing puzzles and persisted in LocalStorage)
     Re-enabled the arbirtarilly obstructive behavior of the gates in the "main" areas
     Added a puzzle completion condition detection warning
+    Updated the Main area for Version 3
 
   7 Oct 2019
     Added more light, more color, and a sky

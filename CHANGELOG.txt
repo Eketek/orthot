@@ -1,6 +1,7 @@
 0.3.0:
   8 Oct 2019
     Added a brief description of the project to the container HTML document
+    Moved all contents of /orthot/orthot to /orthot
 
   7 Oct 2019
     Added more light, more color, and a sky

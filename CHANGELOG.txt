@@ -2,6 +2,11 @@
   8 Oct 2019
     Added a brief description of the project to the container HTML document
     Moved all contents of /orthot/orthot to /orthot
+    Moved textures and packaged data to /textures
+    Implement completion-based triggers (things get enabled or disabled on the basis of Completion codes 
+      (which are awarded by completing puzzles and persisted in LocalStorage)
+    Re-enabled the arbirtarilly obstructive behavior of the gates in the "main" areas
+    Added a puzzle completion condition detection warning
 
   7 Oct 2019
     Added more light, more color, and a sky

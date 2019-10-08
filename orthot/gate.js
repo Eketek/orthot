@@ -74,6 +74,16 @@ var GateGroup = function(zone, _gate) {
   let position = 0
   
   this.init = (function() {
+    // A gategroup with a code property obstructs unless User's progress satisfies whatever arbitrary condition specified by the code.
+    //  (in which case, all gates are to be deleted)
+    if (this.code && this.code != "") {
+      if (orthotCTL.matchCode(this.code)) {          
+        for (let gate of this.gates) {
+          zone.removeGameobject(gate)
+          return
+        }
+      }
+    }
     for (let gate of this.gates) {
       gate.initGraphics()
       if (!gate.worldpos) {

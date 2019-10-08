@@ -4,7 +4,7 @@ import { getAsset, Material } from '../libek/libek.js'
 import { direction, setOrientation } from '../libek/direction.js'
 import { parseColor } from '../libek/util.js'
 
-import { orthotCTL } from './orthot.js'
+import { orthotCTL, renderCTL } from './orthot.js'
 import { OrthotObject, StandardObject, MovableObject } from './object.js'
 import { Surface } from './surface.js'
 import { Strength, ObjectState } from './enums.js'
@@ -70,6 +70,7 @@ var Exit = function(zone, align, dest, target) {
   this.intruded = function(other) {
     if (other.isPlayer) {
       console.log("Completed Puzzle '" + zone.name + "'")
+      renderCTL.indicateCompletion()
       orthotCTL.addProgress(zone.name)
       //console.log("sceneportal-data", this._ekvxdata_)
       orthotCTL.loadScene(dest, target)

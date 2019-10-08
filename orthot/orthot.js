@@ -62,12 +62,12 @@ $(async function() {
   
   await loadMuch( 
     orthotCTL.assets,
-    {url:"orthot/textures/patterns.png", properties:TextureProps},
-    {url:"orthot/textures/wall_8bit_fg.png", properties:TextureProps},
-    {url:"orthot/textures/symbols.png", properties:TextureProps},
+    {url:"assets/textures/patterns.png", properties:TextureProps},
+    {url:"assets/textures/wall_8bit_fg.png", properties:TextureProps},
+    {url:"assets/textures/symbols.png", properties:TextureProps},
   )
-  await loadZIP(orthotCTL.assets, 'orthot/models.zip')
-  await loadZIP(MAIN_GDATA_PACK.zones, 'orthot/ekvxdat.zip')
+  await loadZIP(orthotCTL.assets, 'assets/models.zip')
+  await loadZIP(MAIN_GDATA_PACK.zones, 'assets/ekvxdat.zip')
     
   orthotCTL.tiles.key = {
     source:orthotCTL.assets.symbols.image,
@@ -222,7 +222,7 @@ $(async function() {
     levelSelector.selectedIndex = -1
   }
   
- let loadProgress = function() {
+  let loadProgress = function() {
     let prgdata = window.localStorage["progress."+orthotCTL.gdatapack.name]
     if (prgdata) {
       orthotCTL.gdatapack.progress = JSON.parse(prgdata)
@@ -230,24 +230,97 @@ $(async function() {
     else {
       orthotCTL.gdatapack.progress = {}
     }
- }
- loadProgress()
- 
- let storeProgress = function() {
+  }
+  loadProgress()
+
+  let storeProgress = function() {
     window.localStorage["progress."+orthotCTL.gdatapack.name] = JSON.stringify(orthotCTL.gdatapack.progress)
- }
- orthotCTL.addProgress = function(code) {
-   orthotCTL.gdatapack.progress[code] = true
-   storeProgress()
- }
- orthotCTL.unProgress = function(code) {
-   delete orthotCTL.gdatapack.progress[code]
-   storeProgress()
- }
- orthotCTL.nukeProgress = function() {
-   orthotCTL.gdatapack.progress = {}
-   storeProgress()
- }
+  }
+  orthotCTL.addProgress = function(code) {
+    orthotCTL.gdatapack.progress[code] = true
+    storeProgress()
+  }
+  orthotCTL.unProgress = function(code) {
+    delete orthotCTL.gdatapack.progress[code]
+    storeProgress()
+  }
+  orthotCTL.nukeProgress = function() {
+    orthotCTL.gdatapack.progress = {}
+    storeProgress()
+  }
+
+  orthotCTL.matchCode = function(code) {
+    if (code == "") {
+      return true
+    }
+    
+    // Orthot II accepted a wide range of separators (due to codes being a manually input field):  "-,:;|", as well as newline and formfeed
+    //  It also accepted a space, but only for the command (spaces are valid in puzzle names)
+    //  The min and max options further complicated this.
+    let args, codes 
+    let sepOption = function(s) {
+      let idx = s.search(/[ ,:;|\n\r\-]/)
+      if (idx == -1) {
+        return false
+      }
+      args = s.substring(idx+1)
+      return s.substring(0, idx)
+    }
+    let sepCodes = function() {
+      codes = args.split(/[,:;|\n\r\-]/)
+      for (let i = codes.length-1; i >= 0; i--) {
+        if (codes[i] == "") {
+          codes.splice(i,1)
+        }
+      }
+    }
+    let command = sepOption(code)
+    if (command) {
+      let count = 0
+      let constraint = 0
+      switch (command) {
+        case "any":
+          sepCodes()
+          for (let i = 0; i < codes.length; i++) {      
+            if (orthotCTL.gdatapack.progress[codes[i]]) {
+              return true
+            }
+          }
+          return false
+        break
+        case "all":
+          sepCodes()
+          for (let i = 0; i < codes.length; i++) {
+            if (!orthotCTL.gdatapack.progress[codes[i]]) {
+              return false
+            }
+          }
+          return true
+        break
+        case "min":
+          constraint = parseFloat(sepOption(args))
+          sepCodes()
+          for (let i = 1; i < codes.length; i++) {
+            if (orthotCTL.gdatapack.progress[codes[i]]) {
+              count++
+            }
+          }
+          return count >= constraint
+        break
+        case "max":
+          constraint = parseFloat(sepOption(args))
+          sepCodes()
+          for (let i = 1; i < codes.length; i++) {
+            if (orthotCTL.gdatapack.progress[codes[i]]) {
+              count++
+            }
+          }
+          return count <= constraint
+        break
+      }
+    }
+    return orthotCTL.gdatapack.progress[code]
+  }
   
   $("#loadPuzzle").on("input", ()=>{  
     let lvlName = levelSelector.options[levelSelector.selectedIndex].value
@@ -278,6 +351,45 @@ $(async function() {
   $("#controls").append(resetBTN)
   $("#controls").append(aboutBTN)
   
+  
+  let faderID  
+  let completionELEM = $("#completionGraphic")[0]
+  completionELEM.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )  
+  renderCTL.indicateCompletion = function() {
+    if (faderID != undefined) {
+      clearInterval(faderID)
+      faderID = undefined
+    }
+    completionELEM.style.opacity = 0
+    let opa = 0
+    let state = 0
+    faderID = setInterval(()=>{
+      switch(state) {
+        case 0:
+          opa += 0.25
+          completionELEM.style.opacity = opa
+          if (opa >= 1) {
+            completionELEM.style.opacity = 1
+            opa = 1
+            state = 1
+          }
+          break
+        default:
+          state += 1
+          break
+        case 30:
+          opa -= 0.05
+          completionELEM.style.opacity = opa
+          if (completionELEM.style.opacity <= 0) {
+            completionELEM.style.opacity = 0
+            clearInterval(faderID)
+            faderID = undefined
+          }
+          break
+      }
+      //console.log("st-1")
+    }, 30)
+  }
   
   renderCTL.build_domOBJ = function(tile, color, location, css_class, event_handlers) {
     if (typeof(tile) == "string") {

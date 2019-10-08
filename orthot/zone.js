@@ -1443,8 +1443,34 @@ var Zone = function(ekvx, override_startloc, name) {
       let gobj
       let align, color
       let adjctn
+      
+      
+      // If an object has an enable or disable code, it gets enabled or disabled based on codes persisted Progress Codes.
+      //  But, gates are a special case - A code specified on a gate is applied to the entire gategroup which the gate is a member of
+      if (template.type != "gate") {      
+        let enableInfo = property("if", datas)
+        let disableInfo = property("ifnot", datas)
+        
+        if (enableInfo && enableInfo != "") {
+          if (!orthotCTL.matchCode(enableInfo)) {
+            return false
+          }
+        }
+        if (disableInfo && disableInfo != "") {
+          if (orthotCTL.matchCode(disableInfo)) {
+            return false
+          }
+        }
+      }
+      
       if (ldstage == 1) {
         switch(template.type) {
+        
+          // return "true" to defer side-attached objects to a 2nd pass (need to make sure that the carrying objects are instantiated first)
+          default:
+            return true
+            break
+            
           case 'wall':
             vxc.loadTerrain(x,y,z, template.id)
             this.putGameobject(loc, new Wall(this))            
@@ -1523,9 +1549,6 @@ var Zone = function(ekvx, override_startloc, name) {
             
             console.log(light)
             */
-            break
-          default:
-            return true
             break
           case "start": {   
               //console.log(datas)       
@@ -1753,12 +1776,14 @@ var Zone = function(ekvx, override_startloc, name) {
     
     for (let ggroup of gategroups) {   
       ggroup.init() 
+      /*
       for (let gate of ggroup.gates) {        
         // For the time being, I want gates which unlock by progress to be visible, but non-obstructing.        
         if (ggroup.code) {
           delete gate.SpatialClass
         }
       }
+      */
     }
     //console.log(gategroups)
   }).bind(this)

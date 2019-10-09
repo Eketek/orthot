@@ -8,7 +8,6 @@ export {
   loadMuch, loadZIP,
   debug_tip
 }
-//import { keycode } from './event.js'
 import { flatten } from './util.js'
 import { EkvxLoader } from './ekvx.js'
 

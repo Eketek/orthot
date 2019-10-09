@@ -61,7 +61,14 @@ var QueryTriggeredButtonControl = function(params={}) {
   
   // Return the list of recently pressed buttons (+bttons held down if the readheldbuttons option is set)
   this.query = function() {
-    return state
+    if (held) {
+      return state
+    }
+    else {
+      let r = state
+      state = {}
+      return r
+    }
   }
 }
 

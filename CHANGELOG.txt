@@ -4,6 +4,12 @@
       (this is for allowing async functions to receive events)
     Added a generic EventTarget for passing messages between loosely coupled components (orthotCTL.events)
     Keyboard handler state now resets when the page loses focus.
+    Added a high-responsive mode    
+      Ordinarilly, when input is received, it checks to see if anything is still animating and if not, will force the next tick to start on the next frame.
+      The new high-responsive mode disables that check, causing it to start the next tick without regard for animation (visually, this teleports everything
+      that is in motion to its destination).  If movement button is held down, auto-repeat will eventually take over and cause the game to tick rapidly.
+        Note:  Apparent responsiveness issues in high-responsive mode is much more indicative of performance issues than apparent resposiveness problems
+               while things are animating.  
 
   8 Oct 2019
     Added a brief description of the project to the container HTML document

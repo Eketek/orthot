@@ -54,6 +54,7 @@ var QueryTriggeredButtonControl = function(params={}) {
           break
         case "keydown":
           state[evt.code] = true
+          inpCallback()
           break
         case "keyup":
           state[evt.code] = false

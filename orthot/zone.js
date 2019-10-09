@@ -407,7 +407,7 @@ var Zone = function(ekvx, override_startloc, name) {
   }
   
   this.inputAvailable = function() {
-    if ( (cmdSequences_short.length == 0) && (cmdSequences_long.length == 0)) {
+    if ( (orthotCTL.highResponsiveMode) || ((cmdSequences_short.length == 0) && (cmdSequences_long.length == 0))) {
       prevtick = Date.now() - this.ticklen
     }
   }

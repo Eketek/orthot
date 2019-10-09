@@ -327,6 +327,19 @@ $(async function() {
   
   orthotCTL.loadScene("MainArea")
   
+  let highRespModeBTN = $("<div>").addClass("btn_inactive").text("Hi-Resp:OFF")
+  
+  on(highRespModeBTN, "click", ()=>{
+    if (orthotCTL.highResponsiveMode) {
+       orthotCTL.highResponsiveMode = false
+       highRespModeBTN.text("Hi-Resp:OFF").removeClass("btn_active").addClass("btn_inactive")
+    }
+    else {
+     orthotCTL.highResponsiveMode = true
+     highRespModeBTN.text("Hi-Resp:ON").removeClass("btn_inactive").addClass("btn_active")
+    }
+  })
+  
   let resetBTN = $("<div>").addClass("btn_active").text("Reset").click(function() {
     if (orthotCTL.ActiveZone) {
       orthotCTL.ActiveZone.reset()
@@ -344,6 +357,10 @@ $(async function() {
   
   aboutBTN = $("<div>").addClass("btn_active").text("About").click(toggleAboutBox)[0]
   
+  highRespModeBTN[0].title = "High-Responsive Mode"
+  resetBTN[0].title = "Restart the active puzzle"
+  
+  $("#controls").append(highRespModeBTN)
   $("#controls").append(resetBTN)
   $("#controls").append(aboutBTN)
   

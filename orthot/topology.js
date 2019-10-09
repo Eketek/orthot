@@ -242,6 +242,9 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
           r.toUNALIGNEDRAMP = true
         }
       }
+      else {
+        r.unalignedOBSTRUCTION = toCTN
+      }
       
       downramp_or_flat = false
     }
@@ -349,7 +352,7 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
   }
   
   r.isTraversable = function() {
-    if (r.toBLOCKINGRAMP) {
+    if (r.toBLOCKINGRAMP || r.unalignedOBSTRUCTION) {
       return false
     }
     for (let hop of r.path) {

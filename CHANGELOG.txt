@@ -10,6 +10,10 @@
       that is in motion to its destination).  If movement button is held down, auto-repeat will eventually take over and cause the game to tick rapidly.
         Note:  Apparent responsiveness issues in high-responsive mode is much more indicative of performance issues than apparent resposiveness problems
                while things are animating.  
+    Topology system now indicates when an unaligned obstruction should prevent a Creature or Player from being able to hop off a ramp.
+      Note:  An unaligned obstruction is a blocking object (such as a Wall) positioned above the space to the side of a ramp
+      (Failure to account for this opened up an unintended route in the "keymaze" puzzle, which also caused the "walk" animation controller to do nothing, 
+       resulting in a temporarilly glitched Player-avatar)
 
   8 Oct 2019
     Added a brief description of the project to the container HTML document

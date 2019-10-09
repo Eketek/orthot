@@ -1800,8 +1800,7 @@ var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
       }
     },
     
-    walk:function(force) {  
-      //console.log("WALK", mainINST, force)
+    walk:function(force) {
       configurecam(force.isPortaljump)
       
       let animName
@@ -1812,10 +1811,10 @@ var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
         else if (force.toDOWNRAMP) {
           animName = "rampupdown"
         }
-        else if (force.hopOUT) {      
+        else if (force.hopOUT) {
           animName = "rampuphop"
         }
-        else {  // flat ground   
+        else {
           animName = "rampupflat"
         }
       }
@@ -1830,22 +1829,22 @@ var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           animName = "rampdownhop"
         
         }
-        else {  // flat ground
-          animName = "rampdownflat"      
-        }      
+        else {
+          animName = "rampdownflat"
+        }
       }
       else if (force.fromUNALIGNEDRAMP) {
         if (force.toUPRAMP) {
-          animName = "urampup"      
+          animName = "urampup"
         }
         else if (force.toUNALIGNEDRAMP) {
-          animName = "urampuramp"    
+          animName = "urampuramp"
         }
-        else if (force.toGAP) { //flat ground
-          animName = "urampgap"    
-        }      
+        else if (force.toGAP) {
+          animName = "urampgap"
+        } 
       }
-      else {  //flat ground
+      else {
         if (force.toUPRAMP) {
           animName = "flatup"
         }
@@ -1853,30 +1852,28 @@ var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
           animName = "flatdown"
         
         }
-        else if (force.hopOUT) {    
-          mCTL.walk_flathop(force) 
+        else if (force.hopOUT) {
+          animName = "flathop"
         }
-        else {  //flat ground 
-          mCTL.walk_flatflat(force)   
+        else {
+          animName = "flatflat"
         }
       }
       
       
       if (animName) {
-        //console.log("run animation:  ", animName)
         animName = "walk_" + animName
         if (force.isPUSH) {
           animName = "push" + animName
         }
-        //animName += "_anim"
         
-          
+        
         if (mainINST.ctl[animName]) {
-          mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP) 
+          mainINST.ctl.configure(force.toCTN, force.toHEADING, force.toFORWARD, force.toUP)
           
-          if (force.isPortaljump) {   
+          if (force.isPortaljump) {
             let hop = force.path[0]
-            minorINST1.ctl.configure(hop.adjCTN, hop.fromHEADING, hop.fromFORWARD, hop.fromUP)                        
+            minorINST1.ctl.configure(hop.adjCTN, hop.fromHEADING, hop.fromFORWARD, hop.fromUP)
             zone.addCommandsequence_short(minorINST1.ctl[animName])            
             zone.addCommandsequence_short(mainINST.ctl[animName])
           }
@@ -1884,6 +1881,9 @@ var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
             zone.addCommandsequence_short(mainINST.ctl[animName])
           }
         }
+      }
+      else {
+        console.log("ERROR: No defined walk-animation for requested move:", force)
       }
     },
     

@@ -366,7 +366,6 @@ var SceneviewController = function(params = {}) {
           let evt = await evtman.next(dom_evttarget, btndown, "wheel")
           switch(evt.vname) {           
             case "wheel":
-              console.log(evt)
               if (evt.deltaY > 0) {
                 this.campos.radius += this.radstep
                 if (this.campos.radius > this.radmax) {

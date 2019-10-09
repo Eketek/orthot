@@ -25,17 +25,9 @@ var inputCTL = window.ictl = {}
 // Screen-view controller:  Camera controller which performs orbitting, following, and a bit of flying.
 var sviewCTL
 
-var MAIN_GDATA_PACK = {
-  name:"MainGdataPack",
-  mainAreaname:"MainArea",
-  zones:{},
-  progress:{}
-}
-
 //Level data, high-level state, and "Orthot" functions
 var orthotCTL = window.octl = {
-  assets:{},      
-  gdatapack:MAIN_GDATA_PACK,
+  assets:{},
   tiles:{},  
   version:"0.3.0",
   event:new EventTarget()
@@ -59,6 +51,8 @@ $(async function() {
     anisotropy:4,
   }
   
+  let MAIN_ZONES = {}
+  
   await loadMuch( 
     orthotCTL.assets,
     {url:"assets/textures/patterns.png", properties:TextureProps},
@@ -66,8 +60,8 @@ $(async function() {
     {url:"assets/textures/symbols.png", properties:TextureProps},
   )
   await loadZIP(orthotCTL.assets, 'assets/models.zip')
-  await loadZIP(MAIN_GDATA_PACK.zones, 'assets/ekvxdat.zip')
-    
+  await loadZIP(MAIN_ZONES, 'assets/ekvxdat.zip')
+  
   orthotCTL.tiles.key = {
     source:orthotCTL.assets.symbols.image,
     x:0, y:0, w:64, h:64
@@ -182,12 +176,7 @@ $(async function() {
   sviewCTL.run()
   
   let levelSelector = $("#loadPuzzle")[0]
-  for (let i = levelSelector.length-1; i >= 0; i--) {
-    levelSelector.remove(i)
-  }
-  for (let name in MAIN_GDATA_PACK.zones) {
-    levelSelector.add($("<option>").text(name)[0])
-  }
+    
 
   orthotCTL.loadScene = function(arg, loc) {
     let ekvx = arg
@@ -228,7 +217,6 @@ $(async function() {
       orthotCTL.gdatapack.progress = {}
     }
   }
-  loadProgress()
 
   let storeProgress = function() {
     window.localStorage["progress."+orthotCTL.gdatapack.name] = JSON.stringify(orthotCTL.gdatapack.progress)
@@ -325,7 +313,32 @@ $(async function() {
     disp_elem.focus()
   });
   
+   
+  let loadDataPack = function(packname, mainareaname, zones) {
+    orthotCTL.gdatapack = {
+      name:packname,
+      mainAreaname:mainareaname,
+      zones:zones
+    }
+    loadProgress()
+    
+    for (let i = levelSelector.length-1; i >= 0; i--) {
+      levelSelector.remove(i)
+    }
+    for (let name in orthotCTL.gdatapack.zones) {
+      levelSelector.add($("<option>").text(name)[0])
+    }
+  }
+  
+  loadDataPack("MainGdataPack", "MainArea", MAIN_ZONES) 
   orthotCTL.loadScene("MainArea")
+  
+  orthotCTL.forceReloadMainData = async function() {
+    let zones = {}
+    await loadZIP(zones, 'assets/ekvxdat.zip', {cache:"reload"})
+    loadDataPack("MainGdataPack", "MainArea", zones) 
+    orthotCTL.loadScene("MainArea")
+  }
   
   let highRespModeBTN = $("<div>").addClass("btn_inactive").text("Hi-Resp:OFF")
   

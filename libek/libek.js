@@ -408,9 +408,9 @@ var loadOBJ = async function(url) {
 }
   
   
-var load_to_ArrayBuffer = async function(url) {    
+var load_to_ArrayBuffer = async function(url, fetch_options) {    
   return new Promise( async resolve => {  
-    let resp = await fetch(url)    
+    let resp = await fetch(url, fetch_options)    
     let fr = new FileReader() 
     
     fr.readAsArrayBuffer(await resp.blob()) 
@@ -487,14 +487,13 @@ var loadMuch = async function(assets, ... entries) {
           name = name.substring(0,i)
         }
       }
-      
       assets[name] = val
     }
   })
 }
   
-var loadZIP = async function(assets, url) { 
-  let buf = await load_to_ArrayBuffer(url)
+var loadZIP = async function(assets, url, fetch_options) { 
+  let buf = await load_to_ArrayBuffer(url, fetch_options)
   let jz = new JSZip()    
   let archive = await jz.loadAsync(buf)
   let aliastable = {}
@@ -513,6 +512,9 @@ var loadZIP = async function(assets, url) {
           line = line.substring(0, spp)
         }
         line = line.trim()
+        if (line == "") {
+          continue
+        }
         let primeparts = line.split('::')
         let token = primeparts[1]
         let parts = primeparts[0].split(':')
@@ -520,13 +522,14 @@ var loadZIP = async function(assets, url) {
         let alias = parts[1]
         
         if (type == "mainscene") {
-          token = "MainArea"
+          alias = "MainArea"
         }
         
         aliastable[token] = alias
       }
     }
   }
+  
   for (let fname in archive.files) {
     let entry = archive.files[fname]  
     let name = fname.substring(fname.lastIndexOf('/')+1)
@@ -539,6 +542,9 @@ var loadZIP = async function(assets, url) {
       name = name.substring(0,i)
     }
     switch(ext) {
+      case 'mf':
+      case '':
+        break
       case 'ekvx':
         let ab = await entry.async("arraybuffer")
         try {
@@ -547,7 +553,7 @@ var loadZIP = async function(assets, url) {
         catch(err) {
           console.log(`ERROR parsing ${fname}: `, err)
         }
-      break
+        break
       case 'obj':
         let txt = await entry.async("string")
         try {
@@ -556,36 +562,24 @@ var loadZIP = async function(assets, url) {
         catch(err) {
           console.log(`ERROR parsing ${fname}: `, err)
         }
-      break
+        break
       case 'png':   
       case 'jpg':
       case 'jpeg':
         console.log(`Support for loading '${ext}' files from zip archive has not yet been hacked in!`)
-      break
+        break
       default:
-        console.log(`Unsupported format: '${ext}'`)
+        console.log(`Unsupported format: '${ext}' (${fname})`)
       break
     }
-    
-    //if (i != -1) {
-    //  loader = libek.loader[url.substr(i+1)]
-    //}
-    
-    //let ab = await entry.async("arraybuffer")
-    //if (name.endsWith("ekvx")) {
-      
-    //}      
-    //let ekvx = new libek.EkvxLoader(ab)
   }
-  /*
-  let ab = await arch.file("ekvxdat/MainArea.ekvx").async("arraybuffer")
   
-  let ekvx = new libek.EkvxLoader(ab)
-
-  zone = new orthot.Zone(ekvx)
-  console.log(ab, ekvx, zone)
-  window.zn = zone
-  renderCTL.display.scene.add(zone.scene)*/
+  for (let fname in aliastable) {
+    let name = aliastable[fname]
+    if (assets[name] == undefined) {
+      console.log(`WARNING:  no data entry loaded for alias '${name}'`)
+    }
+  }
 }
   
 var delay = async function(ms) {

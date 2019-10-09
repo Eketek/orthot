@@ -2,11 +2,11 @@ export { buildVariantMaterial, UVspec, UV_ATTRIBUTE_PREFIX, ManagedColor }
 import { getUID } from '../libek/libek.js'
 
   /* A shader variation generator.  -- A simple and convenient way to inject custom GLSL into shader (as well as to configure the Material).
-    
+
      base:    Name of the builtin shader to make a variant of, or an object containing either [GLSL vertex and fragment shaders] or [THREE.js shader-lib code]
               Any words marked with a '$' will be replaced with GLSL shader code attached to the params object [with the same name]
-              
-     params:  An object that defines all inputs to add to the shader 
+
+     params:  An object that defines all inputs to add to the shader
               This accepts Textures, Vectors, Colors, Numbers, and UV specifications.
               Each entry in this object is converted into an equivalent value in the shader.
               Strings entries are [mostly] GLSL code - to be inserted into the shader at a location in the shader with the same name as the params entry
@@ -14,36 +14,36 @@ import { getUID } from '../libek/libek.js'
                 The Vertex Shader name for custom uv generators is "attr_<name>" (name prefixed with "attr_") - use that name for adding secondary UVs to Meshes.
               A texture named "map" is also assumed to be the main texture (and named "map" in the FragmentShader)
               The main uv generator is "vUv" (and will always be present)
-    
-      This returns THREE.Material, with the compiled shader, and all specified properties attached to the Material uniforms params object.  
+
+      This returns THREE.Material, with the compiled shader, and all specified properties attached to the Material uniforms params object.
         (and anything else that would go into MeshStandardMaterial)
-        
+
       //SHADER VARIATION EXAMPLE:
       //Modify MeshStandard shader to make use of a custom colorizing function
       //  sampling operation:  R -> vertex color, G -> col1, B -> col2, FG.A -> FG-alpha-blend factor, BG.A -> ignored
       let material = libek.shader.buildVariantMaterial("standard", {
         map:some_ForegroundTexture,                                       //
-        bg:some_BackgroundTexture,                                        //                                      
+        bg:some_BackgroundTexture,                                        //
         bguv:"uv",                                                        // Background texture UV specification
         col1:new THREE.Color(`hsl(${Math.random()*360}, 75%, 25%)`),      // Constant color
         col2:new THREE.Color(`hsl(${Math.random()*360}, 100%, 50%)`),     // Another constant color
         roughness:0.6,                                                    // MeshStandard shader property
         metalness:0.1,                                                    // MeshStandard shader property
         sample:`                                                          // GLSL code defining the texture sampling function
-          vec4 mc = texture2D( map, vUv );                                
-          vec4 bc = texture2D( bg, bguv );                                
-          vec3 fgColor = vColor*mc.r + col1*mc.g + col2*mc.b;             
+          vec4 mc = texture2D( map, vUv );
+          vec4 bc = texture2D( bg, bguv );
+          vec3 fgColor = vColor*mc.r + col1*mc.g + col2*mc.b;
           vec3 bgColor = vColor*bc.r + col1*bc.g + col2*bc.b;
           sample = vec4(fgColor * mc.a + bgColor*(1.0-mc.a), 1.0);
         `
       })
-      
+
       managed vs unmanaged params:
-      
+
       VariantMaterial may be paramterized with either unmanaged or managed objects.  Unmanaged parameters are value-type parameters.  Managed parameters are
       reference-type paramters.  Use Managed parameters for shader paramaters that need to auto-update when altered.  Use uUnmanaged paramters for shader
       paramters that should be changed only manually.
-      
+
       NOTE:  "Unmanaged" THREE.js Objects used as shader parameters are intentionally cloned (to prevent them from acting like Managed Paramters).
   */
 var buildVariantMaterial = function(base, params) {
@@ -58,7 +58,7 @@ var buildVariantMaterial = function(base, params) {
   let float = {}
   let uvspec = {}
   let code = {}
-  
+
   let addParamTo = function(name, val, target) {
     for (let k in target) {
       if (target[k].equals && target[k].equals(val)) {
@@ -66,18 +66,18 @@ var buildVariantMaterial = function(base, params) {
       }
       if (target[k] == val) {
         return k
-      } 
+      }
     }
     target[name] = val
     return name
   }
-  
+
   let addParam = function(k, v, is_tt_param=false) {
     switch (typeof(v)) {
       case "object": {
         if (v.isTexture) {
           return addParamTo(k,v,textures)
-          //textures[k] = v          
+          //textures[k] = v
         }
         else if (v.isVector2) {
           return addParamTo(k,v,vec2)
@@ -110,7 +110,7 @@ var buildVariantMaterial = function(base, params) {
         else if (v.isManagedFloat) {
           return addParamTo(k,v,float)
         }
-        else if (v.isUVspec) {             
+        else if (v.isUVspec) {
           return addParamTo(k, v, uvspec)
 //            uvspec[k] = v
         }
@@ -122,7 +122,7 @@ var buildVariantMaterial = function(base, params) {
       break
       case "string": {
         if (is_tt_param) {
-          
+
         }
         else {
           switch(v) {
@@ -140,57 +140,57 @@ var buildVariantMaterial = function(base, params) {
       break
     }
   }
-  
+
   for (let k in params) {
     if (_MATOBJ_PARAMS.indexOf(k) == -1) {
       addParam(k,params[k])
     }
     //let v = params[k]
   }
-      
+
   let maintex
-  
+
   let uniforms = THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms)
   let vtx_init = ''
   let vtx_main = ''
   let frg_init = ''
-  for (let name in uvspec) {      
+  for (let name in uvspec) {
     let attrname = uvspec[name].attrname
     vtx_init = `${vtx_init}\nattribute vec2 ${attrname};\nvarying vec2 ${name};`
     vtx_main = `${vtx_main}\n${name} = ${attrname};`
-	  frg_init = `${frg_init}\nvarying vec2 ${name};`
-  }   
+    frg_init = `${frg_init}\nvarying vec2 ${name};`
+  }
   for (let name in textures) {
     switch(name) {
       case "map":
         maintex = textures[name]
       break
       default:
-	      frg_init = `${frg_init}\nuniform sampler2D ${name};`
-	    break
+        frg_init = `${frg_init}\nuniform sampler2D ${name};`
+      break
     }
     if (textures[name].isManagedParam) {
       uniforms[name] = textures[name]
     }
     else {
-	    //uniforms[name] = {value:textures[name].clone()}
-	    uniforms[name] = {value:textures[name]}
-	  }
-  } 
+      //uniforms[name] = {value:textures[name].clone()}
+      uniforms[name] = {value:textures[name]}
+    }
+  }
   for (let name in vec2) {
     switch(name) {
       default:
-  	    frg_init = `${frg_init}\nuniform vec2 ${name};`
-  	  break
-  	}
+        frg_init = `${frg_init}\nuniform vec2 ${name};`
+      break
+    }
     if (vec2[name].isManagedParam) {
       uniforms[name] = vec2[name]
     }
     else {
       uniforms[name] = {value:vec2[name].clone()}
     }
-  } 
-  
+  }
+
   for (let name in vec3) {
     switch(name) {
       case "diffuse":
@@ -200,7 +200,7 @@ var buildVariantMaterial = function(base, params) {
         frg_init = `${frg_init}\nuniform vec3 ${name};`
       break
     }
-    
+
     if (vec3[name].isManagedParam) {
       uniforms[name] = vec3[name]
     }
@@ -208,8 +208,8 @@ var buildVariantMaterial = function(base, params) {
       uniforms[name] = {value:vec3[name].clone()}
       //uniforms[name] = {value:vec3[name]}
     }
-  } 
-  
+  }
+
   for (let name in vec4) {
     frg_init = `${frg_init}\nuniform vec4 ${name};`
     if (vec4[name].isManagedParam) {
@@ -218,8 +218,8 @@ var buildVariantMaterial = function(base, params) {
     else {
       uniforms[name] = {value:vec4[name].clone()}
     }
-  } 
-  
+  }
+
   for (let name in color) {
     frg_init = `${frg_init}\nuniform vec3 ${name};`
     if (color[name].isManagedParam) {
@@ -228,14 +228,14 @@ var buildVariantMaterial = function(base, params) {
     else {
       uniforms[name] = {value:color[name].clone()}
     }
-  } 
+  }
   for (let name in float) {
     switch(name) {
       case "roughness":
       case "metalness":
       case "opacity":
       break
-      default:      
+      default:
         frg_init = `${frg_init}\nuniform float ${name};`
       break
     }
@@ -245,17 +245,17 @@ var buildVariantMaterial = function(base, params) {
     else {
       uniforms[name] = {value:float[name]}
     }
-  } 
-  
+  }
+
   for (let name in base.default) {
     if (!code[name]) {
       code[name] = base.default[name]
     }
   }
-      
+
   let vtxSHD = base.vshader.replace("$INIT", vtx_init).replace("$MAIN", vtx_main)
   let frgSHD = base.fshader.replace("$INIT", frg_init)
-  
+
   for (let k in code) {
     let prg = code[k]
     k = '$' + k
@@ -268,10 +268,10 @@ var buildVariantMaterial = function(base, params) {
   }
   //console.log(vtxSHD)
   //console.log(frgSHD)
-  
+
   let matparams = {
-    uniforms:uniforms, 
-    vertexShader:vtxSHD, 
+    uniforms:uniforms,
+    vertexShader:vtxSHD,
     fragmentShader:frgSHD,
     lights: true,
     vertexColors:THREE.VertexColors
@@ -279,27 +279,27 @@ var buildVariantMaterial = function(base, params) {
   if (params.side) {
     matparams.side = params.side
   }
-  
-  let mat = new THREE.ShaderMaterial(matparams)    
+
+  let mat = new THREE.ShaderMaterial(matparams)
   mat.transparent = params.transparent
-  
+
   if (maintex) {
     if (maintex.isManagedParam) {
       mat.map = maintex.value
     }
     else {
-  	  mat.map = maintex
-  	}
+      mat.map = maintex
+    }
  }
-  
-  
+
+
   return mat
 }
-  
+
 var builtinShaders = {
-  standard:{    
+  standard:{
     vshader:`
-      $INIT     
+      $INIT
       #define PHYSICAL
       varying vec3 vViewPosition;
       #ifndef FLAT_SHADED
@@ -317,7 +317,7 @@ var builtinShaders = {
       #include <logdepthbuf_pars_vertex>
       #include <clipping_planes_pars_vertex>
       void main() {
-        $MAIN 
+        $MAIN
         #include <uv_vertex>
         #include <uv2_vertex>
         #include <color_vertex>
@@ -388,11 +388,11 @@ var builtinShaders = {
         ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
         vec3 totalEmissiveRadiance = emissive;
         #include <logdepthbuf_fragment>
-        
+
         vec4 sample;
-        $sample;        
+        $sample;
         diffuseColor = mapTexelToLinear(sample);
-        
+
         #include <alphamap_fragment>
         #include <alphatest_fragment>
         #include <roughnessmap_fragment>
@@ -421,11 +421,11 @@ var builtinShaders = {
     }
   }
 }
-  
-var ManagedVec2 = function(arg) {        
+
+var ManagedVec2 = function(arg) {
   this.isManagedParam = true
   this.isVector2 = true
-  
+
   if (arg.isVector2) {
     this.value = arg
   }
@@ -434,10 +434,10 @@ var ManagedVec2 = function(arg) {
   }
 }
 
-var ManagedVec3 = function(arg) {        
+var ManagedVec3 = function(arg) {
   this.isManagedParam = true
   this.isVector3 = true
-  
+
   if (arg.isVector3) {
     this.value = arg
   }
@@ -445,10 +445,10 @@ var ManagedVec3 = function(arg) {
     this.value = new THREE.Vector3()
   }
 }
-var ManagedVec4 = function(arg) {        
+var ManagedVec4 = function(arg) {
   this.isManagedParam = true
   this.isVector4 = true
-  
+
   if (arg.isVector4) {
     this.value = arg
   }
@@ -456,10 +456,10 @@ var ManagedVec4 = function(arg) {
     this.value = new THREE.Vector4()
   }
 }
-var ManagedFloat = function(arg) {        
+var ManagedFloat = function(arg) {
   this.isManagedParam = true
   this.isManagedFloat = true
-  
+
   if (typeof(arg) == "number") {
     this.value = arg
   }
@@ -470,13 +470,13 @@ var ManagedFloat = function(arg) {
     this.value = 0
   }
 }
-var ManagedTexture = function(arg) {        
+var ManagedTexture = function(arg) {
   this.isManagedParam = true
-  this.isTexture = true    
+  this.isTexture = true
   this.value = arg
 }
-  
-var ManagedColor = function(arg) {        
+
+var ManagedColor = function(arg) {
   this.isManagedParam = true
   this.isColor = true
   if (typeof(arg) == "string") {
@@ -490,22 +490,22 @@ var ManagedColor = function(arg) {
   }
   else {
     this.value = new THREE.Color()
-  }    
-  
-  Object.defineProperty(this, 'r', { 
+  }
+
+  Object.defineProperty(this, 'r', {
     get: function() { return this.value.x },
     set: function(v) { this.value.x = v; }
   })
-  Object.defineProperty(this, 'g', { 
+  Object.defineProperty(this, 'g', {
     get: function() { return this.value.y },
     set: function(v) { this.value.y = v }
   })
-  Object.defineProperty(this, 'b', { 
+  Object.defineProperty(this, 'b', {
     get: function() { return this.value.z },
     set: function(v) { this.value.z = v }
   })
 }
-  
+
   /*  This is a more consistant handle for referencing Texture Coordinates by code that manipulates BufferGeometry objects and Shaders.
       This also is somewhat of a shim.
    */
@@ -514,8 +514,8 @@ var UVspec = function(name, attrname) {
   this.name = name ? name : "uv_" + getUID()
   this.attrname = attrname ? attrname : UV_ATTRIBUTE_PREFIX+this.name
 }
-  
-  //This is automatically prepended to custom UV spec names where appropriate, to allow the the mesh generator, the shader parameterizer, and the fragment 
+
+  //This is automatically prepended to custom UV spec names where appropriate, to allow the the mesh generator, the shader parameterizer, and the fragment
   //  shader to use the same name to reference logically associated data.
 var UV_ATTRIBUTE_PREFIX = "attr_"
 var _MATOBJ_PARAMS = ["side"]

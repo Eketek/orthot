@@ -9,9 +9,9 @@ This project is intended to be a re-implementation, extension, and Open-Sourcing
 The previous version is a discontinued commercial project which has since been made available free of charge.  It may be found at this address:
 http://orthot.eketech.com/___release.html
 
-# Current version:  
+# Current version:
 #0.3.0 (to be left-shifted to 3.0 after the project is ready for release)
 
-# Project status:  
+# Project status:
 Most of the game has successfully been implemented, though adding new puzzles requires the use of the level editor from previous version.
 

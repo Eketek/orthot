@@ -15,45 +15,45 @@ For both functions ("on" and "next"):
   If the last argument in the list is a function, then it gets separated fromt he list and treated as an Event listener callback.
   The rest of the arguments are a list of space-delimited strings and EventTargets.  If it finds any jquery objects, the unrelying DOM object gets unpacked and
   used as an EventTarget.  Each string gets split by space chars.
-  
+
   All String and EventTarget inputs are then processed in sequence.  If the first entry in the list is not an EventTarget, then the top-level html document
   will be used.  Strings which appear subsequently in the list get interpreted as event specifications (see below for details) to be applied to the EventTarget,
   until either the next EventTarget or the end of the list is reached.
 
-Event Specification: 
+Event Specification:
   <EventType>* - Listen for any named event
   <KeyboardEventType>:<buttons>* - Listen for a KeyboardEvent with a Key matching <buttons> (see below)
   .<Buttons> - Shorthand specification for a "keydown" KeyboardEvent with a Key matching any character literal present in <buttons>
         (except for ' ', which must be separated and spelled out)
   <Preset> - various keyboard and mouse buttons (see NEXT__DEFAULT_CONFIG.Presets)
-    
+
   (*) vname
-  Optionally, a virtual name *(event.vname) may be appended to any event specificaiton.  This is an alternate name that gets assigned to Event.vname property 
+  Optionally, a virtual name *(event.vname) may be appended to any event specificaiton.  This is an alternate name that gets assigned to Event.vname property
   to make it easier to distinguish events (particularly when events of differing types are combined into a single listener (such as listening for both mouse
   movement and keyboard arrow buttons in the same place)
   If not specified, a default vname is assigned:
-    for keyboard events, it will be whichever character from the event parameters was matched by Event.key, 
-    for mouse clicks, it will be the string that declared the event type (useful with the button-specific handling).  
-      (Mouse and keyboard event handling is not case sensitive, but will return a vname which reflects the input casing). 
+    for keyboard events, it will be whichever character from the event parameters was matched by Event.key,
+    for mouse clicks, it will be the string that declared the event type (useful with the button-specific handling).
+      (Mouse and keyboard event handling is not case sensitive, but will return a vname which reflects the input casing).
     for anything else, this will be the EventType.
-    
+
 There is also a special preset named "release", which [attempts to] match an input button-down/click event with an expected button-up/release event.  This is
 intended to make it a lot easier to implement User-configurable buttons.
 The general format for this is as follows:
   release:<type>*<vname>
   <type> is a key or mousebutton or preset indicator (this may even be a <whatever>_down indicator).
   *<vname> just a vname -- if not specified, defaults to "release", regardless of what any referenced presets use.
-    
+
 Universal mouse tracking:
   For all events that pass through NextEvent, if the "request target" is a DOM element, the local mouse position (relative to the request target) is added
   to the event.  Properties will be Event.reqtargetX and Event.reqtargetY.
-  
+
   recent_mevt:       Most recent mousemove event
   reqtarget_bounds:  requestTarget.getBoundingClientRect()
   Event.reqtargetX:  recent_mevt.pageX - window.scrollX - reqtarget_bounds.x,
   Event.reqtargetY:  recent_mevt.pageY - window.scrollY - reqtarget_bounds.y,
-    
-usage:    
+
+usage:
 
   // Wait until the mouse cursor moves
   await next("mousemove")
@@ -89,7 +89,7 @@ usage:
   handler = new NextEventManager()
   handler.persistent = true
 
-  // Have the handler listen for clicks, wait for three of them to be passed back, then set it to listen for a right click and wait for one, 
+  // Have the handler listen for clicks, wait for three of them to be passed back, then set it to listen for a right click and wait for one,
   // then programatically cancel it.
   await handler.next("click")
   await handler.next()
@@ -104,17 +104,17 @@ usage:
 
 var NEXT__DEFAULT_CONFIG = {
 
-  // Initial EventTarget to listen to each time next() is called 
+  // Initial EventTarget to listen to each time next() is called
   MainEventTarget:document,
-  
+
   // separator characters for parsing event specifications.
   EventEntrySeparator:' ',    // separate individual event entries within an event specfication
   EventDataSeparator:':',     // separates event name from pseudo-event arguments
   EventVnameSeparator:'*',    // separates a vname assignment from pseudo-event arguments
-  
+
   // Event handling presets for targetting individual buttons.
-  //   To reduce the amount of code, copies of a preset which differ only by name are combined and separated back out at runtime.  
-  //     If present, *<whatever> is appended to each entry, 
+  //   To reduce the amount of code, copies of a preset which differ only by name are combined and separated back out at runtime.
+  //     If present, *<whatever> is appended to each entry,
   //     If present, ?<whatever> is appended to duplicates of each entry
   //
   //   Preset properties:
@@ -129,68 +129,68 @@ var NEXT__DEFAULT_CONFIG = {
   //         If "arg", use Event params (common case)
   //         If "setting", use the exact name of the preset. (semi-common - used for named/special keys)
   //         If "name", use the string which matched the preset (unused, probably not necessesary)
-  //         Otherwise, use preset.key directly 
+  //         Otherwise, use preset.key directly
   //  ignore_keycase - [for keyboard] If true, letter casing is ignored when comparing Event.key with the specified key(s)
   //  exact - [for keyboard] forces a the Event.key-specified key comparison to buse 'evtkey==key' instead of 'key.indexOf(evtkey) != -1'
-  Presets:{     
-    "lclick,leftclick,lmb,mb1,mousebutton1":{eventtype:"mousedown", button:0, vname:"name"},    
-    "mclick,middleclick,mmb,mb2,mousebutton2":{eventtype:"mousedown", button:1, vname:"name"},    
-    "rclick,rightclick,rmb,mb3,mousebutton3":{eventtype:"mousedown", button:2, vname:"name"},    
-    "mb4,mousebutton4":{eventtype:"click", button:3, vname:"name"},    
+  Presets:{
+    "lclick,leftclick,lmb,mb1,mousebutton1":{eventtype:"mousedown", button:0, vname:"name"},
+    "mclick,middleclick,mmb,mb2,mousebutton2":{eventtype:"mousedown", button:1, vname:"name"},
+    "rclick,rightclick,rmb,mb3,mousebutton3":{eventtype:"mousedown", button:2, vname:"name"},
+    "mb4,mousebutton4":{eventtype:"click", button:3, vname:"name"},
     "mb5,mousebutton5":{eventtype:"click", button:4, vname:"name"},
-    
-    "left,lmb,mb1,mousebutton1 *_click":{eventtype:"mousedown", button:0, vname:"name"},    
-    "middle,mmb,mb2,mousebutton2 *_click":{eventtype:"mousedown", button:1, vname:"name"},    
-    "right,rmb,mb3,mousebutton3 *_click":{eventtype:"mousedown", button:2, vname:"name"},    
-    "mb4,mousebutton4 *_click":{eventtype:"click", button:3, vname:"name"},    
-    "mb5,mousebutton5 *_click":{eventtype:"click", button:4, vname:"name"},    
-    
-    "left,lmb,mb1,mousebutton1 *_down":{eventtype:"mousedown", button:0, vname:"name"},    
-    "middle,mmb,mb2,mousebutton2 *_down":{eventtype:"mousedown", button:1, vname:"name"},    
-    "right,rmb,mb3,mousebutton3 *_down":{eventtype:"mousedown", button:2, vname:"name"},    
-    "mb4,mousebutton4 *_down":{eventtype:"mousedown", button:3, vname:"name"},    
-    "mb5,mousebutton5 *_down":{eventtype:"mousedown", button:4, vname:"name"},    
-    
-    "left,lmb,mb1,mousebutton1 *_up":{eventtype:"mouseup", button:0, vname:"name"},    
-    "middle,mmb,mb2,mousebutton2 *_up":{eventtype:"mouseup", button:1, vname:"name"},    
-    "right,rmb,mb3,mousebutton3 *_up":{eventtype:"mouseup", button:2, vname:"name"},    
-    "mb4,mousebutton4 *_up":{eventtype:"mouseup", button:3, vname:"name"},    
+
+    "left,lmb,mb1,mousebutton1 *_click":{eventtype:"mousedown", button:0, vname:"name"},
+    "middle,mmb,mb2,mousebutton2 *_click":{eventtype:"mousedown", button:1, vname:"name"},
+    "right,rmb,mb3,mousebutton3 *_click":{eventtype:"mousedown", button:2, vname:"name"},
+    "mb4,mousebutton4 *_click":{eventtype:"click", button:3, vname:"name"},
+    "mb5,mousebutton5 *_click":{eventtype:"click", button:4, vname:"name"},
+
+    "left,lmb,mb1,mousebutton1 *_down":{eventtype:"mousedown", button:0, vname:"name"},
+    "middle,mmb,mb2,mousebutton2 *_down":{eventtype:"mousedown", button:1, vname:"name"},
+    "right,rmb,mb3,mousebutton3 *_down":{eventtype:"mousedown", button:2, vname:"name"},
+    "mb4,mousebutton4 *_down":{eventtype:"mousedown", button:3, vname:"name"},
+    "mb5,mousebutton5 *_down":{eventtype:"mousedown", button:4, vname:"name"},
+
+    "left,lmb,mb1,mousebutton1 *_up":{eventtype:"mouseup", button:0, vname:"name"},
+    "middle,mmb,mb2,mousebutton2 *_up":{eventtype:"mouseup", button:1, vname:"name"},
+    "right,rmb,mb3,mousebutton3 *_up":{eventtype:"mouseup", button:2, vname:"name"},
+    "mb4,mousebutton4 *_up":{eventtype:"mouseup", button:3, vname:"name"},
     "mb5,mousebutton5 *_up":{eventtype:"mouseup", button:4, vname:"name"},
-        
+
     "Escape,Alt,Control,Shift,CapsLock,Tab,Backspace,Delete,Insert,Enter,Home,End,PageUp,PageDown,ArrowUp,ArrowDown,ArrowLeft,ArrowRight,F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12 ?_down":
         {eventtype:"keydown", key:"setting", vname:"name", exact:true, target:document},
-        
+
     "Escape,Alt,Control,Shift,CapsLock,Tab,Backspace,Delete,Insert,Enter,Home,End,PageUp,PageDown,ArrowUp,ArrowDown,ArrowLeft,ArrowRight,F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12 *_up":
         {eventtype:"keyup", key:"setting", vname:"name", exact:true, target:document},
     "Space ?_down":{eventtype:"keydown", key:" ", vname:"name", target:document},
     "Space *_up":{eventtype:"keyup", key:" ", vname:"name", target:document},
-    
+
     "arrows,arrows_down":{eventtype:"keydown", key:"list", keylist:["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"], vname:"matched", target:document},
     "arrows_up":{eventtype:"keyup", key:"list", keylist:["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"], vname:"matched", target:document},
-    
+
     "release":{eventtype:"*up", vname:"release"},
-    
+
     "":{eventtype:"keydown", key:"arg", vname:"matched", ignore_keycase:true, target:document },
-    
+
     keydown:{eventtype:"keydown", key:"arg", vname:"matched", ignore_keycase:true, target:document},
     keyup:{eventtype:"keyup", key:"arg", vname:"matched", ignore_keycase:true, target:document},
   },
-  
+
   Release:{
     mousedown:"mouseup",
     click:"mouseup",
     keydown:"keyup"
   },
-  
+
   // Define handling for the simplest event specifications ( "a" -> "A" button down, " _up" -> Space button released)
   SingleCharPreset:{eventtype:"keydown", key:"name", vname:"matched", ignore_keycase:true, target:document},
   SingleCharDownPreset:{eventtype:"keydown", key:"name", vname:"matched", ignore_keycase:true, target:document},
   SingleCharUpPreset:{eventtype:"keyup", key:"name", vname:"matched", ignore_keycase:true, target:document},
-  
+
   // Used to determine whether or not to look at event.key for a keyboard event or event.button for a mouse event
   UsesKeyboard:{ keyup:true, keydown:true, keypressed:true },
   UsesMouseButtons:{ click:true, mousedown:true, mouseup:true },
-  
+
   Alphanumeric:"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 }
 
@@ -204,24 +204,24 @@ NEXT__DEFAULT_CONFIG.MainEventTarget.addEventListener("mousemove", (evt)=>{
 
 var NextEventManager = function() {
   let cfg = NEXT__DEFAULT_CONFIG
-  
-  // Set this to true if the EventManager should retain its EventListeners when invoked (this is for setting up callbacks) 
+
+  // Set this to true if the EventManager should retain its EventListeners when invoked (this is for setting up callbacks)
   this.persistent = false;
-  
-  // Set to true if the top-level document object is the preffered EventTarget for all keyboard events 
+
+  // Set to true if the top-level document object is the preffered EventTarget for all keyboard events
   //  (This is intended to for use with universal mouse tracking if when multiple DOM elements are in use)
-  this.useEventTargetOverrides = false    
-  
+  this.useEventTargetOverrides = false
+
   // expand shorthand presets
   let _presets = {}
   if (!cfg.PROCESSED) {
     cfg.PROCESSED = true
     for (let k in cfg.Presets) {
       let parts = k.split(' ', 2)
-      
+
       let suffix = ""
       let suffix_optional = false
-      
+
       if (parts.length == 2) {
         suffix = parts[1]
         if (suffix[0] == '*') {
@@ -232,20 +232,20 @@ var NextEventManager = function() {
           suffix = suffix.slice(1)
         }
       }
-      
+
       parts = parts[0].split(',')
-      for (let name of parts) {   
-        let lc_name = name.toLowerCase() 
-        
-        let presetCopy = Object.assign( {}, cfg.Presets[k] )            
+      for (let name of parts) {
+        let lc_name = name.toLowerCase()
+
+        let presetCopy = Object.assign( {}, cfg.Presets[k] )
         presetCopy.settingName = name+suffix
         _presets[lc_name+suffix] = presetCopy
-        
+
         if (suffix_optional) {
           let alt_presetCopy = Object.assign( {}, cfg.Presets[k] )
           alt_presetCopy.settingName = name
           _presets[lc_name] = alt_presetCopy
-        }      
+        }
       }
     }
     cfg.Presets = _presets
@@ -267,7 +267,7 @@ var NextEventManager = function() {
     else {
       pr = cfg.Presets[lc_evttype]
     }
-    
+
     if (pr == undefined) {
       if (cfg.Alphanumeric.indexOf(lc_evttype[0]) == -1) {
         pr = cfg.SingleCharPreset
@@ -275,22 +275,22 @@ var NextEventManager = function() {
     }
     return pr
   }
-  
+
   //console.log(cfg)
-  
+
   this.RECV = undefined
   let cmd
   let evt_info = []
-  
+
   // send an arbitrary message to the listener
-  this.sendMSG = function(MSG) {    
+  this.sendMSG = function(MSG) {
     if (this.RECV) {
       this.RECV(MSG)
     }
   }
-  
+
   // cancel the event handler and optionally send an arbitrary message to the listener
-  this.cancel = function(cancelMSG) {    
+  this.cancel = function(cancelMSG) {
     for (let entry of evt_info) {
       entry[0].removeEventListener(entry[1], entry[2])
     }
@@ -300,18 +300,18 @@ var NextEventManager = function() {
       this.RECV(cancelMSG)
     }
   }
-  
+
   let out = (function(_evt, reqTarget) {
-  
-    // if the event target is a DOM object, but the preset dictates that the event had to be obtained from something else, 
-    //  add the local mouse position [relative to the "request-target" DOM element]   ("Event.reqtargetX"and "Event.reqtargetY") 
+
+    // if the event target is a DOM object, but the preset dictates that the event had to be obtained from something else,
+    //  add the local mouse position [relative to the "request-target" DOM element]   ("Event.reqtargetX"and "Event.reqtargetY")
     if (reqTarget.getBoundingClientRect) {
       let tvb = reqTarget.getBoundingClientRect()
-      _evt.reqtargetX = mpvx-tvb.x      
+      _evt.reqtargetX = mpvx-tvb.x
       _evt.reqtargetY = mpvy-tvb.y
       //console.log("ADDED LOCAL MOUSE POSITION", [_evt.reqtargetX, _evt.reqtargetY], [_evt.clientX, _evt.clientY], "TO EVENT", _evt)
     }
-    
+
     if (cmd) {
       if (this.RECV) {
         this.RECV(cmd(_evt))
@@ -327,14 +327,14 @@ var NextEventManager = function() {
       this.cancel()
     }
   }).bind(this);
-  
+
   this.on = function(... args) {
     args = flatten(args)
     let req_target = cfg.MainEventTarget
     if (evt_info.length != 0) {
       this.cancel()
     }
-    
+
     cmd = args[args.length-1]
     if (typeof(cmd) == "function") {
       args.pop()
@@ -342,7 +342,7 @@ var NextEventManager = function() {
     else {
       cmd = undefined
     }
-    
+
     for (let i = 0; i < args.length; i++) {
       let arg = args[i]
       //let test = undefined
@@ -354,19 +354,19 @@ var NextEventManager = function() {
           // If a jquery object, unwrap it...  Does jquery wrap anything other than DOM elements?
           if (arg.jquery && (arg.length > 0)) {
             arg = arg[0]
-          }          
+          }
           //It is EventTarget enough if it has addEventListener()
           if (arg.addEventListener) {
             req_target = arg
           }
-        break        
+        break
         case "string":
           let entries = arg.split(cfg.EventEntrySeparator)
           for (let j = 0; j < entries.length; j++) {
             let _req_target = req_target
             let entry = entries[j]
-            
-            // Hack to allow " *exit" to be handled as "Space*exit" 
+
+            // Hack to allow " *exit" to be handled as "Space*exit"
             //    (and thus to allow a vname override to be included in a single-char shorthand for the space key)
             if (entry == "") {
               if (j == entries.length-1) {
@@ -377,27 +377,27 @@ var NextEventManager = function() {
             }
             let parts = entry.split(cfg.EventVnameSeparator,2)
             let vname = parts[1]
-            
-            parts = parts[0].split(cfg.EventDataSeparator,2)            
+
+            parts = parts[0].split(cfg.EventDataSeparator,2)
             let evttype = parts[0]
             let evtparams = parts[1]
-            
+
             let lc_evttype = evttype.toLowerCase()
             //let evtparams = evttype
-            
+
             let preset = getPreset(evttype, lc_evttype)
-               
+
             let listener
             let actual_evttype, actual_button, actual_key
-            
+
             let actual_evttarget = _req_target
-            
+
             // If a preset is matched, use a pre-defined event handler
             if (preset) {
               actual_evttype = preset.eventtype
               actual_button = preset.button
               actual_key = preset.key
-              
+
               if (actual_evttype == "*up") {
                 if (vname == undefined) {
                   vname = preset.vname
@@ -432,14 +432,14 @@ var NextEventManager = function() {
               }
               let uses_keyboard = cfg.UsesKeyboard[actual_evttype]
               let uses_mousebtns = cfg.UsesMouseButtons[actual_evttype]
-              
+
               listener = function(evt) {
                 //let _test = test
                 let listenkey
                 let evtkey
                 let matched
                 let _listenkey
-                // If a keypress event, compare the Event.key with the key or keyset defined by the preset 
+                // If a keypress event, compare the Event.key with the key or keyset defined by the preset
                 if (uses_keyboard) {
                   evtkey = evt.key
                   if (preset.key == "arg") {
@@ -464,13 +464,13 @@ var NextEventManager = function() {
                     listenkey = actual_key
                   }
                   _listenkey = listenkey
-                              
+
                   if (listenkey || evtparams) {
                     if (preset.ignore_keycase) {
                       evtkey = evtkey.toLowerCase()
                       listenkey = listenkey.toLowerCase()
                     }
-                    
+
                     if (preset.exact) {
                       if (listenkey == evtkey) {
                         matched = _listenkey
@@ -479,12 +479,12 @@ var NextEventManager = function() {
                         return
                       }
                     }
-                    else if (evtkey.length == 1) { 
+                    else if (evtkey.length == 1) {
                       if ( !listenkey || (listenkey.indexOf(evtkey) == -1 ) ) {
                         return
                       }
                       else {
-                        let mi = listenkey.indexOf(evtkey)                       
+                        let mi = listenkey.indexOf(evtkey)
                         matched = _listenkey.substring(mi, mi+evtkey.length)
                       }
                     }
@@ -492,11 +492,11 @@ var NextEventManager = function() {
                       return
                     }
                   }
-                  
+
                   // If no listenkey was defined by the preset no params where passed in, use generic event handling as a fallback
                   else if (!matched) {
                     matched = evttype
-                  }                 
+                  }
                 }
                 // If a mouseclick event, compare Event.button with preset.button
                 else if (uses_mousebtns) {
@@ -510,7 +510,7 @@ var NextEventManager = function() {
                 //if (_test && !_test(evt)) {
                 //  return
                 //}
-                
+
                 if (vname) {
                   evt.vname = vname
                 }
@@ -520,7 +520,7 @@ var NextEventManager = function() {
                 else if (preset.vname == "arg") {
                   evt.vname = evtparams
                 }
-                else if (preset.vname == "matched") {                  
+                else if (preset.vname == "matched") {
                   evt.vname = matched
                 }
                 else if (preset.vname == "setting") {
@@ -529,19 +529,19 @@ var NextEventManager = function() {
                 else {
                   evt.vname = preset.vname
                 }
-                out(evt, _req_target) 
-              }              
+                out(evt, _req_target)
+              }
             }
-            
+
             // If not preset, use a generic event handler
             else {
               actual_evttype = evttype
               let uses_keyboard = cfg.UsesKeyboard[actual_evttype]
               let uses_mousebtns = cfg.UsesMouseButtons[actual_evttype]
-              
+
               listener = function(evt) {
                 //let _test = test
-                                
+
                 //if (_test && !_test(evt)) {
                 //  return
                 //}
@@ -551,19 +551,19 @@ var NextEventManager = function() {
                 else {
                   evt.vname = evttype
                 }
-                out(evt, _req_target)          
-              }              
+                out(evt, _req_target)
+              }
             }
-            
+
             //console.log([_req_target, actual_evttype, listener, preset])
             evt_info.push([_req_target, actual_evttype, listener])
             actual_evttarget.addEventListener(actual_evttype, listener)
-          }    
+          }
         break
       }
     }
   }
-  
+
   this.next = async function(... args) {
     if (args.length != 0) {
       this.on(args)
@@ -577,7 +577,7 @@ var NextEventManager = function() {
 
 }
 
-// recursively un-nest an array and return it.  
+// recursively un-nest an array and return it.
 var flatten = function(arr, levels=1000) {
   let r = []
   let doFlatten = function(arr, level) {
@@ -598,11 +598,11 @@ var flatten = function(arr, levels=1000) {
   }
   return r
 }
- 
+
 /* Capture the first matching event and pass it to code which is suspended by await.
    OR
    Capture the first matching event and pass it to a transient event listener (callback).
-   
+
    If the last argument is a function, then the last argument is the transient event listener callback.
    If a transient event listener is present, the triggering event will be passed to the event listener, then the event listener's output will be passed
     back to any code suspended by an await keyword.
@@ -615,7 +615,7 @@ var next = window.next = async function(... args) {
 }
 
 /* Set up a persistant event handler.
-   
+
    All triggering events will be passed to the event listener.
    This returns a the event handler (which may be used to cancel the event)
 */

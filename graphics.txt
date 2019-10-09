@@ -1,7 +1,7 @@
-Orthot III uses a minimalistic graphics style.  Textured boxes for terrain and untextured low-poly models for objects.  
+Orthot III uses a minimalistic graphics style.  Textured boxes for terrain and untextured low-poly models for objects.
 
 Terrain Texturing
-Terrain is textured through a somewhat complex (but easily adjusted) process.  
+Terrain is textured through a somewhat complex (but easily adjusted) process.
 
 Terrain textures are sets of square tiles (which the terrain system selects from on a per-cube/per-face basis).
 
@@ -9,24 +9,24 @@ There are two terrain textures.  One is a background pattern which gets repeated
 of terrain edge (which gets selected based on what the adjacent terrain blocks are).
 
 The forground terrain texture is laid out in a binary pattern representing the boundaries with 8 neighboring tiles.  Tiles are indexed by in row-major-order.
-Each neighbor is represented by a bit in this order:  [upper-left, upper, upper-right, right, lower-right, lower, lower-left, left].  A bit value of 0 
-represents an opening between neighboring tiles.  A bit value of 1 represents a boundary between neighboring tiles.  The bits are combined to generate a tile 
+Each neighbor is represented by a bit in this order:  [upper-left, upper, upper-right, right, lower-right, lower, lower-left, left].  A bit value of 0
+represents an opening between neighboring tiles.  A bit value of 1 represents a boundary between neighboring tiles.  The bits are combined to generate a tile
 index (which internally is converted to per-face texture coordinates).    (Or, to be a bit less technical, use [textures/wall_8bit_fg.png] as a template for
 terrain forground graphics).  A terrain foreground texture can also include any number of tilesets (this is just a matter of configuring the terrain mesh
 generator for it).
 
-At some point, it will also be possible to define terrains with 4-bit boundaries (NESW), terrains which only have one boundary (UP), and very simple terrains 
+At some point, it will also be possible to define terrains with 4-bit boundaries (NESW), terrains which only have one boundary (UP), and very simple terrains
 which don't have boundaries (just background + overlay).  .
 
-Input textures are not rendered directly.  Instead the red, green, and blue color components are used to generate a blending of three colors specified by the 
+Input textures are not rendered directly.  Instead the red, green, and blue color components are used to generate a blending of three colors specified by the
 terrain rendering system (two of them are fixed shader properties and the other is a per-terrain color (a vertex color)).  Typical terrain texture will consist
-solely of red, green, and blue pixels set at various levels (resulting in blending the mixer colors only with black).  Any pixels with non-zero valus in 
+solely of red, green, and blue pixels set at various levels (resulting in blending the mixer colors only with black).  Any pixels with non-zero valus in
 multiple channels will result in an additive blending of the mixer colors.
 
 
-In general, artwork contributions to the Orthot III will only be accepted into the *main graphics set if they are visually consistant with existing artwork.  
-(should attempt to keep details at about the same scale, stick with low-poly models, and don't get too radical with texturing).  Partly this is for visual 
-consistancy, and partly, this is to ensure that the graphics can be extended without having to add graphics which look out-of-place and without having to 
+In general, artwork contributions to the Orthot III will only be accepted into the *main graphics set if they are visually consistant with existing artwork.
+(should attempt to keep details at about the same scale, stick with low-poly models, and don't get too radical with texturing).  Partly this is for visual
+consistancy, and partly, this is to ensure that the graphics can be extended without having to add graphics which look out-of-place and without having to
 rely upon a skilled artist.
 
 (*) Ability to load other graphics presently is only a planned feature.

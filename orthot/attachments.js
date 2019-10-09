@@ -21,7 +21,7 @@ var Ladder = function(align, color) {
     }
     return r
   }
-  
+
   Object.assign(this, align)
 }
 
@@ -39,7 +39,7 @@ var Portal = function(align, color, pclass, pname, ptarget) {
     }
     return r
   }
-  
+
   Object.assign(this, align)
 }
 
@@ -54,8 +54,8 @@ var Icefloor = function(align) {
 }
 
 /* Buttons send signals when pressed and released.
-   Buttons may be pressed directly by pushing and pressed indirectly through shearing forces. 
-   
+   Buttons may be pressed directly by pushing and pressed indirectly through shearing forces.
+
    Button "animation" is a lazy hack because buttons are the only planned side-attached puzzle element that needs to be animated.
 */
 var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
@@ -73,15 +73,15 @@ var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
       this.minForce = Strength.HARD
       break
   }
-  
+
   // send press and release signals when the button is pressed or released
   //  This uses deferred actions to only sign
   let prevpressed = false
   let pressed = false
   let presser
-  
+
   this.push = function(force) {
-    if (force.strength >= this.minForce) {      
+    if (force.strength >= this.minForce) {
       presser = force.OBJ
       if (!pressed) {
         pressed = true
@@ -92,7 +92,7 @@ var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
       this.relax(force)
     }
   }
-  this.stress = function(force, shearstrength) {    
+  this.stress = function(force, shearstrength) {
     if ( shearstrength >= this.minForce ) {
       presser = force.OBJ
       if (!pressed) {
@@ -114,7 +114,7 @@ var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
       }
     }
   }
-    
+
   this.sendSignal = (function() {
     if (pressed != prevpressed) {
       if (pressed) {
@@ -136,7 +136,7 @@ var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
       prevpressed = pressed
     }
   }).bind(this)
-  
+
   this.mdlgen = function() {
     let mdl = getAsset(orthotCTL.assets, mdlname)
     mdl.position.y = 0
@@ -147,13 +147,13 @@ var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
     let r = new THREE.Object3D()
     r.add(mdl)
     return r
-  }  
+  }
   this.mdlungen = function(mdl) {
     let i = models.indexOf(mdl)
     if (i != -1) {
       models.splice(i, 1)
     }
-  }  
+  }
   Object.assign(this, align)
 }
 

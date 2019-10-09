@@ -28,7 +28,7 @@ var sviewCTL
 //Level data, high-level state, and "Orthot" functions
 var orthotCTL = window.octl = {
   assets:{},
-  tiles:{},  
+  tiles:{},
   version:"0.3.0",
   event:new EventTarget()
 }
@@ -36,24 +36,24 @@ var orthotCTL = window.octl = {
 
 $(async function() {
 
-  initLIBEK() 
-  
+  initLIBEK()
+
   let disp_elem = $("#game").attr("tabindex", "0").get(0)
-  disp_elem.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )  
+  disp_elem.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )
   disp_elem.focus()
   renderCTL.display = Display(disp_elem, true)
-  
+
   //renderCTL.display.renderer.setClearColor( "blue", 0.1 )
   //console.log(renderCTL)
-  
+
   let TextureProps = {
     magFilter:THREE.NearestFilter,
     anisotropy:4,
   }
-  
+
   let MAIN_ZONES = {}
-  
-  await loadMuch( 
+
+  await loadMuch(
     orthotCTL.assets,
     {url:"assets/textures/patterns.png", properties:TextureProps},
     {url:"assets/textures/wall_8bit_fg.png", properties:TextureProps},
@@ -61,27 +61,27 @@ $(async function() {
   )
   await loadZIP(orthotCTL.assets, 'assets/models.zip')
   await loadZIP(MAIN_ZONES, 'assets/ekvxdat.zip')
-  
+
   orthotCTL.tiles.key = {
     source:orthotCTL.assets.symbols.image,
     x:0, y:0, w:64, h:64
   }
-    
+
   let UI_TILEGRAPHIC_SIZE = [32,32]
   let UI_TILEGRAPHIC_OFFSET = [0, 0]
   let UI_TILESHADOW_SIZE = 8
   let UI_TILESHADOW_OFFSET = [5,3]
   let UI_TILE_SIZE = [37,35]
-    
+
   renderCTL.fg = new ManagedColor("yellow")
   renderCTL.bg1 = new ManagedColor("orange")
   renderCTL.bg2 = new ManagedColor("green")
-         
+
   renderCTL.vxlMAT = buildVariantMaterial("standard", {
-    map:orthotCTL.assets.wall_8bit_fg, 
+    map:orthotCTL.assets.wall_8bit_fg,
     bkgtex:orthotCTL.assets.patterns,
     uv2:renderCTL.uv2,
-    roughness:0.76, 
+    roughness:0.76,
     metalness:0.05,
     sample:tt`
       vec4 mc = texture2D( map, vUv );
@@ -91,9 +91,9 @@ $(async function() {
       sample = vec4(fgColor * mc.a + bgColor*(1.0-mc.a), 1.0);
     `
   })
-  
+
   let manmats = ["hsl(25, 80%, 60%)", "blue", "hsl(15, 100%, 15%)", "black", {color:"black", metalness:1}, {color:"white", emissive:"yellow", emissiveIntensity:1}]
-  
+
   assignMaterials(orthotCTL.assets.man, manmats)
   assignMaterials(orthotCTL.assets.man2, manmats)
   assignMaterials(orthotCTL.assets.man_walk, manmats)
@@ -107,32 +107,32 @@ $(async function() {
   assignMaterials(orthotCTL.assets.man_slide3, manmats)
   assignMaterials(orthotCTL.assets.man_slide4, manmats)
   assignMaterials(orthotCTL.assets.man_slide5, manmats)
-  
+
   let flag = getAsset(orthotCTL.assets, "FlagPlain")
   storeAsset(orthotCTL.assets, "flag", flag)
   assignMaterials(flag, ["brown", "white"])
-  
+
   assignMaterials(orthotCTL.assets.scene_portal, {color:"yellow", emissive:"yellow", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
   assignMaterials(orthotCTL.assets.EndBlock, {color:"yellow", emissive:"yellow", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
   orthotCTL.assets.EndBlock.children[0].scale.x *= -1
-  
+
   assignMaterials(orthotCTL.assets.portal_pane, "white", "yellow", {color:"blue", transparent:true, opacity:0.25}, "white" )
   assignMaterials(orthotCTL.assets.pushblock, ["white", "red", "black"])
   assignMaterials(orthotCTL.assets.lock, ["white", "black"])
-  assignMaterials(orthotCTL.assets.crate, ["hsl(20, 100%, 50%)", "black", "hsl(25, 90%, 25%)", "hsl(22, 100%, 55%)" ])  
+  assignMaterials(orthotCTL.assets.crate, ["hsl(20, 100%, 50%)", "black", "hsl(25, 90%, 25%)", "hsl(22, 100%, 55%)" ])
   assignMaterials(orthotCTL.assets.iceblock, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}])
   assignMaterials(orthotCTL.assets.icefloor, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}, "black"])
-  assignMaterials(orthotCTL.assets.mouse, ["hsl(20, 100%, 50%)", "hsl(0, 100%, 70%)", {color:"green", emissive:"green", emissiveIntensity:1}, "hsl(30, 100%, 20%)"]) 
-  assignMaterials(orthotCTL.assets.moose, ["hsl(20, 100%, 50%)", "black", "hsl(30, 100%, 20%)", {color:"red", emissive:"red", emissiveIntensity:1}]) 
-  
+  assignMaterials(orthotCTL.assets.mouse, ["hsl(20, 100%, 50%)", "hsl(0, 100%, 70%)", {color:"green", emissive:"green", emissiveIntensity:1}, "hsl(30, 100%, 20%)"])
+  assignMaterials(orthotCTL.assets.moose, ["hsl(20, 100%, 50%)", "black", "hsl(30, 100%, 20%)", {color:"red", emissive:"red", emissiveIntensity:1}])
+
   let markmats = [{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
   let cursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
-  
+
   assignMaterials(orthotCTL.assets.CubeMark, markmats)
   assignMaterials(orthotCTL.assets.FaceMark, markmats)
   assignMaterials(orthotCTL.assets.CubeCursor, cursormats)
   assignMaterials(orthotCTL.assets.FaceCursor, cursormats)
-    
+
   inputCTL.keystate = new QueryTriggeredButtonControl({
     buttons:".wasd arrows space",
     readheldbuttons:true,
@@ -143,7 +143,7 @@ $(async function() {
     }
   })
   inputCTL.keystate.run()
-    
+
   sviewCTL = window.sctl = new SceneviewController({
     camtarget:new THREE.Vector3(0,0,0),
     display:renderCTL.display,
@@ -154,14 +154,14 @@ $(async function() {
     UpdcamUpdatepickplane:true,
     followspeed:1/60,
     campos_maxphi:Math.PI * 0.85,
-    
+
     OrbitTargetMBTN:"rmb",
-    ChaseTargetMBTN:"lmb",    
+    ChaseTargetMBTN:"lmb",
     RefocusTargetMBTN:"mmb",
     RefocusUpdatepickplane:true,
     RefocusLen:700,
     QuickRefocusLen:150,
-    
+
     tpmode_fov:60,
     fpmode_fov:75,
     fpmode_enabled:true,
@@ -172,17 +172,17 @@ $(async function() {
         orthotCTL.ActiveZone.setFPmode(fpmode_on, fpmode_moused)
       }
     }
-  })    
+  })
   sviewCTL.run()
-  
+
   let levelSelector = $("#loadPuzzle")[0]
-    
+
 
   orthotCTL.loadScene = function(arg, loc) {
     let ekvx = arg
     if (typeof(arg) == "string") {
       ekvx = orthotCTL.gdatapack.zones[arg]
-      if (ekvx == undefined) {  
+      if (ekvx == undefined) {
         console.log(`No puzzle named "${arg}" to load...  Loading the default (MainArea)`)
         arg = orthotCTL.gdatapack.mainAreaname
         ekvx = orthotCTL.gdatapack.zones[arg]
@@ -198,7 +198,7 @@ $(async function() {
     }
     orthotCTL.ActiveZone = new Zone(ekvx, loc, arg)
     renderCTL.display.scene.add(orthotCTL.ActiveZone.scene)
-    
+
     for (let i = 0; i < levelSelector.length; i++) {
       if (levelSelector.options[i].value == arg) {
         levelSelector.selectedIndex = i
@@ -207,7 +207,7 @@ $(async function() {
     }
     levelSelector.selectedIndex = -1
   }
-  
+
   let loadProgress = function() {
     let prgdata = window.localStorage["progress."+orthotCTL.gdatapack.name]
     if (prgdata) {
@@ -238,11 +238,11 @@ $(async function() {
     if (code == "") {
       return true
     }
-    
+
     // Orthot II accepted a wide range of separators (due to codes being a manually input field):  "-,:;|", as well as newline and formfeed
     //  It also accepted a space, but only for the command (spaces are valid in puzzle names)
     //  The min and max options further complicated this.
-    let args, codes 
+    let args, codes
     let sepOption = function(s) {
       let idx = s.search(/[ ,:;|\n\r\-]/)
       if (idx == -1) {
@@ -266,7 +266,7 @@ $(async function() {
       switch (command) {
         case "any":
           sepCodes()
-          for (let i = 0; i < codes.length; i++) {      
+          for (let i = 0; i < codes.length; i++) {
             if (orthotCTL.gdatapack.progress[codes[i]]) {
               return true
             }
@@ -306,14 +306,14 @@ $(async function() {
     }
     return orthotCTL.gdatapack.progress[code]
   }
-  
+
   on($("loadPuzzle"), "input", ()=>{
     let lvlName = levelSelector.options[levelSelector.selectedIndex].value
     orthotCTL.loadScene(lvlName)
     disp_elem.focus()
   });
-  
-   
+
+
   let loadDataPack = function(packname, mainareaname, zones) {
     orthotCTL.gdatapack = {
       name:packname,
@@ -321,7 +321,7 @@ $(async function() {
       zones:zones
     }
     loadProgress()
-    
+
     for (let i = levelSelector.length-1; i >= 0; i--) {
       levelSelector.remove(i)
     }
@@ -329,19 +329,19 @@ $(async function() {
       levelSelector.add($("<option>").text(name)[0])
     }
   }
-  
-  loadDataPack("MainGdataPack", "MainArea", MAIN_ZONES) 
+
+  loadDataPack("MainGdataPack", "MainArea", MAIN_ZONES)
   orthotCTL.loadScene("MainArea")
-  
+
   orthotCTL.forceReloadMainData = async function() {
     let zones = {}
     await loadZIP(zones, 'assets/ekvxdat.zip', {cache:"reload"})
-    loadDataPack("MainGdataPack", "MainArea", zones) 
+    loadDataPack("MainGdataPack", "MainArea", zones)
     orthotCTL.loadScene("MainArea")
   }
-  
+
   let highRespModeBTN = $("<div>").addClass("btn_inactive").text("Hi-Resp:OFF")
-  
+
   on(highRespModeBTN, "click", ()=>{
     if (orthotCTL.highResponsiveMode) {
        orthotCTL.highResponsiveMode = false
@@ -352,45 +352,45 @@ $(async function() {
      highRespModeBTN.text("Hi-Resp:ON").removeClass("btn_inactive").addClass("btn_active")
     }
   })
-  
+
   let resetBTN = $("<div>").addClass("btn_active").text("Reset").click(function() {
     if (orthotCTL.ActiveZone) {
       orthotCTL.ActiveZone.reset()
       disp_elem.focus()
     }
   })
-  
+
   let aboutBTN
   let toggleAboutBox = function() {
     $("#about").toggle()
     putFloatingElement($("#about")[0], aboutBTN)
   }
-  
+
   on($("#hideabout"), "click", toggleAboutBox)
-  
+
   aboutBTN = $("<div>").addClass("btn_active").text("About").click(toggleAboutBox)[0]
-  
+
   highRespModeBTN[0].title = "High-Responsive Mode"
   resetBTN[0].title = "Restart the active puzzle"
-  
+
   $("#controls").append(highRespModeBTN)
   $("#controls").append(resetBTN)
   $("#controls").append(aboutBTN)
-  
-  
-  let faderID  
+
+
+  let faderID
   let completionELEM = $("#completionGraphic")[0]
-  completionELEM.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )  
-  
+  completionELEM.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )
+
   let busy = false
   renderCTL.indicateCompletion = async function() {
     if (busy) {
       console.log("BAH!  They can't wreck my puzzles that quickly... can they?")
       return
-    }    
+    }
     completionELEM.style.display = "block"
-    busy = true    
-    completionELEM.style.opacity = 0    
+    busy = true
+    completionELEM.style.opacity = 0
     let opa = 0
     let incr = 1/10
     for (let i = 0; i < 10; i++) {
@@ -398,7 +398,7 @@ $(async function() {
       opa += incr
       completionELEM.style.opacity = opa
     }
-    completionELEM.style.opacity = 1 
+    completionELEM.style.opacity = 1
     for (let i = 0; i < 50; i++) {
       await next(orthotCTL.event, "frame")
     }
@@ -408,27 +408,27 @@ $(async function() {
       opa -= incr
       completionELEM.style.opacity = opa
     }
-    busy = false    
+    busy = false
     completionELEM.style.display = "none"
   }
-  
+
   renderCTL.build_domOBJ = function(tile, color, location, css_class, event_handlers) {
     if (typeof(tile) == "string") {
       tile = orthotCTL.tiles[tile]
     }
     if (!tile) {
       return
-    }    
+    }
     if (!color) {
       color = new THREE.Color("white")
     }
     else if (!color.isColor) {
       color = new THREE.Color(color)
-    }    
+    }
     if (!location) {
       location = "#inventory"
     }
-    
+
     let cnv = document.createElement("canvas")
     let elem = $(cnv)
     if (css_class) {
@@ -439,55 +439,55 @@ $(async function() {
         elem.on(k, event_handlers[k])
       }
     }
-    
-    
+
+
     $(location).append(elem)
-  
+
     cnv.width = UI_TILE_SIZE[0]
     cnv.height = UI_TILE_SIZE[1]
-    
+
     let hilight = false
-    
+
     //console.log(sz)
     let ctx = cnv.getContext('2d');
     let draw = function() {
       ctx.clearRect(0,0, UI_TILE_SIZE[0], UI_TILE_SIZE[1])
-      
+
       if (hilight) {
         ctx.shadowOffsetX = 0
         ctx.shadowOffsetY = 0
-        
+
         ctx.strokeStyle = "black"
         ctx.lineWidth = 4
-        ctx.strokeRect(1,1, UI_TILE_SIZE[0]-2, UI_TILE_SIZE[1]-2)   
-             
+        ctx.strokeRect(1,1, UI_TILE_SIZE[0]-2, UI_TILE_SIZE[1]-2)
+
         ctx.strokeStyle = color.getStyle()
         ctx.lineWidth = 2
-        ctx.strokeRect(1,1, UI_TILE_SIZE[0]-2, UI_TILE_SIZE[1]-2)       
+        ctx.strokeRect(1,1, UI_TILE_SIZE[0]-2, UI_TILE_SIZE[1]-2)
       }
-      
+
       ctx.shadowColor = 'rgba(0, 0, 0, .33333)';
       ctx.shadowOffsetX = UI_TILESHADOW_OFFSET[0]
       ctx.shadowOffsetY = UI_TILESHADOW_OFFSET[1]
       ctx.drawImage(tile.source, tile.x, tile.y, tile.w, tile.h, UI_TILEGRAPHIC_OFFSET[0], UI_TILEGRAPHIC_OFFSET[1], UI_TILEGRAPHIC_SIZE[0], UI_TILEGRAPHIC_SIZE[1]);
-      
+
       let imgd = ctx.getImageData(0,0, UI_TILE_SIZE[0], UI_TILE_SIZE[1])
       let buf = imgd.data
-      
+
       let r = color.r
       let g = color.g
       let b = color.b
-      
+
       for (let i = 0; i < buf.length; i+= 4) {
         buf[i] =   buf[i]   * r
         buf[i+1] = buf[i+1] * g
         buf[i+2] = buf[i+2] * b
       }
       ctx.putImageData(imgd, 0, 0);
-      
+
     }
     draw()
-    
+
     elem.mouseover(function() {
       hilight = true
       draw()
@@ -496,12 +496,12 @@ $(async function() {
       hilight = false
       draw()
     });
-    
+
     return elem
   }
-    
+
   // Item description display
-  // These functions (orthot.showDescription and orthot.updateDescription and orthot.hideDescription) are used to allow items to show tooltips and run graphical 
+  // These functions (orthot.showDescription and orthot.updateDescription and orthot.hideDescription) are used to allow items to show tooltips and run graphical
   // visualizarion routines.  These are called as objects or interface-elements are moused-over and moused-out
   let shownItem
   let tiptext = ""
@@ -524,7 +524,7 @@ $(async function() {
       item.visualizer(true)
     }
   }
-  
+
   orthotCTL.hideDescription = function(item) {
     if (item != shownItem) {
       return
@@ -535,7 +535,7 @@ $(async function() {
       item.visualizer(false)
     }
   }
-  
+
   let rotate = function(val, amt) {
     return (val<<amt)&0xffffffff | (val>>(32-amt))
   }
@@ -551,19 +551,19 @@ $(async function() {
     v &= 0xffffffff
     v ^= rotate(v, 23)
     v += 0x01234567
-    v &= 0xffffffff    
+    v &= 0xffffffff
     v /= (2**32)
     v += 0.5
     return v
   }
-  
+
   let pRandPlatues = function(... args) {
     let tw = 0
     for (let i = 0; i < args.length; i+= 2) {
       tw += args[i+1]
     }
     return function(col, numCols) {
-      let x = col/numCols      
+      let x = col/numCols
       let r = 0
       for (let i = 0; i < args.length; i+= 2) {
         let f = args[i]
@@ -573,7 +573,7 @@ $(async function() {
       return r/tw
     }
   }
-  
+
   let mixRandSin = function(sinFrequency, sineWeight, randWeight) {
     let tw = randWeight+sineWeight
     sinFrequency = sinFrequency*Math.PI*2
@@ -588,7 +588,7 @@ $(async function() {
   hg.bkgColor = "black"
   hg.layers = [
     { baseOfs:0,
-      baseGen:mixRandSin(0.333,1,0), 
+      baseGen:mixRandSin(0.333,1,0),
       range:0.2,
       auxGen:pRandPlatues(7,5,11,6,13,7,17,8,19,9),
       auxRange:0.05,
@@ -739,15 +739,15 @@ $(async function() {
   let prevCamTheta = sviewCTL.campos.theta
   hg.yOFS = (prevCamPhi/Math.PI-0.4) * hgyscale
   hg.update()
-      
-	var run = function run () {	   
-		requestAnimationFrame( run );
-		orthotCTL.event.dispatchEvent(new Event("frame"))
-  	
-  	if (orthotCTL.ActiveZone) {  	 
-  	  orthotCTL.ActiveZone.onFrame()
-  	}  	
-	  renderCTL.display.render()
+
+  var run = function run () {
+    requestAnimationFrame( run );
+    orthotCTL.event.dispatchEvent(new Event("frame"))
+
+    if (orthotCTL.ActiveZone) {
+      orthotCTL.ActiveZone.onFrame()
+    }
+    renderCTL.display.render()
     //hg.rotate(17/16)
     //console.log(sviewCTL.campos.phi)
     let camTheta = sviewCTL.campos.theta
@@ -757,21 +757,21 @@ $(async function() {
       prevCamPhi = sviewCTL.campos.phi
       //hg.offset += diff
       hg.yOFS = (prevCamPhi/Math.PI-0.4) * hgyscale
-      hg.rotate(hgRotamt)    
+      hg.rotate(hgRotamt)
       hg.update()
     }
     else if ( (prevCamPhi != sviewCTL.campos.phi) ) {
       prevCamPhi = sviewCTL.campos.phi
       hg.yOFS = (prevCamPhi/Math.PI-0.4) * hgyscale
       hg.update()
-    } 
-	  
-	  //let mpos3d = pickPlanepos(renderCTL.display, evtman.mpos, sviewCTL.pickplane)
-		//debug_tip(`${tiptext}<br>
-		//Mouse position:  x=${mpos3d.x}, y=${mpos3d.y}, z=${mpos3d.z}`)
-	}	
-	run()
-  
+    }
+
+    //let mpos3d = pickPlanepos(renderCTL.display, evtman.mpos, sviewCTL.pickplane)
+    //debug_tip(`${tiptext}<br>
+    //Mouse position:  x=${mpos3d.x}, y=${mpos3d.y}, z=${mpos3d.z}`)
+  }
+  run()
+
   //console.log(assets)
 })
 

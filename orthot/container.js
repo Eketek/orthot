@@ -4,24 +4,24 @@ import { direction } from '../libek/direction.js'
 
 /*  Containers represent one unit of space which an Orthot Object (solid or spatially-positioned Puzzle element) may occupy.
 
-    In additional to helping structure the data, Containers also provide queries and helper functions 
+    In additional to helping structure the data, Containers also provide queries and helper functions
         (rather than scattering many queries throughout puzzle element code)
 */
 var Container = function(x,y,z) {
   this.x = x
   this.y = y
-  this.z = z 
+  this.z = z
   this.content = []
   this.id = `${x}|${y}|${z}`
-  
+
   // Somewhat lazy adjacentcy test.  Returns true if one of the other container's coordinates differs by 1.  This assumes that coordinates have integer values.
   this.isAdjacent = function(other) {
     return ((Math.abs(x-other.x) + Math.abs(y-other.y) + Math.abs(z-other.z)) == 1)
   }
-  
+
   this.push = function(force) {
     let internalOBJ_moved
-    for (let internalOBJ of this.content) {        
+    for (let internalOBJ of this.content) {
       if (internalOBJ.push(force)) {
         internalOBJ_moved = internalOBJ
       }
@@ -41,7 +41,7 @@ var Container = function(x,y,z) {
     }
     return false
   }
-  
+
   this.addObject = function(obj) {
     this.content.push(obj)
     for (let other of this.content) {
@@ -51,10 +51,10 @@ var Container = function(x,y,z) {
       }
     }
   }
-  
+
   /*  Query the container for an object matching the specified type
   */
-  this.getObject_bytype = function(type) {    
+  this.getObject_bytype = function(type) {
     if (type) {
       for (let obj of this.content) {
         if (obj.types.indexOf(type) != -1) {
@@ -63,10 +63,10 @@ var Container = function(x,y,z) {
       }
     }
   }
-  
+
   /*  Query the container for an object matching any specified spatial class
   */
-  this.getObject_byspatialclass = function(sclass) {  
+  this.getObject_byspatialclass = function(sclass) {
     if (!Array.isArray(sclass)) {
       sclass = [sclass]
     }
@@ -76,7 +76,7 @@ var Container = function(x,y,z) {
       }
     }
   }
-  
+
   /*  An object is moving out of some container other than this one, into a container which is adjacent to this container
    *
    *  heading:
@@ -92,7 +92,7 @@ var Container = function(x,y,z) {
       obj.__applyInboundIndirectForce__(heading, normal, from_normal, originatingForce)
     }
   }
-  
+
   /*  An object is moving out of an adjacent container, into some container other than this one
    *
    *  heading:
@@ -108,7 +108,7 @@ var Container = function(x,y,z) {
       obj.__applyOutboundIndirectForce__(heading, normal, from_normal, originatingForce)
     }
   }
-  
+
   /*  Query the container for a side-attachment.  (This is mainly for finding portals and ladders)
   */
   this.getSideobject_bytype = function(side, type) {

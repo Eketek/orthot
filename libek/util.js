@@ -117,19 +117,19 @@ var parseColor = function(arg) {
     Math.min(1, Math.max(0,b))
   )
 }
-var toBinColor = function(arg) {    
+var toBinColor = function(arg) {
   let c = parseColor(arg)
   return (Math.round(c.r*255) << 16) | ( Math.round(c.g*255) << 8 ) | ( Math.round(c.b*255) )
 }
 
-var putFloatingElement = function(element, target) {  
+var putFloatingElement = function(element, target) {
   let elementRect = element.getBoundingClientRect()
   let targetRect = target.getBoundingClientRect()
   let x = targetRect.left+window.scrollX
   let y = targetRect.bottom+window.scrollY
   let w = elementRect.width
   let h = elementRect.height
-  
+
   console.log(x,y,w,h, window.innerWidth)
   if ( (x+w) > window.innerWidth) {
     x = targetRect.right-elementRect.width
@@ -145,7 +145,7 @@ var putFloatingElement = function(element, target) {
   }
   element.style.left = x + "px"
   element.style.top = y + "px"
-  
+
   console.log(elementRect, targetRect, x,y,w,h)
 }
 

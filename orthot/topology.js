@@ -14,19 +14,19 @@ var scan_simple = function(zone, loc, obj, heading, forward, up=direction.code.U
   let fromHEADING = heading
   let fromFORWARD = forward
   let fromUP = up
-          
+
   let [adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
-      
+
   // If down but a floor-type entity obstructing, clear the traversable flag
   if (fromHEADING == direction.code.DOWN) {
     isTraversable &= !fromCTN.getObject_bytype("floor")
   }
-  
-  //Scan toCTN on inbound face for a portal 
+
+  //Scan toCTN on inbound face for a portal
   //  If found, traverse the portal (+ any connected portals) to find its destination
   //    toCTN = portal-destination
   //    toDIR = portal-redirect
-  
+
   let hop = {
     adjCTN:adjCTN,
     fromCTN:fromCTN,
@@ -39,8 +39,8 @@ var scan_simple = function(zone, loc, obj, heading, forward, up=direction.code.U
     toUP:toUP,
     isPortaljump:isPortaljump,
   }
-  
-  
+
+
   let r = Object.assign( {
     OBJ:obj,
     priority:0,
@@ -50,26 +50,26 @@ var scan_simple = function(zone, loc, obj, heading, forward, up=direction.code.U
       return zone.isTraversable(fromCTN, fromHEADING, toCTN, toHEADING, obj)
     },
   }, hop )
-  
+
   let _
-  
-  // Check for open space under destination, so that creatures popping out of portals can decide whether to right themselves mid-air 
-  // or whether to flop over on the ground.  
+
+  // Check for open space under destination, so that creatures popping out of portals can decide whether to right themselves mid-air
+  // or whether to flop over on the ground.
   // If you want a reasonable explanation, Eketek isn't going to give it..  Maybe your quandary could be exacerbated by accosting a random physics professor!
   [_, _, _, _, _, _, isTraversable] = zone.getLocalTopology(obj, toCTN, direction.code.DOWN, toFORWARD, toUP)
   if (isTraversable) {
     r.isOVERHOLE = true
   }
-  
+
   return r
 }
 
-/* A shim to allow the movement engine to handle movement of gates.  
+/* A shim to allow the movement engine to handle movement of gates.
     If and when it is decided that gates should pass through portals, scan_simple() will suffice */
 var scan_gate = function(zone, loc, obj, heading, forward, up=direction.code.UP) {
-          
+
   let adjCTN = zone.getAdjacentCTN(loc, heading)
-  
+
   let hop = {
     adjCTN:adjCTN,
     fromCTN:loc,
@@ -82,8 +82,8 @@ var scan_gate = function(zone, loc, obj, heading, forward, up=direction.code.UP)
     toUP:up,
     isPortaljump:false,
   }
-  
-  
+
+
   let r = Object.assign( {
     OBJ:obj,
     priority:0,
@@ -93,7 +93,7 @@ var scan_gate = function(zone, loc, obj, heading, forward, up=direction.code.UP)
       return true
     },
   }, hop )
-  
+
   return r
 }
 
@@ -104,19 +104,19 @@ var scan_gate = function(zone, loc, obj, heading, forward, up=direction.code.UP)
  *  If forward is open and contains an aligned ramp, add the space above the ramp
  *  If forward is open but does not contain a ramp, check the space below
 */
-var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP) {  
-  
+var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP) {
+
   let fromCTN = loc
   let fromHEADING = heading
   let fromFORWARD = forward
   let fromUP = up
-  
+
   let _isTraversable = true
   let _isPortaljump = false
-  
+
   let adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable, ramp
-  
-  let r = { 
+
+  let r = {
     OBJ:obj,
     priority:0,
     path:[],      //Used by animation system for handling portals.  Eventually, the movement engine will need this for certain special cases
@@ -125,7 +125,7 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
     fromFORWARD:forward,
     fromUP:up
   }
-  
+
   let appendHop = function() {
     r.path.push({
       adjCTN:adjCTN,
@@ -139,39 +139,39 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
       toUP:toUP,
       isTraversable:isTraversable,
       isPortaljump:isPortaljump,
-    })  
+    })
   }
-  
+
   let downramp_or_flat = true
-  
+
   ramp = fromCTN.getObject_bytype("ramp")
   if (ramp) {
     //If on a ramp and ascending
     if (ramp.ascendDIR == fromHEADING) {
       ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromUP, fromFORWARD, fromUP)
       _isTraversable &= isTraversable
-      _isPortaljump |= isPortaljump      
+      _isPortaljump |= isPortaljump
       appendHop()
-      
+
       // Should adjust this at some point to allow down-facing-portal on top of stairs.  But... this would involve either more complexity or properly
       //  handling objects which have a split-location.
-      
+
       ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, toCTN, fromHEADING, fromFORWARD, fromUP)
       //;[adjCTN, toCTN, toDIR, toUPDIR, isPortaljump, isTraversable] = zone.getLocalTopology(obj, toCTN, fromDIR, toUPDIR)
       _isTraversable &= isTraversable
       _isPortaljump |= isPortaljump
       appendHop()
-            
+
       r.toCTN = toCTN
       r.toHEADING = toHEADING
       r.toFORWARD = toFORWARD
       r.toUP = toUP
       downramp_or_flat = false
-      
+
       r.fromUPRAMP = true
-      
+
     }
-    
+
     //If on a ramp and moving along it (not asending or descending)
     else if (ramp.descendDIR != fromHEADING) {
       ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
@@ -179,38 +179,38 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
       //console.log([toCTN, toDIR, toUPDIR, isPortaljump, isTraversable])
       _isTraversable &= isTraversable
       _isPortaljump |= isPortaljump
-      
+
       appendHop()
-      
+
       r.toCTN = toCTN
       r.toHEADING = toHEADING
       r.toFORWARD = toFORWARD
       r.toUP = toUP
-      
+
       //The center of a ramp is 0.5 units above the origin, so any object should occupy both stacked stacked spaces while moving  ...
-      
+
       let low_toCTN = toCTN
       let low_toHEADING = toHEADING
       let low_toFORWARD = toFORWARD
       let low_toUP = toUP
-      
+
       // Should adjust this at some point to allow down-facing-portal on top of stairs.  But... this would involve either more complexity or properly
       //  handling objects which have a split-location.
       let upperCTN = zone.getAdjacentCTN(fromCTN, fromUP)
-            
+
       // ... If there just happens to be a pair of portals ahead, these should obviously be stepped through ...
       ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, upperCTN, fromHEADING, fromFORWARD, fromUP)
       //;[adjCTN, toCTN, toDIR, toUPDIR, isPortaljump, isTraversable] = zone.getLocalTopology(obj, upperCTN, fromDIR, fromUPDIR)
       _isTraversable &= isTraversable
       _isPortaljump |= isPortaljump
       //appendHop()
-      
+
       r.upper_toCTN = toCTN
       r.upper_toHEADING = toHEADING
       r.upper_toFORWARD = toFORWARD
       r.upper_toUP = toUP
-      
-      // ... 
+
+      // ...
       if (isPortaljump) {
         if (toCTN != upperCTN) {
           r.uhoh = true
@@ -234,7 +234,7 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
         else if (ramp.ascendDIR == low_toHEADING) {
           r.toUPRAMP = true
         }
-        else if (ramp.descendDIR == low_toHEADING) {          
+        else if (ramp.descendDIR == low_toHEADING) {
           _isTraversable = false
           r.toBLOCKINGRAMP = true
         }
@@ -245,37 +245,37 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
       else {
         r.unalignedOBSTRUCTION = toCTN
       }
-      
+
       downramp_or_flat = false
     }
     else {
       r.fromDOWNRAMP = true
-    } 
+    }
   }
-  
-  // If not on a ramp or on a ramp and descending    
+
+  // If not on a ramp or on a ramp and descending
   if (downramp_or_flat) {
-    
+
     ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
     //;[adjCTN, toCTN, toDIR, toUPDIR, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromDIR, fromUPDIR)
     //console.log([toCTN, toDIR, toUPDIR, isPortaljump, isTraversable])
     _isTraversable &= isTraversable
     _isPortaljump |= isPortaljump
-    
+
     r.toCTN = toCTN
     r.toHEADING = toHEADING
     r.toFORWARD = toFORWARD
     r.toUP = toUP
     appendHop()
-    
-    
-    if (isTraversable) {   
+
+
+    if (isTraversable) {
       ramp = toCTN.getObject_bytype("ramp")
       if (ramp) {
         //Moves onto aligned stairs within the current plane is blocked (ascending stairs)
-        
-        if (ramp.ascendDIR == toHEADING) {   
-        
+
+        if (ramp.ascendDIR == toHEADING) {
+
           ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, toCTN, toUP, toFORWARD, toUP)
           _isTraversable &= isTraversable
           _isPortaljump |= isPortaljump
@@ -287,7 +287,7 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
         //Moves onto mis-aligned stairs within the current plane is blocked (stairs function as walls on their own plane in every other direction)
           _isTraversable = false
           r.toBLOCKINGRAMP = true
-        }        
+        }
       }
       else {
         fromCTN = toCTN
@@ -298,10 +298,10 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
         if (isTraversable) {
           //_isTraversable &= isTraversable
           ramp = toCTN.getObject_bytype("ramp")
-          if (ramp) {              
+          if (ramp) {
             if (ramp.descendDIR == fromHEADING) {
               _isPortaljump |= isPortaljump
-              appendHop()   
+              appendHop()
               r.toCTN = toCTN
               r.toUP = toUP
               r.toDOWNRAMP = true
@@ -312,7 +312,7 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
           }
           else {
             r.hopOUT = true
-          }         
+          }
         }
       }
     }
@@ -328,7 +328,7 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
         r.toBLOCKINGRAMP = true
       }
     }
-    
+
     else {
       ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, r.toCTN, direction.invert[r.toUP], r.toFORWARD, r.toUP)
       if (isTraversable) {
@@ -350,7 +350,7 @@ var scan_ramp = function(zone, loc, obj, heading, forward, up=direction.code.UP)
       }
     }
   }
-  
+
   r.isTraversable = function() {
     if (r.toBLOCKINGRAMP || r.unalignedOBSTRUCTION) {
       return false
@@ -373,13 +373,13 @@ var scan_upladder = function(zone, loc, obj, forward, up=direction.code.UP) {
   let fromHEADING = direction.code.UP
   let fromFORWARD = forward
   let fromUP = up
-  
+
   let _isTraversable = true
   let _isPortaljump = false
-  
+
   let adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable, ramp
-  
-  let r = { 
+
+  let r = {
     OBJ:obj,
     priority:0,
     path:[],      //Used by animation system for handling portals.  Eventually, the movement engine will need this for certain special cases
@@ -388,7 +388,7 @@ var scan_upladder = function(zone, loc, obj, forward, up=direction.code.UP) {
     fromFORWARD:fromFORWARD,
     fromUP:fromUP
   }
-  
+
   let appendHop = function() {
     r.path.push({
       adjCTN:adjCTN,
@@ -402,38 +402,38 @@ var scan_upladder = function(zone, loc, obj, forward, up=direction.code.UP) {
       toUP:toUP,
       isTraversable:isTraversable,
       isPortaljump:isPortaljump,
-    })  
+    })
   }
-  
-  let downramp_or_flat = true    
-  
+
+  let downramp_or_flat = true
+
   //scan upward
   ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
   _isTraversable &= isTraversable
   _isPortaljump |= isPortaljump
-  
+
   r.toCTN = toCTN
   r.toHEADING = toHEADING
   r.toFORWARD = toFORWARD
   r.toUP = toUP
   appendHop()
-  
-  if (isTraversable) {  
+
+  if (isTraversable) {
     fromCTN = toCTN
     fromHEADING = toFORWARD
     fromFORWARD = toFORWARD
     fromUP = toUP
-    
+
     //scan forward
     ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
-    
-    if (isTraversable) {              
+
+    if (isTraversable) {
       r.toCTN = toCTN
       r.toFORWARD = toHEADING
       r.toFORWARD = toFORWARD
-      r.toUP = toUP 
+      r.toUP = toUP
       appendHop()
-      
+
       //ladder terminal with open space above and the space in front is also open and [presumably] can be climbed out onto
       r.isLADDEREXIT = true
     }
@@ -453,7 +453,7 @@ var scan_upladder = function(zone, loc, obj, forward, up=direction.code.UP) {
     // ladder terminal with obstructed space above
     r.isLADDEROBSTRUCTED = true
   }
-  
+
   r.isTraversable = function() {
     for (let hop of r.path) {
       if (!zone.isTraversable(hop.fromCTN, hop.fromHEADING, hop.toCTN, hop.toHEADING, obj)) {
@@ -463,7 +463,7 @@ var scan_upladder = function(zone, loc, obj, forward, up=direction.code.UP) {
     return true
   }
   r.isPortaljump = _isPortaljump
-  
+
   return r
 }
 
@@ -474,13 +474,13 @@ var scan_downladder = function(zone, loc, obj, forward, up=direction.code.UP) {
   let fromHEADING = direction.code.DOWN
   let fromFORWARD = forward
   let fromUP = up
-  
+
   let _isTraversable = true
   let _isPortaljump = false
-  
+
   let adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable, ramp
-  
-  let r = { 
+
+  let r = {
     OBJ:obj,
     priority:0,
     path:[],      //Used by animation system for handling portals.  Eventually, the movement engine will need this for certain special cases
@@ -489,7 +489,7 @@ var scan_downladder = function(zone, loc, obj, forward, up=direction.code.UP) {
     fromFORWARD:fromFORWARD,
     fromUP:fromUP
   }
-  
+
   let appendHop = function() {
     r.path.push({
       adjCTN:adjCTN,
@@ -503,38 +503,38 @@ var scan_downladder = function(zone, loc, obj, forward, up=direction.code.UP) {
       toUP:toUP,
       isTraversable:isTraversable,
       isPortaljump:isPortaljump,
-    })  
+    })
   }
-  
-  let downramp_or_flat = true    
-  
+
+  let downramp_or_flat = true
+
   //scan downward
   ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
   _isTraversable &= isTraversable
   _isPortaljump |= isPortaljump
-  
+
   r.toCTN = toCTN
   r.toHEADING = toHEADING
   r.toFORWARD = toFORWARD
   r.toUP = toUP
   appendHop()
-  
-  if (isTraversable) {  
+
+  if (isTraversable) {
     fromCTN = toCTN
     fromHEADING = toFORWARD
     fromFORWARD = toFORWARD
     fromUP = toUP
-    
+
     //scan forward
     ;[adjCTN, toCTN, toHEADING, toFORWARD, toUP, isPortaljump, isTraversable] = zone.getLocalTopology(obj, fromCTN, fromHEADING, fromFORWARD, fromUP)
-    
-    if (isTraversable) {              
+
+    if (isTraversable) {
       r.toCTN = toCTN
       r.toFORWARD = toHEADING
       r.toFORWARD = toFORWARD
-      r.toUP = toUP 
+      r.toUP = toUP
       appendHop()
-      
+
       //ladder terminal with open space below (also nothing forward from that space... which probably means something pushed a ladder-block away...)
       r.isLADDERTERMINAL = true
     }
@@ -554,7 +554,7 @@ var scan_downladder = function(zone, loc, obj, forward, up=direction.code.UP) {
     // ladder terminal with floor below
     r.isLADDERTERMINAL = true
   }
-  
+
   r.isTraversable = function() {
     for (let hop of r.path) {
       if (!zone.isTraversable(hop.fromCTN, hop.fromHEADING, hop.toCTN, hop.toHEADING, obj)) {
@@ -564,12 +564,12 @@ var scan_downladder = function(zone, loc, obj, forward, up=direction.code.UP) {
     return true
   }
   r.isPortaljump = _isPortaljump
-  
+
   return r
 }
 
 // Also need a risk-averse topological scan for mouse and moose (like the "ramp" scan, but only includes a down-space if it contains an aligned ramp
-// Should also exclude the "hop-off-end-of-ramp" behavior from Orthot II (inadvertent but technically correct and also inadvertently animated, 
+// Should also exclude the "hop-off-end-of-ramp" behavior from Orthot II (inadvertent but technically correct and also inadvertently animated,
 // then left in-place for fun)
 
 

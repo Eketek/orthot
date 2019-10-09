@@ -4,22 +4,22 @@
       (this is for allowing async functions to receive events)
     Added a generic EventTarget for passing messages between loosely coupled components (orthotCTL.events)
     Keyboard handler state now resets when the page loses focus.
-    Added a high-responsive mode    
+    Added a high-responsive mode
       Ordinarilly, when input is received, it checks to see if anything is still animating and if not, will force the next tick to start on the next frame.
       The new high-responsive mode disables that check, causing it to start the next tick without regard for animation (visually, this teleports everything
       that is in motion to its destination).  If movement button is held down, auto-repeat will eventually take over and cause the game to tick rapidly.
         Note:  Apparent responsiveness issues in high-responsive mode is much more indicative of performance issues than apparent resposiveness problems
-               while things are animating.  
+               while things are animating.
     Topology system now indicates when an unaligned obstruction should prevent a Creature or Player from being able to hop off a ramp.
       Note:  An unaligned obstruction is a blocking object (such as a Wall) positioned above the space to the side of a ramp
-      (Failure to account for this opened up an unintended route in the "keymaze" puzzle, which also caused the "walk" animation controller to do nothing, 
+      (Failure to account for this opened up an unintended route in the "keymaze" puzzle, which also caused the "walk" animation controller to do nothing,
        resulting in a temporarilly glitched Player-avatar)
 
   8 Oct 2019
     Added a brief description of the project to the container HTML document
     Moved all contents of /orthot/orthot to /orthot
     Moved textures and packaged data to /textures
-    Implement completion-based triggers (things get enabled or disabled on the basis of Completion codes 
+    Implement completion-based triggers (things get enabled or disabled on the basis of Completion codes
       (which are awarded by completing puzzles and persisted in LocalStorage)
     Re-enabled the arbirtarilly obstructive behavior of the gates in the "main" areas
     Added a puzzle completion condition detection warning
@@ -31,7 +31,7 @@
     Added base surface types to Player, Mouse, and Moose
       (This would have resulted in an obscure quirk, but it raised an exception by requesting an unimplemented animation and got caught. Yay for work not done.)
     Update Reticles for recent changes to asset management
-    Reposition generated inventory-item indicators 
+    Reposition generated inventory-item indicators
     Assigned a falling strength to Creatures (Also a fix for Mouse and Moose being unable to press buttons)
     Corrected falling strength of various moveable blocks
     Added Progress (Puzzle Completion, Persistent completion data (LocalStorage), Progress indicator-flags (the visible & waving-in-the-pseudo-wind variety))
@@ -42,7 +42,7 @@
       sctl - SceneView Controller
       oplayer - Reference to the active Player-avatar instance
     Added a colored outline to inventory item indicators while moused over.
-    
+
   5 Oct 2019
     Move buttons to the surface they are attached to (puzzle element buttons, not GUI)
     Added a "Creature" abstract type
@@ -54,7 +54,7 @@
     Move asset table to a more appropriate place (libek.assets -> orthotCTL.assets)
     Initial adjustment to make GameData modular.
     Added a puzzle selector
-    
+
   2 Oct 2019
     Converted all scripts to ES6 modules
     Shortened all script names
@@ -90,7 +90,7 @@
     Movement behavior of simple objects has been standardized and is defined and controlled by simple properties:
        surface type (which gets paired up with an adjacent surface to become a surface interaction)
        strength of propagated force (strength of force applied to the next object in the line-of-fire)
-       force propagation threshold (strength of force needed for the object to react)    
+       force propagation threshold (strength of force needed for the object to react)
     Added First-person view (with program-controlled and mouse-controlled sub-modes)
     Added ice-blocks and ice-floors
     Adjusted key/lock reticle logic to always pick a contrasting color (uses the hsl hue component only now).
@@ -104,7 +104,7 @@
     All objects have been modified to use force priority to manage gravity instead of object state
     Fixed an animation glitch (down-ramp to lower down-ramp)
     An object which is influenced by gravity and which is positioned above a horizontally aligned portal can now push away an object which is obstructing
-      a vertically aligned output portal (doing this correctly was the main reason for modifying the movement engine).  
+      a vertically aligned output portal (doing this correctly was the main reason for modifying the movement engine).
   4 Jan 2019
     Fixed several defects in indirect force portal handling which where caused by the "Eketek-made-sweeping-changes-then-completely-forgot-to-test-it" problem
   3 Jan 2019
@@ -129,4 +129,4 @@
     Various code consistancy adjustments
     disabled timing output from THREE.Objectloader.js
     Removed an unintended puzzle solution
-    Added a changelog.  
+    Added a changelog.

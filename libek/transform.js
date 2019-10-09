@@ -2,7 +2,7 @@ export { Transform }
 
 /*  Parameterized matrix transformations
  *
- *  
+ *
  *  Usage:
  *  1.  Instantiate the transform (either pass in a matrix frpom elsewhere or extract Transform.matrix and use it elsewhere)
  *  2.  Call the various transformation functions to define how the Transform works (Transform will retain references to all input parameters)
@@ -14,17 +14,17 @@ var Transform = function(matrix, base) {
     matrix = new THREE.Matrix4()
   }
   this.matrix = matrix
-  
-  
+
+
   let vec = new THREE.Vector3()
   let mat = new THREE.Matrix4()
-  
+
   let ops = []
   this.reset = function() {
     ops = []
   }
-  
-  // Apply a scaling factor to the matrix.  
+
+  // Apply a scaling factor to the matrix.
   this.scale = function(scale) {
     ops.push( function() {
       matrix.elements[0] *= scale.x
@@ -35,29 +35,29 @@ var Transform = function(matrix, base) {
       matrix.elements[5] *= scale.y
       matrix.elements[6] *= scale.y
       matrix.elements[7] *= scale.y
-      matrix.elements[8] *= scale.z   
-      matrix.elements[9] *= scale.z   
-      matrix.elements[10] *= scale.z   
-      matrix.elements[11] *= scale.z      
+      matrix.elements[8] *= scale.z
+      matrix.elements[9] *= scale.z
+      matrix.elements[10] *= scale.z
+      matrix.elements[11] *= scale.z
       matrix.elements[12] *= scale.x
       matrix.elements[13] *= scale.y
       matrix.elements[14] *= scale.z
-      
+
     })
   }
-  
+
   // Scale the transposition only.
   this.scalePosition = function(scale) {
-    ops.push( function() {      
+    ops.push( function() {
       matrix.elements[12] *= scale.x
       matrix.elements[13] *= scale.y
       matrix.elements[14] *= scale.z
       //matrix.elements[11] *= scale.z
-      
+
     })
   }
-  
-  // Apply a rotation & position pair 
+
+  // Apply a rotation & position pair
   this.orient = function(orientation) {
     ops.push( function() {
       mat.makeRotationFromEuler(orientation.rotation)
@@ -65,7 +65,7 @@ var Transform = function(matrix, base) {
       matrix.premultiply(mat)
     })
   }
-      
+
   this.rotate = function(rotation) {
     if (rotation.isEuler) {
       ops.push( function() {
@@ -87,7 +87,7 @@ var Transform = function(matrix, base) {
       matrix.premultiply(mat)
     })
   }
-  
+
   // Re-process the transformation.
   this.update = function() {
     if (base) {
@@ -98,6 +98,6 @@ var Transform = function(matrix, base) {
     }
     for (let op of ops) {
       op()
-    }    
+    }
   }
 }

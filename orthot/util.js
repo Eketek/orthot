@@ -14,8 +14,8 @@ var parseO2Orientation = function(val) {
   val = Number.parseInt(val)
   let up = (val & 63)
   let fwd = ((val>>8) & 63)
-  //  It seems that the convention from Orthot II was wrong.  
-  up = o2dirs[up]    
+  //  It seems that the convention from Orthot II was wrong.
+  up = o2dirs[up]
   fwd = o2dirs[fwd]
   return {
     up:up,

@@ -27,13 +27,13 @@ var Grid = function(params={}) {
   let axis_linewidth = params.axis_linewidth ? params.axis_linewidth : 2
   let major_linewidth = params.major_linewidth ? params.major_linewidth : 1
   let minor_linewidth = params.minor_linewidth ? params.minor_linewidth : 1
-  
-  let minorline_mat = new THREE.LineBasicMaterial( {color:minor_color, linewidth:minor_linewidth} ) 
-  let majorline_mat = new THREE.LineBasicMaterial( {color:major_color, linewidth:major_linewidth} ) 
-  let xaxline_mat = new THREE.LineBasicMaterial( {color:x_axis_color, linewidth:axis_linewidth} ) 
-  let yaxline_mat = new THREE.LineBasicMaterial( {color:y_axis_color, linewidth:axis_linewidth} ) 
-  let zaxline_mat = new THREE.LineBasicMaterial( {color:z_axis_color, linewidth:axis_linewidth} ) 
-  
+
+  let minorline_mat = new THREE.LineBasicMaterial( {color:minor_color, linewidth:minor_linewidth} )
+  let majorline_mat = new THREE.LineBasicMaterial( {color:major_color, linewidth:major_linewidth} )
+  let xaxline_mat = new THREE.LineBasicMaterial( {color:x_axis_color, linewidth:axis_linewidth} )
+  let yaxline_mat = new THREE.LineBasicMaterial( {color:y_axis_color, linewidth:axis_linewidth} )
+  let zaxline_mat = new THREE.LineBasicMaterial( {color:z_axis_color, linewidth:axis_linewidth} )
+
   if (typeof(offset) == "number") {
     switch (orientation) {
       case AXIS.X:
@@ -50,22 +50,22 @@ var Grid = function(params={}) {
   else if (typeof(offset) == "undefined") {
     offset = new THREE.Vector3()
   }
-  
-  
+
+
   let spacing_offset = new THREE.Vector3()
-  
+
   let _max = edge_spaces/2
-  let _min = -_max      
-  
+  let _min = -_max
+
   this.obj = new THREE.Object3D()
-  
+
   let linegroup1 = []
   let linegroup2 = []
-  
+
   this.horiz_axline = undefined
   this.vert_axline = undefined
-  
-  this.moveto = function(pos, do_updatecolors=true) {   
+
+  this.moveto = function(pos, do_updatecolors=true) {
     spacing_offset.copy(pos)
     spacing_offset.divideScalar(spacewidth).floor()
     this.obj.position.copy(spacing_offset).multiplyScalar(spacewidth)
@@ -84,10 +84,10 @@ var Grid = function(params={}) {
       this.updateColors()
     }
   }
-  
+
   this.updateColors = function() {
     switch(orientation) {
-      case AXIS.X: {        
+      case AXIS.X: {
         for (let i = 0; i <= edge_spaces; i++) {
           let y = i + _min + spacing_offset.y
           let line = linegroup1[i]
@@ -100,7 +100,7 @@ var Grid = function(params={}) {
           else {
             line.material = minorline_mat
           }
-          
+
           let z = i + _min + spacing_offset.z
           line = linegroup2[i]
           if (z == 0) {
@@ -115,7 +115,7 @@ var Grid = function(params={}) {
         }
       }
       break
-      case AXIS.Y: {        
+      case AXIS.Y: {
         for (let i = 0; i <= edge_spaces; i++) {
           let x = i + _min + spacing_offset.x
           let line = linegroup1[i]
@@ -128,7 +128,7 @@ var Grid = function(params={}) {
           else {
             line.material = minorline_mat
           }
-          
+
           let z = i + _min + spacing_offset.z
           line = linegroup2[i]
           if (z == 0) {
@@ -141,10 +141,10 @@ var Grid = function(params={}) {
             line.material = minorline_mat
           }
         }
-        
+
       }
       break
-      case AXIS.Z: {         
+      case AXIS.Z: {
         for (let i = 0; i <= edge_spaces; i++) {
           let x = i + _min + spacing_offset.x
           let line = linegroup1[i]
@@ -157,7 +157,7 @@ var Grid = function(params={}) {
           else {
             line.material = minorline_mat
           }
-          
+
           let y = i + _min + spacing_offset.y
           line = linegroup2[i]
           if (y == 0) {
@@ -170,12 +170,12 @@ var Grid = function(params={}) {
             line.material = minorline_mat
           }
         }
-      
+
       }
       break
     }
   }
-  
+
   this.setAxis = function(axis, do_updatecolors=true) {
     orientation = axis
     switch(axis) {
@@ -195,9 +195,9 @@ var Grid = function(params={}) {
       this.updateColors()
     }
   }
-  
-  
-  for (let x = 0; x <= edge_spaces; x++) {      
+
+
+  for (let x = 0; x <= edge_spaces; x++) {
     let lgeom = new THREE.Geometry();
     lgeom.vertices.push(new THREE.Vector3(x+_min, 0, _min).multiplyScalar(spacewidth))
     lgeom.vertices.push(new THREE.Vector3(x+_min, 0, _max).multiplyScalar(spacewidth))
@@ -206,34 +206,34 @@ var Grid = function(params={}) {
     this.obj.add(line)
     //let line = new THREE.Line( geometry, majorline_mat );
   }
-  
-  for (let z = 0; z <= edge_spaces; z++) {  
+
+  for (let z = 0; z <= edge_spaces; z++) {
     lgeom = new THREE.Geometry();
     lgeom.vertices.push(new THREE.Vector3(_min, 0, z+_min).multiplyScalar(spacewidth))
-    lgeom.vertices.push(new THREE.Vector3(_max, 0, z+_min).multiplyScalar(spacewidth))  
+    lgeom.vertices.push(new THREE.Vector3(_max, 0, z+_min).multiplyScalar(spacewidth))
     let line = new THREE.Line(lgeom, minorline_mat)
     linegroup2.push(line)
     this.obj.add(line)
-  }    
-  
+  }
+
   this.moveto(offset, false)
   this.setAxis(orientation, true)
-  
+
   return this
-  
+
   //renderer.render( scene, camera );
 }
 
 var Wfcube = function(params = {}) {
   let size = params.size ? params.size : 40
-  
+
   let color = new THREE.Color(params.major_color ? params.major_color : 'hsl(0, 0%, 100%)')
   let linewidth = params.axis_linewidth ? params.axis_linewidth : 2
-  
-  let mat = new THREE.LineBasicMaterial( {color:color, linewidth:linewidth} ) 
-  
+
+  let mat = new THREE.LineBasicMaterial( {color:color, linewidth:linewidth} )
+
   let hsize = size/2
-  
+
   let obj = new THREE.Object3D()
   let geom = new THREE.Geometry();
   geom.vertices.push(new THREE.Vector3(-hsize, 0, -hsize))
@@ -260,5 +260,5 @@ var Wfcube = function(params = {}) {
   geom.vertices.push(new THREE.Vector3(-hsize, size, hsize))
   obj.add(new THREE.Line(geom, mat))
   return obj
-  
+
 }

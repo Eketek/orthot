@@ -20,7 +20,7 @@ var Zone = function(ekvx, override_startloc, name) {
   this.isZone = true
   let isGeomValid = true
   this.name = name
-  
+
   let bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
   let vxc = new VxScene({
     boxterrain:bxtbldr,
@@ -28,47 +28,47 @@ var Zone = function(ekvx, override_startloc, name) {
   })
 
   this.scene = vxc.scene
-  
+
   vxc.default = Container
-  
-  
+
+
   let rawdata = {}
   let flipWorld = (ekvx.data_version <= 5)
-  
-  let walltemplates = {}  
+
+  let walltemplates = {}
   let targets = {}
-  
+
   // For now, lighting is simplified to global ambient + global directional light + player-held lantern + maybe one light-bearing object
   //  ANd...  just because there otherwise isn't much interesting about lighting, the global directional light rotates very slowly as time passes
   var amblCol = new THREE.Color("white")
-	var vambl = new THREE.AmbientLight(amblCol, 0.125)
-	var ambl = new THREE.AmbientLight(0xffffff, 0.125)
-	this.scene.add(ambl)	
-	this.scene.add(vambl)	
+  var vambl = new THREE.AmbientLight(amblCol, 0.125)
+  var ambl = new THREE.AmbientLight(0xffffff, 0.125)
+  this.scene.add(ambl)
+  this.scene.add(vambl)
   let dlight = new THREE.DirectionalLight( 0xffffff, 1 )
   dlight.position.set(0,1000,0)
   this.scene.add(dlight)
-  
+
   let dlTarget = new THREE.Object3D()
   dlTarget.position.set(0,0,0)
   this.scene.add(dlTarget)
   let dlrot = Math.random()*T
-  
+
   //clear out any lingering input
-  
+
   this.ticknum = -1
   let prevtick = Date.now()
   let prevtime = prevtick
   let prevreltime = 0
   this.ticklen = 200
-  
+
   let player
   let startloc = vxc.get(0,1,0)
-  
+
   let tickListeners = []
-  let tmp_tickListeners = [] 
+  let tmp_tickListeners = []
   let deferredActions = []
-  
+
   //set up "reticles" that can show which keys will work with which locks
   let keys = []
   let locks = []
@@ -81,7 +81,7 @@ var Zone = function(ekvx, override_startloc, name) {
   else {
     baseReticleOBJ = getAsset(orthotCTL.assets, "CubeMark")
     orthotCTL.assets.cubereticle = baseReticleOBJ
-    reticlemat = Material({color:"green", emissive:"green", emissiveIntensity:0.333}) 
+    reticlemat = Material({color:"green", emissive:"green", emissiveIntensity:0.333})
     baseReticleOBJ.children[0].material = reticlemat
     storeAsset(orthotCTL.assets, "cubereticle", baseReticleOBJ)
   }
@@ -89,17 +89,17 @@ var Zone = function(ekvx, override_startloc, name) {
   let lockReticle = new Reticle(orthotCTL.assets, baseReticleOBJ)
   this.scene.add(keyReticle.obj)
   this.scene.add(lockReticle.obj)
-  
+
   let setReticle = function(reticle, objs, code, color) {
     if (activeReticle) {
       activeReticle.clear()
     }
     activeReticle = reticle
-    
-    let hue = color.getHSL().h+0.5      
+
+    let hue = color.getHSL().h+0.5
     reticlemat.color.setHSL(hue, 1, 0.5)
     reticlemat.emissive.setHSL(hue, 1, 0.5)
-    
+
     for (let obj of objs) {
       if (obj.code == code) {
         reticle.add(obj.ctn)
@@ -111,14 +111,14 @@ var Zone = function(ekvx, override_startloc, name) {
       activeReticle.clear()
     }
   }
-  
+
   this.showKeys = function(code, color="green") {
     setReticle(keyReticle, keys, code, color)
   }
   this.showLocks = function(code, color="green") {
     setReticle(lockReticle, locks, code, color)
   }
-  
+
   let sigReceivers = {}
   this.signal = function(name, value=true) {
     let receivers = sigReceivers[name]
@@ -142,36 +142,36 @@ var Zone = function(ekvx, override_startloc, name) {
       receivers.splice(i,1)
     }
   }
-  
+
   /*  Rules for determining which objects can enter space occupied by other objects
       These rules are assymetric (liquid objects can not enter space occupied by solid objects, but solid objects can enter space occupied by liquid)
       These rules apply to movements of objects under forces and to certain topology considerations.
   */
-  let traverseTestTBL = {  
-    // no traversal of anything 
+  let traverseTestTBL = {
+    // no traversal of anything
     wall:[],
-    
+
     //basic classes
     solid:["liquid", "gas", "item"],
     liquid:["solid"],
     gas:[],
-    
-    //Ramps are a special case because there is not presently a mechanism for tilted objects resting on top of a ramp and partially occupying an adjacent space    
-    ramp:[],    
-    
+
+    //Ramps are a special case because there is not presently a mechanism for tilted objects resting on top of a ramp and partially occupying an adjacent space
+    ramp:[],
+
     // interactive objects
     float:["gas"],    // (ice, wood, or any other bouyant solid objects)
     creature:["player", "item", "liquid", "gas", "ramp"],
     player:["creature", "item", "liquid", "gas", "ramp"],
     item:["player", "creature", "liquid", "gas"]
   }
-  
+
   this.HALT = function(reason) {
     console.log("ZONE-HALT because:", reason)
     HALTED = true
   }
-	
-  
+
+
   // Command sequences that are added at the beginning of a tick, end at the beginning of the next tick, and are measured in seconds (floating point values)
   this.addCommandsequence_short = function(cmdseq) {
     cmdSequences_short.push(cmdseq)
@@ -182,24 +182,24 @@ var Zone = function(ekvx, override_startloc, name) {
       cmdseq.stop()
       cmdSequences_short.splice(cmdSequences_short.indexOf(cmdseq), 1)
     }
-  }  
+  }
   let cmdSequences_short = []
-  
+
   // Command sequences that are added at the beginning of a tick, end at the beginning of any future tick, and are measured in seconds (floating point values)
   this.addCommandsequence_long = function(cmdseq) {
     cmdSequences_long.push(cmdseq)
     cmdseq.start()
   }
   let cmdSequences_long = []
-  
+
   // Command sequences that are added at an arbitrary time, end at an arbitrary time, and are measured in seconds (floating point values)
   this.addCommandsequence_realtime = function(cmdseq) {
     cmdSequences_realtime.push(cmdseq)
     cmdseq.start()
   }
   let cmdSequences_realtime = []
-  
-  
+
+
   let tHue = 0, hue = 0, hueIncr = 0.001
   let setHueTarget = function() {
     tHue = Math.random()
@@ -210,21 +210,21 @@ var Zone = function(ekvx, override_startloc, name) {
   vambl.color = amblCol
   setHueTarget()
  // col = new THREE.Color()
-  
+
   let HALTED = false
-  
+
   this.onFrame = function() {
     if (HALTED) {
       return
     }
     //update geometry
     vxc.buildChunks()
-    
+
     //Move the global directional light a bit
     dlrot += 0.0003
     dlight.position.x = Math.cos(dlrot%T)*2000
     dlight.position.z = Math.sin(dlrot%T)*2000
-    
+
     hue += hueIncr
     amblCol.setHSL ( hue, 1, 0.5 )
     vambl.color = amblCol
@@ -238,13 +238,13 @@ var Zone = function(ekvx, override_startloc, name) {
         setHueTarget()
       }
     }
-    
+
     //timekeeping
     let t = Date.now()
     let dt = t-prevtime
     prevtime = t
-    
-        
+
+
     for (let i = 0; i < cmdSequences_realtime.length; i++) {
       let seq = cmdSequences_realtime[i]
       if (!seq.advance(dt)) {
@@ -252,11 +252,11 @@ var Zone = function(ekvx, override_startloc, name) {
         i--
       }
     }
-    
-    let reltime = (t-prevtick) / this.ticklen  
+
+    let reltime = (t-prevtick) / this.ticklen
     let d = reltime-prevreltime
     prevreltime = reltime
-    
+
     for (let i = 0; i < cmdSequences_long.length; i++) {
       let seq = cmdSequences_long[i]
       if (!seq.advance(d)) {
@@ -264,7 +264,7 @@ var Zone = function(ekvx, override_startloc, name) {
         i--
       }
     }
-    
+
     //update command sequences
     if (reltime < 1) {
       for (let seq of cmdSequences_short) {
@@ -284,11 +284,11 @@ var Zone = function(ekvx, override_startloc, name) {
       tick()
     }
   }
-  
+
   let tick = (function() {
     this.ticknum++
     let input = inputCTL.keystate.query()
-    
+
     if (this.ticknum > 0) {
       if (tmp_tickListeners.length > 0) {
         for (let f of tmp_tickListeners) {
@@ -296,60 +296,60 @@ var Zone = function(ekvx, override_startloc, name) {
         }
         tmp_tickListeners = []
       }
-      
+
       for (let i = tickListeners.length; i >= 0; i--) {
         let f = tickListeners[i]
         if (f) {
           f()
         }
-      } 
-      
+      }
+
       if (player) {
         player.recvInput(input)
       }
-      
+
       while (true) {
         if ( (num_movers == 0) && (deferredActions.length == 0)) {
           break
         }
         if (num_movers > 0) {
           processMovement()
-        }     
-        if (deferredActions.length != 0) {          
+        }
+        if (deferredActions.length != 0) {
           let _da = deferredActions
           deferredActions = []
           for (let act of _da) {
             act()
-          } 
+          }
         }
       }
-       
+
     }
   }).bind(this)
-  
+
   /*  Interpret arguments form an Array as a spatial reference
       This allows any Zone functions to accept spatial references in the following formats:
         x,y,z             -- an absolute spatial reference passed as a set of three arguments
         {x,y,z}           -- An absolute spatial reference contained by an object with x,y, and z properties (such as THREE.Vector3)
         <Container>       -- A direct reference to the container
-      
+
       This returns an array: [X, Y, Z, Container, ...]  (the coordinates, followed by the container, followed by everything else passed in
-      
+
       This is intended to be used with destructuring assignments
-      
+
       Example usage:
-      
+
       doStuff=function(...args) {
         [x,y,z, ctn, obj] = unpack_LOC_ARGS(args)
-        ctn.content.push(obj)        
+        ctn.content.push(obj)
         console.log(`Added object "${obj.name}" to container at location x=${x}, y=${y}, z=${z}`)
       }
       doStuff(_x, _y, _z, obj1)
       doStuff(someCTN, obj2)
-  
+
       This is also probably one of the more dubious utility functions...
    */
-  let unpack_LOC_ARGS = function(args, pos=0) {  
+  let unpack_LOC_ARGS = function(args, pos=0) {
     let x,y,z,ctn, i=pos
     if (typeof(args[pos]) == "number") {
       x = args[pos]
@@ -358,30 +358,30 @@ var Zone = function(ekvx, override_startloc, name) {
       ctn = vxc.get(x,y,z)
       i+=3
     }
-    else if (args[pos].content) {    
-      ctn = args[pos]   
+    else if (args[pos].content) {
+      ctn = args[pos]
       x = ctn.x
       y = ctn.y
       z = ctn.z
       i++
     }
     else {
-      let vec = args[pos] 
+      let vec = args[pos]
       x = vec.x
       y = vec.y
       z = vec.z
       ctn = vxc.get(x,y,z)
       i++
     }
-    
+
     let r = [x,y,z, ctn]
-    
-    if (args.length > i) {      
+
+    if (args.length > i) {
       r = r.concat(args.splice(i))
-    }    
+    }
     return r
   }
-  
+
   this.addTickListener = function(f) {
     if (tickListeners.indexOf(f) == -1) {
       tickListeners.push(f)
@@ -398,20 +398,20 @@ var Zone = function(ekvx, override_startloc, name) {
   }
   this.addTickListener_temp = function(f) {
     tmp_tickListeners.push(f)
-  } 
-  
+  }
+
   this.addDeferredAction = function(f) {
     if (deferredActions.indexOf(f) == -1) {
       deferredActions.push(f)
     }
   }
-  
+
   this.inputAvailable = function() {
     if ( (orthotCTL.highResponsiveMode) || ((cmdSequences_short.length == 0) && (cmdSequences_long.length == 0))) {
       prevtick = Date.now() - this.ticklen
     }
   }
-  
+
   this.removeGameobject = function(obj, destroy=true) {
     if (obj.ctn) {
       let i = obj.ctn.content.indexOf(obj)
@@ -423,9 +423,9 @@ var Zone = function(ekvx, override_startloc, name) {
       obj.destroy()
     }
   }
-  
+
   this.attach = function(...args) {
-    let [x,y,z,ctn, o] = unpack_LOC_ARGS(args)   
+    let [x,y,z,ctn, o] = unpack_LOC_ARGS(args)
     for (let obj of ctn.content) {
       if (obj.hasSides) {
         obj.attach(o)
@@ -435,43 +435,43 @@ var Zone = function(ekvx, override_startloc, name) {
     console.log("FAILED to attach something...", args)
     return false
   }
-  this.putGameobject = function(...args) { 
-    let [x,y,z,ctn, o] = unpack_LOC_ARGS(args)  
-         
+  this.putGameobject = function(...args) {
+    let [x,y,z,ctn, o] = unpack_LOC_ARGS(args)
+
     if (o.ctn) {
       let i = o.ctn.content.indexOf(o)
       if (i != -1) {
         o.ctn.content.splice(i,1)
       }
     }
-    o.ctn = ctn   
-    
+    o.ctn = ctn
+
     if (o.obj) {
       o.worldpos.set(x,y,z)
     }
-    
+
     if (o.OnUpdateCTN) {
       o.OnUpdateCTN()
     }
-    
+
     ctn.addObject(o)
-    
+
     if (y < _min.y) {
       o.defeat()
     }
   }
-  
-  
-  /*  Check a mover's spatial class against the spatial class of everything in the target container 
+
+
+  /*  Check a mover's spatial class against the spatial class of everything in the target container
       If anything obstructs the mover, return false
       If nothing obstructs the mover, return true
-      
+
       This ignores any objects which do not posess a spatial class.  (presumably scenery or dummy objects)
   */
   this.isTraversable = function(from, fromDIR, to, toDIR, mover) {
-  
+
     let mover_class = mover.SpatialClass
-    
+
     if (mover_class) {
       let obstruction_class
       for (let obstruction of to.content) {
@@ -490,8 +490,8 @@ var Zone = function(ekvx, override_startloc, name) {
       }
     }
     return true
-  } 
-  
+  }
+
   this.impededBy = function( mover, impeder ) {
     if (!impeder.SpatialClass || !mover.SpatialClass) {
       return false
@@ -501,10 +501,10 @@ var Zone = function(ekvx, override_startloc, name) {
     }
     return (traverseTestTBL[mover.SpatialClass].indexOf(impeder.SpatialClass) == -1)
   }
-  
+
   this.getObstructor = function(mover, ctn) {
     let mover_class = mover.SpatialClass
-    
+
     if (mover_class) {
       let obstruction_class
       for (let obstruction of ctn.content) {
@@ -515,8 +515,8 @@ var Zone = function(ekvx, override_startloc, name) {
       }
     }
   }
-  
-  this.getAdjacentCTN = function(ctn, dir) {    
+
+  this.getAdjacentCTN = function(ctn, dir) {
     switch(dir) {
       case direction.code.UP: return vxc.get(ctn.x, ctn.y+1, ctn.z)
       case direction.code.DOWN: return vxc.get(ctn.x, ctn.y-1, ctn.z)
@@ -526,23 +526,23 @@ var Zone = function(ekvx, override_startloc, name) {
       case direction.code.WEST: return vxc.get(ctn.x+1, ctn.y, ctn.z)
     }
   }
-  
+
   /*  Determine where a portal is pointing.
       This resolves multi-targets:
-        If 3 or more portals belonging to the same "class", portals are are logically a circular group 
-          (determined by the order in which they are read from the ekvx, though eventually, this should be specifiable by a level designer) 
+        If 3 or more portals belonging to the same "class", portals are are logically a circular group
+          (determined by the order in which they are read from the ekvx, though eventually, this should be specifiable by a level designer)
         Portal selection is governed by two priorities:
           Top priority is an unobstructed destination
           Secondary priority is the next portal [counting from the source portal] in the portal group, with wraparound to the end
-      
+
       This also resolves daisy-chaining:
         If a destination portal feeds directly into another portal, the scan will traverse and select the destination of the entire daisy chain
   */
-  let getPortalTarget = (function(portal, fromCTN, fromHEADING, obj, visited=[]) {      
+  let getPortalTarget = (function(portal, fromCTN, fromHEADING, obj, visited=[]) {
     visited.push(portal)
     let toCTN, toHEADING, dportal, nportal
     let traversable = false
-    
+
     if (Array.isArray(portal.target)) {
       let ofs = portal.target.indexOf(portal) +1
       for (let _i = 0; _i < portal.target.length-2; _i++) {
@@ -551,7 +551,7 @@ var Zone = function(ekvx, override_startloc, name) {
         if (visited.indexOf(dportal) == -1) {
           toHEADING = dportal.up
           toCTN = this.getAdjacentCTN(dportal.host.ctn, toHEADING)
-          
+
           nportal = adjCTN.getSideobject_bytype(direction.invert[toHEADING], "portal")
           if (nportal) {
             if (visited.indexOf(nportal) == -1) {
@@ -566,13 +566,13 @@ var Zone = function(ekvx, override_startloc, name) {
             }
           }
         }
-        //If a multitarget, prioritize the traversable portal.  
+        //If a multitarget, prioritize the traversable portal.
         if (this.isTraversable(fromCTN, fromHEADING, outCTN, outHEADING, obj)) {
           traversable = true
           break
         }
       }
-      
+
       //if nothing is observably traversable, select the next non-daisy-chain portal without regard for obstructions
       //  I dont want to deal with the convoluted logic needed to prioritize a portal with an unblocked pushable object in front.
       if (!traversable) {
@@ -581,7 +581,7 @@ var Zone = function(ekvx, override_startloc, name) {
           dportal = portal.target[i]
           toHEADING = dportal.up
           toCTN = this.getAdjacentCTN(dportal.host.ctn, toHEADING)
-        
+
           //accept the portal if it has not been rejected by a chained scan
           if (visited.indexOf(dportal == -1)) {
             break
@@ -611,7 +611,7 @@ var Zone = function(ekvx, override_startloc, name) {
       }
     }
   }).bind(this)
-  
+
   /*  Given an input object, position, vector, and orientation, determine the destination, vector, and orientation.
    *  If there is no portal involved, this returns the adjacent space and the input vector & orientation.
    *  If there is a portal, this returns the portal destination and vector & orientation as transformed by the portal
@@ -638,13 +638,13 @@ var Zone = function(ekvx, override_startloc, name) {
     //let outHEADING = libek.direction.getRelDir(fromHEADING, outUP)
     let outHEADING = fromHEADING
     let isPortaljump = false
-    
+
     let invHeading = direction.invert[fromHEADING]
     let portal = adjCTN.getSideobject_bytype(invHeading, "portal")
     if (portal) {
       let dportal = getPortalTarget(portal, fromCTN, fromHEADING, obj)
       if (dportal) {
-        isPortaljump = true 
+        isPortaljump = true
         outHEADING = dportal.up
         //outFORWARD = dportal.up
         //outUP = dportal.forward
@@ -657,7 +657,7 @@ var Zone = function(ekvx, override_startloc, name) {
         else if (!sv && !dv) {
           outFORWARD = dportal.up
           outUP = fromUP
-        }        
+        }
         else if (sv && !dv) {
           outFORWARD = direction.invert[rotateDirection_bydirections(fromFORWARD, portal.up, portal.forward, dportal.up, dportal.forward)]
           outUP = direction.invert[rotateDirection_bydirections(fromUP, direction.invert[portal.up], portal.forward, dportal.up, dportal.forward)]
@@ -672,7 +672,7 @@ var Zone = function(ekvx, override_startloc, name) {
     let traversable = this.isTraversable(fromCTN, fromHEADING, outCTN, outHEADING, obj)
     return [adjCTN, outCTN, outHEADING, outFORWARD, outUP, isPortaljump, traversable]
   }
-  
+
   /*  Return containers from which the specified container (thisCTN) may be directly accessed.
    *  "This" container may be accessed from "other" container under these circumstances:
    *    1:  "this" and "other" are literally adjacent and "this" does not contain a portal pointed at "other"
@@ -681,8 +681,8 @@ var Zone = function(ekvx, override_startloc, name) {
   let getInboundNeighbors = (function(thisCTN, excludeDIR) {
     let portals = []
     let r = []
-    
-    let evaluateSide = (function(dir) {  
+
+    let evaluateSide = (function(dir) {
       let invdir = direction.invert[dir]
       let otherCTN = this.getAdjacentCTN(thisCTN, dir)
       if (!thisCTN.getSideobject_bytype(dir, "portal")) {
@@ -699,28 +699,28 @@ var Zone = function(ekvx, override_startloc, name) {
           }
         }
         else {
-          r.push({ctn:otherCTN, dir:invdir, fromdir:dir})          
+          r.push({ctn:otherCTN, dir:invdir, fromdir:dir})
         }
-      }      
+      }
     }).bind(this)
     for (let dir of Object.values(direction.code)) {
       if (dir != excludeDIR) {
         evaluateSide(dir)
       }
     }
-    
+
     return r
   }).bind(this)
-  
-  /*  Given a target portal, find all potential source portals (anything directly or indirectly connected portal).  
+
+  /*  Given a target portal, find all potential source portals (anything directly or indirectly connected portal).
    *   An "other" portal is directly linked if one of the following conditions is true:
    *   1.  "other" and "this" are part of the same multiportal
    *   2.  "other" has "this" as its target
    *   3.  There is a daisy-chain of portals which may be followed from "other" to "this"
-   */  
+   */
   let findPortalSources = (function(targetPortal, result, visited) {
     visited.push(targetPortal)
-    
+
     // Evaluate every portal in targetPortal.sources as a potential portal
     for (let portal of targetPortal.sources) {
       if (visited.indexOf(portal) == -1) {
@@ -741,7 +741,7 @@ var Zone = function(ekvx, override_startloc, name) {
       }
       //NOTE:  Any other path a source portal can point is irrelevant here (destinations based on portal class).
     }
-    
+
     //It the portal is a multi-portal, extract every portal in it other than itself is a potential source portal
     if (Array.isArray(targetPortal.target)) {
       let pgroup = targetPortal.target
@@ -767,58 +767,58 @@ var Zone = function(ekvx, override_startloc, name) {
       }
     }
   }).bind(this)
-  
+
   // Secondary forces is additional forces exerted upon neighboring objects by the movement of an object:
   //    things like Release of tension, gravity, riding, and shearing are triggered through this
   //
-  //  This, incidentally, was conceived as an extremely roundabout [but thorough] way to make keys and crates ride moving objects... 
+  //  This, incidentally, was conceived as an extremely roundabout [but thorough] way to make keys and crates ride moving objects...
   let processIndirectForces = function(force) {
     let ctn = force.fromCTN
     let from_nbrpaths = getInboundNeighbors(force.fromCTN, force.fromHEADING)
-    
-    // outbound secondary forces - these apply to neighbors of force.fromCTN 
+
+    // outbound secondary forces - these apply to neighbors of force.fromCTN
     for (let path of from_nbrpaths) {
-    
+
       // If the neighbor is behind a portal, inverse-portal the secondary force out to the neighbor (from targetPortal to sourcePortal).
-      // The inverse-portal'd force should be transformed by the portal to whatever the movement should look like form the source portal 
+      // The inverse-portal'd force should be transformed by the portal to whatever the movement should look like form the source portal
       //NOTE:  This also is a wild guess.  I am unsure whether or not this even should give a *correct* transformation of a secondary force
-      // through an inverse portal.  
-      let heading = path.sourcePortal ? 
+      // through an inverse portal.
+      let heading = path.sourcePortal ?
         rotateDirection_bydirections(
-          force.fromHEADING, 
+          force.fromHEADING,
           direction.invert[path.targetPortal.up],
           direction.invert[path.targetPortal.forward],
           path.sourcePortal.up,
           path.sourcePortal.forward
-        ) 
-        : force.fromHEADING      
+        )
+        : force.fromHEADING
       if (path.sourcePortal) {
       }
-      path.ctn.applyOutboundIndirectForce(heading, path.dir, path.fromdir, force)      
+      path.ctn.applyOutboundIndirectForce(heading, path.dir, path.fromdir, force)
     }
-    
-    // inbound secondary forces - these apply to neighbors of force.toCTN     
+
+    // inbound secondary forces - these apply to neighbors of force.toCTN
     let to_nbrpaths = getInboundNeighbors(force.toCTN, direction.invert[force.toHEADING])
     for (let path of to_nbrpaths) {
-      let heading = path.sourcePortal ? 
+      let heading = path.sourcePortal ?
         rotateDirection_bydirections(
-          force.fromHEADING, 
+          force.fromHEADING,
           direction.invert[path.targetPortal.up],
           direction.invert[path.targetPortal.forward],
           path.sourcePortal.up,
           path.sourcePortal.forward
-        ) 
-        : force.fromHEADING      
-      path.ctn.applyInboundIndirectForce(heading, path.dir, path.fromdir, force)      
+        )
+        : force.fromHEADING
+      path.ctn.applyInboundIndirectForce(heading, path.dir, path.fromdir, force)
     }
   }
-  
+
   //----------------------------------------------------------------------------------------------------------------------------------
   //  MOVEMENT ENGINE
   //----------------------------------------------------------------------------------------------------------------------------------
   //
   //  It might not seem like it on the surface, but Orthot III requires a complex physics engine to manage collisions and topology.
-  //  Everything is discrete (things occupy specific unit cubes), low-frequency (200 millisecond ticks), symmetric (not biased by 
+  //  Everything is discrete (things occupy specific unit cubes), low-frequency (200 millisecond ticks), symmetric (not biased by
   //  any spatial, temporal, or random ordering), and subject to portals (any interaction may just as easily take place across a portal
   //  as between adjacent objects)
   //
@@ -833,33 +833,33 @@ var Zone = function(ekvx, override_startloc, name) {
   //    3:  Graph Forces          - generate a Directed graph of all forces, compute the collision type for each node
   //        Until no Unprocessed Nodes:
   //    4:    Process simple collisions (order is something like non-collisions & simple collision > chase > strike)
-  //  
+  //
   //----------------------------------------------------------------------------------------------------------------------------------
-  
+
   // table of moving objects, indexed by object ID
-  let active_movers = {}    
+  let active_movers = {}
   let all_movers = {}
-    
+
   // table of lists of dependant forces, indexed by ID of the object belonging to the impeding force
   // this is a dynamic dependency graph representing unresolved collisions between forces.
-  // A dependent force is a force which is possibly impeded by another force.  The impeding force may be either of these two situations: 
+  // A dependent force is a force which is possibly impeded by another force.  The impeding force may be either of these two situations:
   //    an incoming object (impedes if it passes)
   //    an outgoing (impedes if it fails)
   //
   // This is updated every time dependencies between forces are found, resolved, deferred, or nullified.
   let depend
-  
+
   let num_movers = 0
-    
+
   //Moves listed by originating position
   //{pos, [node]}
   let moves_by_dest = {}
-  
+
   //Moves listed by destination
   //{pos, [node]}
   let moves_by_source = {}
   let recent_insertion
-  
+
   let cmp_forces = function(a,b) {
     if (a.priority == b.priority) {
       return b.strength - a.strength
@@ -868,18 +868,18 @@ var Zone = function(ekvx, override_startloc, name) {
       return b.priority - a.priority
     }
   }
-      
+
   this.addForce = (function(force) {
-  
+
     //If the object has not moved this tick, add the force
     //If the object did move already, skip ahead a bit, propagate the force, then return.
     if (force.OBJ.movedAt != this.ticknum) {
       recent_insertion = true
-      
+
       force.incoming = []
-      force.outgoing = []  
-      
-      
+      force.outgoing = []
+
+
       //let obj = force.OBJ
       if (force.OBJ.recently != this.ticknum) {
         force.OBJ.recently = this.ticknum
@@ -889,7 +889,7 @@ var Zone = function(ekvx, override_startloc, name) {
         delete force.OBJ.depend
         num_movers++
       }
-      
+
       //If the force has a higher priority than the object's active force, replace the active force with the new one and clear the dependancy (if present)
       else if (cmp_forces(force.OBJ.forces[0], force) > 0) {
         force.OBJ.forces.unshift(force)
@@ -915,14 +915,14 @@ var Zone = function(ekvx, override_startloc, name) {
         force.OBJ.forces.sort(cmp_forces)
       }
       //forces.push(force)
-      
+
       // Organize forces into a pair of tables - one indexed by source, the other indexed by destination
       let srcID = force.fromCTN.id
       let destID = force.toCTN.id
-          
+
       let srclist = moves_by_source[srcID]
       let dstlist = moves_by_dest[destID]
-      
+
       if (!srclist) {
         srclist = []
         moves_by_source[srcID] = srclist
@@ -931,24 +931,24 @@ var Zone = function(ekvx, override_startloc, name) {
         dstlist = []
         moves_by_dest[destID] = dstlist
       }
-          
+
       // Movement insertion during processMovement() [generally dragging and falling] might need to result in re-classification of movement in affected spaces,
       // but this doesn't seem particularly important.  So, for now, any movement inserted during processMovement() is assumed to be non-controversial and will
       // be blindly accepted.
       //
-      // if (processMovementActive) { 
+      // if (processMovementActive) {
       //   classifyNearCollisions(srcID)
       //   classifyFarCollisions(destID)
       // }
-      
+
       // Classify near-collisions with objects moving away from the destination (force-originating Object entering a space occupied by a departing Object)
       let tgtList = moves_by_source[destID]
       if (tgtList && tgtList.length > 0) {
         for (let tgtForce of tgtList) {
           if ((force.OBJ != tgtForce.OBJ) && this.impededBy(force.OBJ, tgtForce.OBJ)) {
-            //force.outgoing.push(tgtForce)        
+            //force.outgoing.push(tgtForce)
             //If the directions match, the source is chasing the target
-            if (force.toHEADING == tgtForce.fromHEADING) {          
+            if (force.toHEADING == tgtForce.fromHEADING) {
               if (tgtForce.moved) {
                 //stackfall!
               }
@@ -958,14 +958,14 @@ var Zone = function(ekvx, override_startloc, name) {
                 tgtForce.incoming.push({source:force, collision:ocol})
               }
             }
-            
+
             //If the directions are opposite, the source and target are ramming each other
-            else if (force.toHEADING == direction.invert[tgtForce.fromHEADING]) {              
+            else if (force.toHEADING == direction.invert[tgtForce.fromHEADING]) {
               let ocol = {target:tgtForce, type:Collision.NEAR_RAM}
               force.outgoing.push( ocol )
               tgtForce.incoming.push({source:force, collision:ocol})
             }
-            
+
             //If the directions are neither, the source is striking the target's side
             else {
               let ocol = {target:tgtForce, type:Collision.EDGE_RAM}
@@ -980,9 +980,9 @@ var Zone = function(ekvx, override_startloc, name) {
       if (srcList && srcList.length > 0) {
         for (let srcForce of srcList) {
           if ((force.OBJ != srcForce.OBJ) && this.impededBy(force.OBJ, srcForce.OBJ)) {
-            //force.outgoing.push(tgtForce)        
+            //force.outgoing.push(tgtForce)
             //If the directions match, the source is chasing the target
-            if (srcForce.toHEADING == force.fromHEADING) {          
+            if (srcForce.toHEADING == force.fromHEADING) {
               if (srcForce.moved) {
                 //stackfall!
               }
@@ -1000,21 +1000,21 @@ var Zone = function(ekvx, override_startloc, name) {
           }
         }
       }
-      
+
       // Classify far-collisions (Two objects attempting to enter the same destination)
       tgtList = moves_by_dest[destID]
       if (tgtList && tgtList.length > 0) {
-        for (let otherForce of tgtList) {  
+        for (let otherForce of tgtList) {
           if ((force.OBJ != otherForce.OBJ) && this.impededBy(force.OBJ, otherForce.OBJ)) {
             let srcForce = force
             let tgtForce = otherForce
-            
+
             // Two forces separated by one space moving toward that space
             if (force.toHEADING == direction.invert[otherForce.toHEADING]) {
               let ocol = {target:otherForce, type:Collision.FAR_RAM}
               force.outgoing.push( ocol )
               otherForce.incoming.push({source:force, collision:ocol})
-              
+
               ocol = {target:force, type:Collision.FAR_RAM}
               otherForce.outgoing.push( ocol )
               force.incoming.push({source:otherForce, collision:ocol})
@@ -1024,7 +1024,7 @@ var Zone = function(ekvx, override_startloc, name) {
               let ocol = {target:otherForce, type:Collision.CORNER_RAM}
               force.outgoing.push( ocol )
               otherForce.incoming.push( {source:force, collision:ocol})
-              
+
               ocol = {target:force, type:Collision.CORNER_RAM}
               otherForce.outgoing.push( ocol )
               force.incoming.push({source:otherForce, collision:ocol})
@@ -1032,14 +1032,14 @@ var Zone = function(ekvx, override_startloc, name) {
           }
         }
       }
-      
+
       srclist.push(force)
       dstlist.push(force)
     }
-    
+
     //  Force propagation
-    //  
-    //  This is not *completely* necessesary, as the movement engine is capable of managing live insertions.  However, it is required if forces need to be 
+    //
+    //  This is not *completely* necessesary, as the movement engine is capable of managing live insertions.  However, it is required if forces need to be
     //  processed in an unbiased manner.  (Any forces processed as live-insertions will not be affected by movement occuring prior to insertion)
     //
     //  Also, for force can be propagated without OrthotObject.propagateForce() -- but the call into it form here avoids infinite loops by only accepting one
@@ -1047,36 +1047,36 @@ var Zone = function(ekvx, override_startloc, name) {
     //
     //  This differs significantly form Orthot II - force propagation is now managed by the movement engine, rather than the individual objects
     //    ( OrthotObject.__propagate__() is part of the movement engine)
-    
+
     let fpropagated = false
     for (let obj of force.toCTN.content) {
       fpropagated |= obj.__propagate_force__(force, this.ticknum)
     }
     return fpropagated
   }).bind(this)
-  
-  
+
+
   let processMovement = (function() {
-    try {    
-    
+    try {
+
       depend = {}
-      
+
       let resolved_any = true
-      
+
       while (true) {
         while (resolved_any || recent_insertion) {
           recent_insertion = false
           resolved_any = false
-          for (let id in active_movers) {      
+          for (let id in active_movers) {
             let mover = active_movers[id]
-            let force = mover.forces[0]   
-            
+            let force = mover.forces[0]
+
             //handle force cancellation triggered by logic outside of the movement engine
             if (force.cancelled) {
               //delete the force, if no forces left for the object, remove it from the movement data and re-activate any dependencies
               mover.forces.shift()
-              if (mover.forces.length == 0) { 
-                num_movers--                  
+              if (mover.forces.length == 0) {
+                num_movers--
                 let depOBJs = depend[id]
                 if (depOBJs) {
                   for (let depOBJ of depOBJs) {
@@ -1088,20 +1088,20 @@ var Zone = function(ekvx, override_startloc, name) {
                 continue
               }
             }
-            
+
             let priorityResolve = true
-            let simpleResolve = true      
-            
+            let simpleResolve = true
+
             let deferTO
-            
+
               // Check to see if the force can be resolved simply.
             for (let collision of force.outgoing) {
               if (!collision.target.cancelled) {
-              
-                // This may be problematic in a difficult-to-test case:  If a force ("force-A") with two collisions ("force-B" and "force-C") claims priority over 
+
+                // This may be problematic in a difficult-to-test case:  If a force ("force-A") with two collisions ("force-B" and "force-C") claims priority over
                 //  force-B, does not claim priority over force-C, force-C obstructs only if it succeessfully moves its object, and force-C is impeded in some way,
                 //  does force-A with its priority over force-B get respected?
-                if (!force.OBJ.hasMovementPriority(force, collision.target, collision.type)) {              
+                if (!force.OBJ.hasMovementPriority(force, collision.target, collision.type)) {
                   priorityResolve = false
                   if (collision.type != Collision.NONE) {
                     simpleResolve = false
@@ -1112,7 +1112,7 @@ var Zone = function(ekvx, override_startloc, name) {
                 }
               }
             }
-            
+
             if (!(simpleResolve || priorityResolve)) {
               if (deferTO) {
                 let depOBJs = depend[deferTO.OBJ.id]
@@ -1125,33 +1125,33 @@ var Zone = function(ekvx, override_startloc, name) {
                 delete active_movers[id]
                 resolved_any = true
               }
-            }          
-            else {          
+            }
+            else {
               //Attempt to move
               //  The move can succeeed, fail, or get deferred.
               //  success (trit.TRUE) - the force resolved, and the object moved
               //  fail (trit.FALSE)   - the force resolved, but the object stayed put
               //  defer (trit.MAYBE)  - Additional forces have been added (which are to be processed, to be followed with another call to move())
-              let moveResult = force.OBJ.move(force)         
+              let moveResult = force.OBJ.move(force)
               switch(moveResult) {
                 // If the object pushed another object, attempt to resolve inserted forces
                 case trit.MAYBE:
-                
+
                   // NOTE:  deferred forces is somewhat of a relic of an earlier and incomplete version of the movement engine.  Force deferral was a hack to
                   //        re-order forces when pushing objects (which has since been cleaned up and handled by the force propagation mechanism)
                   //        force deferral is now automatic and tied directly to collision detection.
-                  //        However, this is to be kept as-is because it us useful if pushing an object can result in that object moving through some 
+                  //        However, this is to be kept as-is because it us useful if pushing an object can result in that object moving through some
                   //        mechanism other than regular force propagation (such as a button attached to the side of an otherwise immobile object which triggers
                   //        its movement)
                   if (force.deferred) {
                     //If the move gets deferred a second time, panic-fail to prevent it from turning into an infinite loop.
                     console.log("  Movement Engine PANIC:  Force deferred a second time!", force)
-                    mover.strike(force, undefined, Collision.FAKE)                
+                    mover.strike(force, undefined, Collision.FAKE)
                     resolvedAny = true
                     force.cancelled = true
                     mover.shift()
-                    if (mover.forces.length == 0) {   
-                      num_movers--           
+                    if (mover.forces.length == 0) {
+                      num_movers--
                       let depOBJs = depend[id]
                       if (depOBJs) {
                         for (let depOBJ of depOBJs) {
@@ -1160,7 +1160,7 @@ var Zone = function(ekvx, override_startloc, name) {
                       }
                       delete active_movers[id]
                       delete depend[id]
-                    }                
+                    }
                   }
                   else {
                     resolved_any = true
@@ -1170,14 +1170,14 @@ var Zone = function(ekvx, override_startloc, name) {
                 case trit.TRUE:
                   resolved_any = true
                   force.moved = true
-                  num_movers--              
+                  num_movers--
                   //force.priority = Number.MAX_SAFE_INTEGER
-                  
+
                   //cancel all other forces still operating on the object, remove it from movement data, and reactivate any dependencies
                   mover.movedAt = this.ticknum
                   for (let i = 1; i < mover.forces.length; i++) {
                     mover.forces[i].cancelled = true
-                  }       
+                  }
                   let depOBJs = depend[id]
                   if (depOBJs) {
                     for (let depOBJ of depOBJs) {
@@ -1186,20 +1186,20 @@ var Zone = function(ekvx, override_startloc, name) {
                   }
                   delete active_movers[id]
                   delete depend[id]
-                  
+
                   //If the object moves, simplify Collisions and mark them as deferred collisions
                   //  (collisions are "deferred" until it can be determined which force to use for it)
                   for (let collisionRef of force.incoming) {
                     let incCollision = collisionRef.collision
                     let incForce = incCollision.target
-                    
+
                     switch(incCollision.type) {
                       case Collision.CHASE:
-                        incCollision.type = Collision.NONE   
+                        incCollision.type = Collision.NONE
                         break
                       // If the object has movement priority, it wins FAR_RAM and CORNER_RAM collisions.
                       case Collision.FAR_RAM:
-                        incCollision.type = Collision.PRIORITY_RAM       //POWER!!! 
+                        incCollision.type = Collision.PRIORITY_RAM       //POWER!!!
                         break
                       case Collision.CORNER_RAM:
                         incCollision.type = Collision.PRIORITY_STEAL
@@ -1226,11 +1226,11 @@ var Zone = function(ekvx, override_startloc, name) {
                         break
                     }
                   }
-                  
+
                   //delete the force, if no forces left for the object, remove it from the movement data and re-activate any dependencies
                   mover.forces.shift()
-                  if (mover.forces.length == 0) { 
-                    num_movers--               
+                  if (mover.forces.length == 0) {
+                    num_movers--
                     let depOBJs = depend[id]
                     if (depOBJs) {
                       for (let depOBJ of depOBJs) {
@@ -1245,27 +1245,27 @@ var Zone = function(ekvx, override_startloc, name) {
             }
           }
         }
-        
+
         if (num_movers == 0) {
           break
         }
-        
+
         if (num_movers > 0) {
-          //console.log("-------------------------------------------")  
-          if (Object.values(active_movers).length != 0) {      
+          //console.log("-------------------------------------------")
+          if (Object.values(active_movers).length != 0) {
             // This is supposed to be impossible - If the above loop does anything with any entry in movers, it runs another iteration
-            console.log("  ERROR:  unexpected unprocessed non-dependent movement:", active_movers)  
+            console.log("  ERROR:  unexpected unprocessed non-dependent movement:", active_movers)
             for (let k in active_movers) {
               console.log(k, active_movers[k].id, active_movers[k].forces)
             }
             active_movers = {}
           }
-          
-           
-          if (Object.values(depend).length != 0) {   
-          
+
+
+          if (Object.values(depend).length != 0) {
+
             let checked = []
-            
+
             main:
             for (let k in depend) {
               k = Number.parseInt(k)
@@ -1273,7 +1273,7 @@ var Zone = function(ekvx, override_startloc, name) {
               if (checked.indexOf(k) == -1) {
                 let node = k
                 let cycle_start
-                let nodes = []   
+                let nodes = []
                 //trace through force-dependencies until a loop can be established
                 while (true) {
                   let cycle_start = nodes.indexOf(node)
@@ -1283,39 +1283,39 @@ var Zone = function(ekvx, override_startloc, name) {
                   nodes.push(node)
                   checked.push(node)
                   node = depend[node][0].depend
-                  
+
                   //If the loop has already been encountered, bail out.  (this should be impossible)
                   if ( (checked.indexOf(node) != -1) && (nodes.indexOf(node) == -1) ) {
                     console.log("ERROR:  loop-crasher implicated a force dependency in a previously crashed loop!", node, all_movers[node], nodes, checked)
                     continue main
                   }
-                } 
+                }
                 if (cycle_start == -1) {
                   continue main
                 }
                 //remove nodes which only lead into the loop
                 nodes = nodes.splice(cycle_start)
-                
+
                 if (nodes.length > 0) {
                   resolved_any = true
-                 
+
                   //crash the loop
                   for (let id of nodes) {
-                    let dobj = all_movers[id]   
+                    let dobj = all_movers[id]
                     let force = dobj.forces.shift()
                     force.cancelled = true
-                    
+
                     for (let outCollision of force.outgoing) {
                       let outForce = outCollision.target
                       force.OBJ.strike(outForce, outForce.OBJ, outCollision.type, true)
                       outForce.OBJ.struck(force, force.OBJ, outCollision.type, true)
                     }
-                    
+
                     if ( (dobj.forces.length == 0) && (active_movers[dobj.id]) ) {
                       delete active_movers[dobj.id]
                     }
                   }
-                  
+
                   //unleash all forces which are dependent upon anything in the loop and which are not [obviously] part of the loop
                   for (let id of nodes) {
                     let depOBJs = depend[id]
@@ -1348,25 +1348,25 @@ var Zone = function(ekvx, override_startloc, name) {
       all_movers = {}
       num_movers = 0
     }
-    
+
     //Moves listed by originating position
     //{pos, [node]}
     moves_by_dest = {}
-    
+
     //Moves listed by destination
     //{pos, [node]}
     moves_by_source = {}
   }).bind(this);
-  
-  
-    
-  ekvx.loadConfig( (id, rawtemplate) => {    
+
+
+
+  ekvx.loadConfig( (id, rawtemplate) => {
     let template = properties_fromstring(rawtemplate.data)
-    
+
     if (!template.type) {
       return undefined
     }
-        
+
     switch(template.type) {
       case undefined:
         return undefined
@@ -1374,49 +1374,49 @@ var Zone = function(ekvx, override_startloc, name) {
         if (!template.color) {
           template.color = "rgba,1,1,1,1"
         }
-  	    if (walltemplates[template.color]) {
-  	      return walltemplates[template.color]
-  	    }
-  	    walltemplates[template.color] = template
-  	    
-  	    bxtbldr.defineSurface_8bit(id, {
-  	      color:template.color, 
-  	      uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
-  	    })
-  	    bxtbldr.defineSurface_8bit(id+'H', {
-  	      color:template.color, 
-  	      uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
-  	    })
+        if (walltemplates[template.color]) {
+          return walltemplates[template.color]
+        }
+        walltemplates[template.color] = template
+
+        bxtbldr.defineSurface_8bit(id, {
+          color:template.color,
+          uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
+        })
+        bxtbldr.defineSurface_8bit(id+'H', {
+          color:template.color,
+          uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
+        })
         bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
-        
-        template.id = id      
-  	  }
-  	    break  	
-  	  default:
-  	    //console.log(template)
-    	  break  
+
+        template.id = id
+      }
+        break
+      default:
+        //console.log(template)
+        break
     }
     return template
   })
-  
-	let _min = {
-	  x:Number.MAX_VALUE,
-	  y:Number.MAX_VALUE,
-	  z:Number.MAX_VALUE,
-	}
-	let _max = {
-	  x:Number.MIN_VALUE,
-	  y:Number.MIN_VALUE,
-	  z:Number.MIN_VALUE,
-	}
-  
+
+  let _min = {
+    x:Number.MAX_VALUE,
+    y:Number.MAX_VALUE,
+    z:Number.MAX_VALUE,
+  }
+  let _max = {
+    x:Number.MIN_VALUE,
+    y:Number.MIN_VALUE,
+    z:Number.MIN_VALUE,
+  }
+
   let loadData = (function() {
-  
+
     let gategroups = []
     let targetted_portals = []
     let portals_byname = {}
     let portals_byclass = {}
-    
+
     let loaded_objects = []
     let ldstage = 1
     let start_align, start_fpmode
@@ -1424,33 +1424,33 @@ var Zone = function(ekvx, override_startloc, name) {
       if (flipWorld) {
         z *= -1
       }
-      
-	    if (x<_min.x) _min.x=x
-	    if (y<_min.y) _min.y=y
-	    if (z<_min.z) _min.z=z
-	    
-	    if (x>_max.x) _max.x=x
-	    if (y>_max.y) _max.y=y
-	    if (z>_max.z) _max.z=z
-      
+
+      if (x<_min.x) _min.x=x
+      if (y<_min.y) _min.y=y
+      if (z<_min.z) _min.z=z
+
+      if (x>_max.x) _max.x=x
+      if (y>_max.y) _max.y=y
+      if (z>_max.z) _max.z=z
+
       if (data) {
         data = properties_fromstring(data)
       }
-      
+
       let datas = [template, data]
-      
+
       let loc = vxc.get(x,y,z)
       let gobj
       let align, color
       let adjctn
-      
-      
+
+
       // If an object has an enable or disable code, it gets enabled or disabled based on codes persisted Progress Codes.
       //  But, gates are a special case - A code specified on a gate is applied to the entire gategroup which the gate is a member of
-      if (template.type != "gate") {      
+      if (template.type != "gate") {
         let enableInfo = property("if", datas)
         let disableInfo = property("ifnot", datas)
-        
+
         if (enableInfo && enableInfo != "") {
           if (!orthotCTL.matchCode(enableInfo)) {
             return false
@@ -1462,18 +1462,18 @@ var Zone = function(ekvx, override_startloc, name) {
           }
         }
       }
-      
+
       if (ldstage == 1) {
         switch(template.type) {
-        
+
           // return "true" to defer side-attached objects to a 2nd pass (need to make sure that the carrying objects are instantiated first)
           default:
             return true
             break
-            
+
           case 'wall':
             vxc.loadTerrain(x,y,z, template.id)
-            this.putGameobject(loc, new Wall(this))            
+            this.putGameobject(loc, new Wall(this))
             break
           case 'stairs': {
               color = property("color", datas, "white", parseColor)
@@ -1483,21 +1483,21 @@ var Zone = function(ekvx, override_startloc, name) {
               vxc.setTerrainKnockout(adjctn, align.up)
               adjctn = this.getAdjacentCTN(loc, direction.invert[align.forward])
               vxc.setTerrainKnockout(adjctn, align.forward)
-              
+
             }
-            break          
+            break
           case 'key': {
-              color = property("color", datas, "white") 
-              let code = property("code", datas)                  
-              gobj = new Key(this, color, code)        
-              keys.push(gobj)    
+              color = property("color", datas, "white")
+              let code = property("code", datas)
+              gobj = new Key(this, color, code)
+              keys.push(gobj)
             }
-            break          
+            break
           case 'lock': {
-              color = property("color", datas, "white") 
-              let code = property("code", datas)                  
-              gobj = new Lock(this, color, code)   
-              locks.push(gobj)         
+              color = property("color", datas, "white")
+              let code = property("code", datas)
+              gobj = new Lock(this, color, code)
+              locks.push(gobj)
             }
             break
           case 'target': {
@@ -1508,14 +1508,14 @@ var Zone = function(ekvx, override_startloc, name) {
             campos.x = campos.x - x
             campos.y = campos.y - y + 0.5
             campos.z = campos.z - z
-            targets[property("name", datas)] = { 
-              loc:loc, 
+            targets[property("name", datas)] = {
+              loc:loc,
               campos:campos
             }
           }
             break
           case 'pblock':
-            color = property("color", datas, "red", parseColor) 
+            color = property("color", datas, "red", parseColor)
             gobj = new PushBlock(this, color)
             break
           case 'crate':
@@ -1530,7 +1530,7 @@ var Zone = function(ekvx, override_startloc, name) {
             gobj = new ScenePortal(this, dest, target)
           }
           break
-          
+
           case 'space_light':
           case 'face_light':
           //  ...  Will have to re-think lighting.  Previous version used unrestricted dynamic lighting, computed it directly and baked it in as VertexColors,
@@ -1539,19 +1539,19 @@ var Zone = function(ekvx, override_startloc, name) {
           //  For now, going with a global directional light
             /*
             let light = new THREE.PointLight(
-              property( "color", 16, libek.util.color.toBinary, data, template), 
+              property( "color", 16, libek.util.color.toBinary, data, template),
               property( "intensity", 1, Number.parseFloat, data, template),
               property( "range", 16, Number.parseFloat, data, template)/5,
               1
             )
             light.position.set( x,y,z );
             this.scene.add( light );
-            
+
             console.log(light)
             */
             break
-          case "start": {   
-              //console.log(datas)       
+          case "start": {
+              //console.log(datas)
               let campos = property("camPos", datas, undefined, parseVec3)
               if (flipWorld) {
                 campos.z *= -1
@@ -1561,20 +1561,20 @@ var Zone = function(ekvx, override_startloc, name) {
               campos.x = campos.x - x
               campos.y = campos.y - y + 0.5
               campos.z = campos.z - z
-              targets.__STARTLOC = { 
-                loc:loc, 
+              targets.__STARTLOC = {
+                loc:loc,
                 campos:campos
               }
             }
             break
           case "cammode":
-            console.log(datas)  
+            console.log(datas)
           break
           case "gate": {
             color = property("color", datas, "white", parseColor)
             align = property("align", datas, undefined, parseO2Orientation)
-            let mprops = mergeObjects(datas)  
-            let gate = new Gate(this, loc, color, align, mprops)             
+            let mprops = mergeObjects(datas)
+            let gate = new Gate(this, loc, color, align, mprops)
             gategroups.push(new GateGroup(this, gate))
           }
           break
@@ -1589,7 +1589,7 @@ var Zone = function(ekvx, override_startloc, name) {
           }
           break
           case "flag": {
-            let mprops = mergeObjects(datas)  
+            let mprops = mergeObjects(datas)
             align = property("align", datas, undefined, parseO2Orientation)
             let code = property("code", datas)
             //console.log("FLAG", mprops)
@@ -1597,7 +1597,7 @@ var Zone = function(ekvx, override_startloc, name) {
           }
           break
           case "exit": {
-            let mprops = mergeObjects(datas)  
+            let mprops = mergeObjects(datas)
             align = property("align", datas, undefined, parseO2Orientation)
             //let code = property("code", datas)
             let dest = property("dest", datas)
@@ -1608,47 +1608,47 @@ var Zone = function(ekvx, override_startloc, name) {
         }
       }
       else {
-        switch(template.type) {               
+        switch(template.type) {
           case "paneportal": {
-					    let p_class = property("class", datas)
-					    let p_name = property("name", datas)
-					    let p_target = property("target", datas)
-					    
+              let p_class = property("class", datas)
+              let p_name = property("name", datas)
+              let p_target = property("target", datas)
+
               align = property("align", datas, undefined, parseO2Orientation)
               vxc.setTerrainKnockout(loc, align.up)
-					    let portal = new Portal(
+              let portal = new Portal(
                 align,
                 property("color", datas, "white", parseColor),
                 p_class, p_name, p_target
               )
               this.attach(x,y,z, portal)
-              
+
               if (p_target && p_class) {
                 console.log("WARNING:  portal defines both single-target and class-based multitargeting (can't do both):", portal)
               }
-              
+
               if (p_name) {
                 portals_byname[pname] = portal
-              } 
+              }
               if (p_target) {
                 targetted_portals.push(portal)
-              } 
+              }
               if (p_class) {
                 let clist = portals_byclass[p_class]
                 if (!clist) {
                   clist = portals_byclass[p_class] = []
                 }
                 clist.push(portal)
-              } 
+              }
             }
-            break   
+            break
           case "icefloor":
             //console.log("icefloor", datas)
             align = property("align", datas, undefined, parseO2Orientation)
             vxc.setTerrainKnockout(loc, align.up)
-				    let icf = new Icefloor( align )
+            let icf = new Icefloor( align )
             this.attach(x,y,z, icf)
-            break            
+            break
           case "ladder":
             let ldr = new Ladder(
               property("align", datas, undefined, parseO2Orientation),
@@ -1661,7 +1661,7 @@ var Zone = function(ekvx, override_startloc, name) {
               property("align", datas, undefined, parseO2Orientation),
               property("color", datas, "white", parseColor),
               property("size", datas, "small"),
-              property("press", datas),              
+              property("press", datas),
               property("release", datas)
             )
             this.attach(x,y,z, btn)
@@ -1671,19 +1671,19 @@ var Zone = function(ekvx, override_startloc, name) {
             break
         }
       }
-      
-      if (gobj) {    
-        loaded_objects.push(gobj)  
-        this.putGameobject(x,y,z, gobj)  
+
+      if (gobj) {
+        loaded_objects.push(gobj)
+        this.putGameobject(x,y,z, gobj)
       }
       return false
     },
     function() {
-      ldstage=2 
+      ldstage=2
     })
-    
+
     // graphics & insertion is deferred until after data loading to allow for attached objects
-    for (let ld_gobj of loaded_objects) {  
+    for (let ld_gobj of loaded_objects) {
       if (ld_gobj.initGraphics()) {
         this.scene.add(ld_gobj.obj)
         if (!ld_gobj.worldpos) {
@@ -1694,7 +1694,7 @@ var Zone = function(ekvx, override_startloc, name) {
       }
       ld_gobj.ready()
     }
-    
+
     let start_target = targets[override_startloc]
     if (!start_target) {
       start_target = targets.__STARTLOC
@@ -1705,7 +1705,7 @@ var Zone = function(ekvx, override_startloc, name) {
     sviewCTL.camtarget.set(start_target.loc.x,start_target.loc.y+0.5,start_target.loc.z)
     sviewCTL.setCamposFromCartisian(start_target.campos)
     sviewCTL.updateCamera(true)
-    
+
     let pl_align
     if (start_align) {
       pl_align = {
@@ -1713,18 +1713,18 @@ var Zone = function(ekvx, override_startloc, name) {
         up:start_align.up
       }
     }
-    
-    player = new Player(this, pl_align, start_fpmode)    
-    
+
+    player = new Player(this, pl_align, start_fpmode)
+
     player.initGraphics()
-    this.putGameobject(start_target.loc, player) 
+    this.putGameobject(start_target.loc, player)
     this.scene.add(player.obj)
     player.ready()
-    
+
     //process multi-targetted portals
     for (let k in portals_byclass) {
       let plist = portals_byclass[k]
-      
+
       //If only a two-entry multitarget spec, simplify it to a pair of one-way links
       if (plist.length == 2) {
         let p1 = plist[0]
@@ -1742,14 +1742,14 @@ var Zone = function(ekvx, override_startloc, name) {
       // list with length 0 is unpossible.
       // if list has one entry, disregard portal class
     }
-    
+
     //process single-targetted portals
     for (let psrc of targetted_portals) {
       psrc.target = portals_byname[psrc.target]
       psrc.target.sources.push(psrc)
     }
-    
-    // Merge gate groups.  
+
+    // Merge gate groups.
     // Result will be that all gates which have the same alignment and are lined up in a row without interruption will be part of the same group.
     let merged_any = true
     while (merged_any) {
@@ -1757,12 +1757,12 @@ var Zone = function(ekvx, override_startloc, name) {
       for (let i = 0; i < gategroups.length; i++) {
         for (let j = 0; j < gategroups.length; j++) {
           if (i != j) {
-            
+
             //try a merge and, if successful, drop the merged-in group.
             if (gategroups[i].merge(gategroups[j])) {
               merged_any = true
               gategroups.splice(j,1)
-              
+
               // decrement indices
               if (i >= j) {
                 i--
@@ -1773,12 +1773,12 @@ var Zone = function(ekvx, override_startloc, name) {
         }
       }
     }
-    
-    for (let ggroup of gategroups) {   
-      ggroup.init() 
+
+    for (let ggroup of gategroups) {
+      ggroup.init()
       /*
-      for (let gate of ggroup.gates) {        
-        // For the time being, I want gates which unlock by progress to be visible, but non-obstructing.        
+      for (let gate of ggroup.gates) {
+        // For the time being, I want gates which unlock by progress to be visible, but non-obstructing.
         if (ggroup.code) {
           delete gate.SpatialClass
         }
@@ -1788,16 +1788,16 @@ var Zone = function(ekvx, override_startloc, name) {
     //console.log(gategroups)
   }).bind(this)
   loadData()
-  
+
   this.unload = function() {
     this.destroyObjects()
     this.destroyTerrain()
     if (this.scene.children.length > 0) {
       //console.log("Objects remaining on scene unload:", this.scene.children)
     }
-    
+
   }
-  this.destroyObjects = function() {    
+  this.destroyObjects = function() {
     keys = []
     locks = []
     keyReticle.clear()
@@ -1808,19 +1808,19 @@ var Zone = function(ekvx, override_startloc, name) {
       }
     })
   }
-  
+
   this.destroyTerrain = function() {
     vxc.dispose()
   }
-  
+
   this.setFPmode = function(fpmode_on, fpmode_moused) {
     if (player) {
       player.setFPmode(fpmode_on, fpmode_moused)
     }
   }
-  
-  this.reset = function() {    
-    this.destroyObjects()    
+
+  this.reset = function() {
+    this.destroyObjects()
     dlight.position.set(0,1000,0)
     dlTarget.position.set(0,0,0)
     dlrot = Math.random()*T
@@ -1829,19 +1829,19 @@ var Zone = function(ekvx, override_startloc, name) {
     prevtime = prevtick
     prevreltime = 0
     this.ticklen = 200
-    startloc = vxc.get(0,1,0) 
+    startloc = vxc.get(0,1,0)
     player = undefined
 
     isGeomValid = true
     cmdSequences_short = []
     cmdSequences_long = []
-    cmdSequences_realtime = [] 
+    cmdSequences_realtime = []
     tmp_tickListeners = []
     tickListeners = []
     deferredActions = []
 
     sigReceivers = {}
-    
+
     vxc.resetData()
     vxc.default = Container
     loadData()

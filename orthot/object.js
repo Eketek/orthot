@@ -22,16 +22,16 @@ var OrthotObject = function(zone) {
   //  and this function is also where force proapgation should be handled.
   //This should return true if this object has propagated the force (to prevent infinite loop from force-propagation)
   // If the function returns true, no additional forces from the originating direction will be applied to the object during the same tick
-  this.propagateForce = function(force){     
+  this.propagateForce = function(force){
     force.OBJ.strike(force, this, Collision.SIMPLE)
     this.struck(force, force.OBJ, Collision.SIMPLE)
   }
-  
+
   // A mechanism for allowing objects to override the default collision resolution order
   //  If true is returned for all collisions the object is involved in, this object will have the opportunity to take the space
   this.hasMovementPriority = function(this_force, other_force, collisiontype) { return false }
-  
-  /*  Called when this object has been struck by another object.  
+
+  /*  Called when this object has been struck by another object.
       force:  The striking force
       otherOBJ:  The object doing the striking
       collision:  (orthot.collision) symbol indicating what sort of collision the strike is
@@ -39,41 +39,41 @@ var OrthotObject = function(zone) {
               of forces is constructed (an edge case requiring creative usage of portals, force propagators, and gravity)
   */
   this.struck = function(force, otherOBJ, collision, crash=false) { return false }
-  
-  /*  Called when this object is striking another object.  
+
+  /*  Called when this object is striking another object.
       force:  The striking force
       otherOBJ:  The object being struck
       collision:  (orthot.collision) symbol indicating what sort of collision the strike is
       crash:  If true, the collision is caused by the Movement Engine being unable to resolve the collision, which, in theory, should only occur if a loop
               of forces is constructed (an edge case requiring creative usage of portals, force propagators, and gravity)
   */
-  this.strike = function(force, otherOBJ, collision, crash=false) { return false } 
-  
+  this.strike = function(force, otherOBJ, collision, crash=false) { return false }
+
   this.idle = function() {}
-  
+
   //Called if requested by preStruck() and there either is space ahead or the space ahead is being vacated and strike()/struck() didn't veto the move
   this.move = function(force) { return false }
-  
+
   this.cancelMove = function(force) {}
-  
+
   //Called if requested by preStruck() and move either was not requested or was requested and subsequently vetoed by strike()/struck()
   this.crush = function(force) { }
-    
+
   this.push = function(force) {}
-  
+
   //isTraversableBy:function(otherOBJ) {return true},
-  
+
   this.intruded = function(other) {}
   this.intrude = function(other) {}
-  
+
   // Called when a force originating from this object and pointed directly at another object either causes the object to leave or results in its destruction.
   //  (This is mainly used to trigger the Player pushwalk animation)
   this.notify_ForcePropagationClearedObstruction = function(force, other) { }
-  
+
   // Called when a push from this object and pointed directly at another object either causes the object to leave or results in its destruction.
   this.notify_PushClearedObstruction = function(force, other) { }
   this.notify_CrushClearedObstruction = function(force, other) { }
-  
+
   this.defeat = function() {
     delete this.SpatialClass    //A reasonably simple way to disappear the object
     this.state = ObjectState.DEFEATED
@@ -97,13 +97,13 @@ var OrthotObject = function(zone) {
       return true
     }
   }
-  
+
   this.stackFall = function(force) {
     return false
   }
   */
-  
-  
+
+
   /*  An object is moving out of some container other than this one, into a container which is adjacent to this container
    *
    *  heading:
@@ -114,7 +114,7 @@ var OrthotObject = function(zone) {
    *  originatingForce:
    *    The [primary] force which is causing this secondary force to be applied
    */
-  this.__applyInboundIndirectForce__ = function(heading, normal, from_normal, originatingForce) {  
+  this.__applyInboundIndirectForce__ = function(heading, normal, from_normal, originatingForce) {
     if (this.hasSides) {
       let slist = this.sides[normal]
       for (let attachment of slist) {
@@ -130,10 +130,10 @@ var OrthotObject = function(zone) {
     }
     this.applyInboundIndirectForce(heading, normal, from_normal, originatingForce)
   }
-  this.applyInboundIndirectForce = function(heading, normal, from_normal, originatingForce) { 
-  
+  this.applyInboundIndirectForce = function(heading, normal, from_normal, originatingForce) {
+
   }
-  
+
   /*  An object is moving out of some container other than this one, into a container which is adjacent to this container
    *
    *  heading:
@@ -161,8 +161,8 @@ var OrthotObject = function(zone) {
     this.applyOutboundIndirectForce(heading, normal, from_normal, originatingForce)
   }
   this.applyOutboundIndirectForce = function(heading, normal, from_normal, originatingForce) { }
-  
-  this.destroy = (function() { 
+
+  this.destroy = (function() {
     if (this.destroyed) {
       return false
     }
@@ -188,8 +188,8 @@ var OrthotObject = function(zone) {
     }
     return true
   }).bind(this)
-  
-  this.getSideobject_bytype = function(side, type) {  
+
+  this.getSideobject_bytype = function(side, type) {
     if (this.sides) {
       for (let sideobj of this.sides[side]) {
         if (sideobj.type == type) {
@@ -198,16 +198,16 @@ var OrthotObject = function(zone) {
       }
     }
   }
-  
-  
+
+
   this.surfaces = [0, 0,0,0,0,0,0]
   this.setBaseSurface = function(sfctype) {
     this.surfaces.fill(sfctype)
   }
-  
+
   let _shearStrength
-  Object.defineProperty(this, 'shearStrength', { 
-    set:function(arg) { 
+  Object.defineProperty(this, 'shearStrength', {
+    set:function(arg) {
       if (typeof(arg) == "object") {
         _shearStrength = arg
       }
@@ -219,24 +219,24 @@ var OrthotObject = function(zone) {
       return _shearStrength
     }
   })
-    
+
   this.types = []
-  
+
   this.sides = [ 0, [],[],[],[],[],[] ]
-  
+
   this.forces = []
-  
+
   this.fproptick = -1
-  let fpropdirs = []   
-  
-  this.__propagate_force__ = function(force, tick) {    
+  let fpropdirs = []
+
+  this.__propagate_force__ = function(force, tick) {
     if (this.fproptick < tick) {
       this.fproptick = tick
       if (fpropdirs.length != 0) {
         fpropdirs = []
       }
     }
-    
+
     if (fpropdirs.indexOf(force.toHEADING) == -1 ) {
       this.propagateForce(force)
       fpropdirs.push(force.toHEADING)
@@ -244,14 +244,14 @@ var OrthotObject = function(zone) {
   }
 }
 
-var StandardObject = function(zone) {   
-  OrthotObject.call(this, zone) 
-  
+var StandardObject = function(zone) {
+  OrthotObject.call(this, zone)
+
   this.initGraphics = function() {
     AnimateBlock(zone, this)
     return true
   }
-  
+
   this.attach = function(sideobj) {
     //console.log("attach", sideobj, "to", this)
     sideobj.host = this
@@ -262,33 +262,33 @@ var StandardObject = function(zone) {
   }
 }
 
-var MovableObject = function(zone) { 
+var MovableObject = function(zone) {
   StandardObject.call(this, zone)
-  
+
   //Minimum amount of force-strength needed to propagate force to this object
   //  By default, objects are immobile.  Recommend using orthot.strength.<WHATEVER> as values
   this.propforceMin = Number.MAX_SAFE_INTEGER
-  
-  // Strength of propgated force.  If -1, the strength of the originating force will be used.  
+
+  // Strength of propgated force.  If -1, the strength of the originating force will be used.
   this.propforceStrength = -1
-  
-  // Strength of sliding force.  If -1, the strength of the preceding force will be used.  
+
+  // Strength of sliding force.  If -1, the strength of the preceding force will be used.
   this.slideStrength = -1
-  
-  // Threshhold for using "crushed" logic instead of "pushed" logic 
+
+  // Threshhold for using "crushed" logic instead of "pushed" logic
   //    (crushing force destroys the object if the object is obstructed)
   this.crushingForce = Strength.CRUSHING
-  
+
   this.fallStrength = Strength.LIGHT
-  
+
   let gravity
-  
+
   this.update = (function() {
     if (this.defeated) {
       zone.removeTickListener(this.update)
       return
-    }    
-    
+    }
+
     if (this.state == ObjectState.SLIDING) {
       let sforce = scan_simple(zone, this.ctn, this, this.slideHEADING, direction.code.NORTH, direction.code.UP)
       sforce.OBJ = this
@@ -298,7 +298,7 @@ var MovableObject = function(zone) {
       sforce.priority = 25
       zone.addForce(sforce)
     }
-    
+
     gravity = scan_simple(zone, this.ctn, this, direction.code.DOWN, direction.code.NORTH, direction.code.UP)
     gravity.OBJ = this
     gravity.initiator = this
@@ -306,35 +306,35 @@ var MovableObject = function(zone) {
     gravity.strength = this.fallStrength
     gravity.priority = 100
     zone.addForce(gravity)
-    
+
   }).bind(this);
-  
-  this.strike = function(force, otherOBJ, collision, crash=false) { 
-  
+
+  this.strike = function(force, otherOBJ, collision, crash=false) {
+
     // If this object strikes something while sliding, cancel the slide.
     if (this.state == ObjectState.SLIDING) {
       this.state = ObjectState.IDLE
       this.idle()
     }
-    
+
     //Just to be safe...
     if (force.action == "slide") {
       force.cancelled = true
     }
-    return false     
-  } 
-  
+    return false
+  }
+
   let prev_ticknum = -10
   this.move = function(force) {
-    if (force.cancelled) {          
+    if (force.cancelled) {
       return trit.FALSE
     }
-    if (force.isTraversable()) {    
+    if (force.isTraversable()) {
       zone.putGameobject(force.toCTN, this)
       if (force.action == "fall") {
         this.state = ObjectState.FALLING
       }
-      else {   
+      else {
         zone.addTickListener(this.update)
         if (force.toHEADING == direction.code.DOWN) {
           this.state = ObjectState.FALLING
@@ -345,9 +345,9 @@ var MovableObject = function(zone) {
             let ngrav = scan_simple(zone, this.ctn, this, direction.code.DOWN, direction.code.NORTH, direction.code.UP)
             let gravOBJ = zone.getObstructor(this, ngrav.toCTN)
             if (gravOBJ) {
-              let gravSFC = gravOBJ.surfaces[direction.invert[ngrav.toHEADING]]   
+              let gravSFC = gravOBJ.surfaces[direction.invert[ngrav.toHEADING]]
               let sfc_interaction = getSurfaceInteraction(this.surfaces[direction.code.DOWN], gravSFC)
-              
+
               if (sfc_interaction == Surface.interaction.SLIDE) {
                 this.state = ObjectState.SLIDING
                 this.slideHEADING = force.toHEADING
@@ -377,7 +377,7 @@ var MovableObject = function(zone) {
       if (this.state == ObjectState.FALLING) {
         this.animCTL.impactDown(force)
       }
-      
+
       this.state = ObjectState.IDLE
       zone.removeTickListener(this.update)
       this.idle()
@@ -398,23 +398,23 @@ var MovableObject = function(zone) {
       return trit.FALSE
     }
   }
-  
+
   this.propagateForce = function(force) {
     if (this.state == ObjectState.DEFEATED) {
       return
     }
-    
+
     force.OBJ.strike(force, this, Collision.SIMPLE)
     this.struck(force, force.OBJ, Collision.SIMPLE)
-    
-    if (force.strength >= this.propforceMin) { 
+
+    if (force.strength >= this.propforceMin) {
       let pbf = scan_simple(zone, this.ctn, this, force.toHEADING, direction.code.SOUTH, direction.code.UP)
-      
+
       pbf.pusher = force.OBJ
       pbf.initiator = force.initiator
-      pbf.action = force.strength >= this.crushingForce ? "crushed" : "pushed"      
+      pbf.action = force.strength >= this.crushingForce ? "crushed" : "pushed"
       pbf.priority = 50
-      
+
       switch(force.toHEADING) {
         case direction.code.DOWN:
           pbf.strength = this.fallStrength
@@ -426,12 +426,12 @@ var MovableObject = function(zone) {
             let grav = scan_simple(zone, this.ctn, this, direction.code.DOWN, direction.code.SOUTH, direction.code.UP)
             let gravOBJ = zone.getObstructor(this, grav.toCTN)
             let gravSFC = gravOBJ ? gravOBJ.surfaces[direction.invert[grav.toHEADING]] : Surface.type.FRICTIONLESS
-            
+
             let sfc_interaction = getSurfaceInteraction(this.surfaces[direction.code.DOWN], gravSFC)
-            
+
             // Interpreting force-strength as traction, if the force is too weak, fail.
             switch(sfc_interaction) {
-              case Surface.interaction.SLIDE:  
+              case Surface.interaction.SLIDE:
                 if (force.strength < Strength.LIGHT) return
                 break
               case Surface.interaction.RESIST:
@@ -440,10 +440,10 @@ var MovableObject = function(zone) {
                 break
               case Surface.interaction.IMPEDE:
                 if (this.propforce_threshold < Strength.HARD) return
-                break        
+                break
               case Surface.interaction.BLOCK:
                 if (this.propforce_threshold < Strength.CRUSHING) return
-                break        
+                break
             }
           }
           break
@@ -451,15 +451,15 @@ var MovableObject = function(zone) {
       zone.addForce(pbf)
     }
   }
-  
-  this.hasMovementPriority = function(this_force, other_force, collisiontype) { 
+
+  this.hasMovementPriority = function(this_force, other_force, collisiontype) {
     if ( (collisiontype == Collision.CORNER_RAM) && (this_force.fromHEADING == direction.code.DOWN) ) {
       return true
     }
-    return false 
+    return false
   }
-  
-  this.applyOutboundIndirectForce = function(heading, normal, from_normal, originatingForce) {    
+
+  this.applyOutboundIndirectForce = function(heading, normal, from_normal, originatingForce) {
     let sfc_interaction = getSurfaceInteraction(this.surfaces[normal], originatingForce.OBJ.surfaces[from_normal])
     switch(this.state) {
       case ObjectState.DEFEATED:
@@ -489,7 +489,7 @@ var MovableObject = function(zone) {
         break
     }
   }
-  
+
 }
 
 

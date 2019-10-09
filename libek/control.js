@@ -362,7 +362,7 @@ var SceneviewController = function(params = {}) {
         let evtman = new NextEventManager()
         main:
         while (true) { 
-          let evt = await evtman.next(btndown, dom_evttarget, "wheel")
+          let evt = await evtman.next(dom_evttarget, btndown, "wheel")
           switch(evt.vname) {           
             case "wheel":
               console.log(evt)
@@ -400,7 +400,7 @@ var SceneviewController = function(params = {}) {
               }
               orbit:
               while (true) {
-                evt = await evtman.next(btnup, dom_evttarget, "mousemove")
+                evt = await evtman.next(dom_evttarget, btnup, "mousemove")
                 switch(evt.vname) {
                   case "mousemove":
                     //let mpos = {
@@ -453,7 +453,7 @@ var SceneviewController = function(params = {}) {
         let evtman = new NextEventManager()
         main:
         while (true) {
-          let evt = await evtman.next(btndown, app_evttarget, "quickrefocus" )  
+          let evt = await evtman.next(dom_evttarget, btndown, app_evttarget, "quickrefocus" )  
           switch(evt.vname) {
             case "quickrefocus":
               qrefocus = true

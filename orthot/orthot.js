@@ -627,7 +627,22 @@ $(async function() {
         {
           pos:0.45,
           color:"orange",
-          startColor:"darkorange",
+          startColor:"hsl(30,100%,50%)",
+          range:0.005
+        },
+        {
+          pos:0.5,
+          color:"hsl(30,100%,33%)",
+          range:0.005
+        },
+        {
+          pos:0.533,
+          color:"hsl(30,100%,20%)",
+          range:0.005
+        },
+        {
+          pos:0.567,
+          color:"hsl(30,100%,10%)",
           range:0.005
         },
         {
@@ -638,18 +653,28 @@ $(async function() {
         {
           pos:0.68,
           color:"black",
-          startColor:"hsl(20,70%,40%)",
+          startColor:"hsl(20,70%,20%)",
           range:0.015
         },
         {
           pos:0.7,
-          color:"hsl(20,70%,10%)",
+          color:"hsl(20,70%,8%)",
           range:0.005
+        },
+        {
+          pos:0.8,
+          color:"hsl(20,70%,4%)",
+          range:0.03
+        },
+        {
+          pos:0.9,
+          color:"hsl(20,70%,2%)",
+          range:0.03
         },
         {
           pos:1,
           color:"black",
-          range:0.005
+          range:0.05
         },
         {
           pos:1.2,

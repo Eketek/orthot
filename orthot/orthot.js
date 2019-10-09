@@ -2,15 +2,13 @@ export { renderCTL, inputCTL, sviewCTL, orthotCTL }
 
 import { tt, initLIBEK, Display, loadMuch, loadZIP, assignMaterials, getAsset, storeAsset, pickPlanepos, debug_tip } from '../libek/libek.js'
 import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
-import { Manager } from '../libek/event.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
 import { direction } from '../libek/direction.js'
 import { Hackground } from '../libek/hackground.js'
 import { clamp, putFloatingElement } from '../libek/util.js'
+import { NextEventManager, next, on } from '../libek/nextevent.js'
 
 import { Zone } from './zone.js'
-
-
 
 /*  Orthot III application logic
     This prepares global controls, loads game data, configures base objects (default materials),
@@ -39,7 +37,8 @@ var orthotCTL = window.octl = {
   assets:{},      
   gdatapack:MAIN_GDATA_PACK,
   tiles:{},  
-  version:"0.3.0"
+  version:"0.3.0",
+  event:new EventTarget()
 }
 
 
@@ -139,13 +138,9 @@ $(async function() {
   assignMaterials(orthotCTL.assets.FaceMark, markmats)
   assignMaterials(orthotCTL.assets.CubeCursor, cursormats)
   assignMaterials(orthotCTL.assets.FaceCursor, cursormats)
-  
-  var evtman = new Manager( disp_elem )
-  inputCTL.EventManager = evtman
-  
+    
   inputCTL.keystate = new QueryTriggeredButtonControl({
-    buttons:"arrows space keys:w a s d",
-    eventmanager:evtman,
+    buttons:".wasd arrows space",
     readheldbuttons:true,
     onInputAvailable:function() {
       if (orthotCTL.ActiveZone) {
@@ -158,7 +153,9 @@ $(async function() {
   sviewCTL = window.sctl = new SceneviewController({
     camtarget:new THREE.Vector3(0,0,0),
     display:renderCTL.display,
-    eventmanager:evtman,
+    dom_evttarget:disp_elem,
+    app_evttarget:orthotCTL.event,
+    evttarget:orthotCTL.event,
     pickplane:new THREE.Plane(direction.vector.UP, 0),
     UpdcamUpdatepickplane:true,
     followspeed:1/60,
@@ -322,7 +319,7 @@ $(async function() {
     return orthotCTL.gdatapack.progress[code]
   }
   
-  $("#loadPuzzle").on("input", ()=>{  
+  on($("loadPuzzle"), "input", ()=>{
     let lvlName = levelSelector.options[levelSelector.selectedIndex].value
     orthotCTL.loadScene(lvlName)
     disp_elem.focus()
@@ -343,8 +340,7 @@ $(async function() {
     putFloatingElement($("#about")[0], aboutBTN)
   }
   
-  $("#hideabout").click( ()=>{$("#about").toggle()} )
-  
+  on($("#hideabout"), "click", toggleAboutBox)
   
   aboutBTN = $("<div>").addClass("btn_active").text("About").click(toggleAboutBox)[0]
   
@@ -355,40 +351,35 @@ $(async function() {
   let faderID  
   let completionELEM = $("#completionGraphic")[0]
   completionELEM.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )  
-  renderCTL.indicateCompletion = function() {
-    if (faderID != undefined) {
-      clearInterval(faderID)
-      faderID = undefined
-    }
-    completionELEM.style.opacity = 0
+  
+  let busy = false
+  renderCTL.indicateCompletion = async function() {
+    if (busy) {
+      console.log("BAH!  They can't wreck my puzzles that quickly... can they?")
+      return
+    }    
+    completionELEM.style.display = "block"
+    busy = true    
+    completionELEM.style.opacity = 0    
     let opa = 0
-    let state = 0
-    faderID = setInterval(()=>{
-      switch(state) {
-        case 0:
-          opa += 0.25
-          completionELEM.style.opacity = opa
-          if (opa >= 1) {
-            completionELEM.style.opacity = 1
-            opa = 1
-            state = 1
-          }
-          break
-        default:
-          state += 1
-          break
-        case 30:
-          opa -= 0.05
-          completionELEM.style.opacity = opa
-          if (completionELEM.style.opacity <= 0) {
-            completionELEM.style.opacity = 0
-            clearInterval(faderID)
-            faderID = undefined
-          }
-          break
-      }
-      //console.log("st-1")
-    }, 30)
+    let incr = 1/10
+    for (let i = 0; i < 10; i++) {
+      await next(orthotCTL.event, "frame")
+      opa += incr
+      completionELEM.style.opacity = opa
+    }
+    completionELEM.style.opacity = 1 
+    for (let i = 0; i < 50; i++) {
+      await next(orthotCTL.event, "frame")
+    }
+    incr = 1/30
+    for (let i = 0; i < 30; i++) {
+      await next(orthotCTL.event, "frame")
+      opa -= incr
+      completionELEM.style.opacity = opa
+    }
+    busy = false    
+    completionELEM.style.display = "none"
   }
   
   renderCTL.build_domOBJ = function(tile, color, location, css_class, event_handlers) {
@@ -696,7 +687,7 @@ $(async function() {
       
 	var run = function run () {	   
 		requestAnimationFrame( run );
-		evtman.dispatch_libek_event("frame")
+		orthotCTL.event.dispatchEvent(new Event("frame"))
   	
   	if (orthotCTL.ActiveZone) {  	 
   	  orthotCTL.ActiveZone.onFrame()
@@ -719,14 +710,10 @@ $(async function() {
       hg.yOFS = (prevCamPhi/Math.PI-0.4) * hgyscale
       hg.update()
     } 
-    
-    
-    //hg.update()
-    //hg.draw()
 	  
-	  let mpos3d = pickPlanepos(renderCTL.display, evtman.mpos, sviewCTL.pickplane)
-		debug_tip(`${tiptext}<br>
-		Mouse position:  x=${mpos3d.x}, y=${mpos3d.y}, z=${mpos3d.z}`)
+	  //let mpos3d = pickPlanepos(renderCTL.display, evtman.mpos, sviewCTL.pickplane)
+		//debug_tip(`${tiptext}<br>
+		//Mouse position:  x=${mpos3d.x}, y=${mpos3d.y}, z=${mpos3d.z}`)
 	}	
 	run()
   

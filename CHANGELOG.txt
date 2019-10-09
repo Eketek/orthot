@@ -1,4 +1,9 @@
 0.3.0:
+  9 Oct 2019
+    Replaced "EventReader" (libek/event.js) interface with "NextEvent" (libek/nextevent.js)
+      (this is for allowing async functions to receive events)
+    Added a generic EventTarget for passing messages between loosely coupled components (orthotCTL.events)
+
   8 Oct 2019
     Added a brief description of the project to the container HTML document
     Moved all contents of /orthot/orthot to /orthot

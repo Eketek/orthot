@@ -8,7 +8,7 @@ export {
   loadMuch, loadZIP,
   debug_tip
 }
-import { keycode } from './event.js'
+//import { keycode } from './event.js'
 import { flatten } from './util.js'
 import { EkvxLoader } from './ekvx.js'
 
@@ -666,6 +666,25 @@ var debug_log = function(data) {
     console.log(data)
     window.whatsthis = data
   }
+}
+  // Code table for converting characters into JS key codes (KeyboardEvent.code)
+var keycode = {
+  '`':'Backquote', '~':'Backquote',
+  '1':'Digit1', '2':'Digit2', '3':'Digit3', '4':'Digit4', '5':'Digit5', 
+  '6':'Digit6', '7':'Digit7', '8':'Digit8', '9':'Digit9', '0':'Digit0',    
+  '!':'Digit1', '@':'Digit2', '#':'Digit3', '$':'Digit4', '%':'Digit5', 
+  '^':'Digit6', '&':'Digit7', '*':'Digit8', '(':'Digit9', ')':'Digit0',    
+  '-':'Minus', '_':'Minus', 
+  '=':'Equal', '+':'Equal',
+  '[':'BracketLeft', '{':'BracketLeft',
+  ']':'BracketRight', '}':'BracketRight',
+  '\\':'Backslash', '|':'Backslash',
+  ';':'Semicolon', ':':'Semicolon',
+  '"':'Quote', '\'':'Quote', 
+  ',':'Comma', '<':'Comma', 
+  '.':'Period', '>':'Period', 
+  '/':'Slash', '?':'Slash', 
+  ' ':'Space',
 }
   
 var initLIBEK = function() {

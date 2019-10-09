@@ -1,7 +1,7 @@
 export { QueryTriggeredButtonControl, SceneviewController }
 import { pickPlanepos, rad_tosector } from './libek.js'
 import { direction } from './direction.js'
-import { EventReaderPolicy, EventReader, EventReaderReturnType } from './event.js'
+import { NextEventManager, next, on } from './nextevent.js'
 
 /*  Controller which reads Buttons through arbitrary periods of time, retains a list of which buttons were recently pressed, 
       and when queried, provides the list of pressed buttons and resets      
@@ -11,73 +11,57 @@ import { EventReaderPolicy, EventReader, EventReaderReturnType } from './event.j
    params:
      buttons:  [required]  space-delimited list of buttons names or button groups to read
      evtman:   [required]  A libek.event.Manager
+     target:   [required]  A DOM element to listen to
      readheldbuttons:   [option]  If true, watched buttons which are held down will be included in the query-result
      onInputAvailable:  [option]  If provided, this is a callback for indicating when new input is available 
                                   query() will still need to be called to fetch the buttons
                                   (this is intended to help make tick-based applications more responsive when nothing important is going on)
 */
 var QueryTriggeredButtonControl = function(params={}) {
-  let btns = params.buttons   
-  let evtman = params.eventmanager
+  let btns = params.buttons
   let held = params.readheldbuttons
   let state = { }
   let inpCallback = params.onInputAvailable
   let hld_mask = []
   
+  
+  if (held) {
+    let nbtnlist = []
+    for (let btn of btns.split(' ')) {
+      if (btn.startsWith('.')) {
+        btn = btn.slice(1)
+        nbtnlist.push("keydown:"+btn)
+        nbtnlist.push("keyup:"+btn)
+      }
+      else {
+        nbtnlist.push(btn)
+        nbtnlist.push(btn + "_up")
+      }
+    }
+    btns = nbtnlist
+  }
+  
+  let evtman = new NextEventManager()  
   // Call this when the application is ready to start accepting input
   this.run = (async function() {
     let btn_evt
-    let configure = function() {
-      btn_evt = EventReaderPolicy(`read ${btns} reconfigure exit`)
-      hld_mask = []
-      for (let btnname in btn_evt) {
-        if (btnname.indexOf('_') != -1) {
-          if ( (btnname != "reconfigure") && (btnname != "exit") ) {
-            hld_mask.push(btnname.substring(0, btnname.indexOf('_')))
-          }
-        } 
-      }
-    }
-    configure()
-    let rdr = new EventReader(evtman)
-    rdr.returnType = EventReaderReturnType.Object
     while (true) {
-      let evt = await rdr.next(btn_evt)  
-      switch(evt.code) {
-        case "reconfigure":
-          configure()
-        break
-        case "exit":
-          return
-        break
-        default:
-          let code = evt.code
-          let _ = code.indexOf('_')
-          if ( _ != -1) {
-            code = code.substring(0, _)
-          }
-          state[code] = true
-          if (inpCallback) {
-            inpCallback()
-          }
+      //let evt = await rdr.next(btn_evt)  
+      let evt = await evtman.next(btns)
+      switch(evt.type) {
+        case "keydown":
+          state[evt.code] = true
+          break
+        case "keyup":
+          state[evt.code] = false
+          break
       }
-      //console.log(evtman.DownKeys.ArrowDown)
-    }
-    
+    }    
   }).bind(this)
   
   // Return the list of recently pressed buttons (+bttons held down if the readheldbuttons option is set)
   this.query = function() {
-    if ( held ) {
-      for (let kname of hld_mask) {
-        if (evtman.DownKeys[kname]) {
-          state[kname] = evtman.DownKeys[kname]
-        }
-      }
-    }
-    let r = state
-    state = {}
-    return r
+    return state
   }
 }
 
@@ -101,7 +85,8 @@ var QueryTriggeredButtonControl = function(params={}) {
 //    subunit                   How far the pick plane is shifted [in native units] when moved along its normal vector
 var SceneviewController = function(params = {}) {  
   this.disp = params.display
-  this.evtman = params.eventmanager
+  let dom_evttarget = params.dom_evttarget
+  let app_evttarget = params.app_evttarget
   
   this.camtarget = params.camtarget ? params.camtarget : new THREE.Vector3()
   this.pickplane = params.pickplane ? params.pickplane : new THREE.Plane()
@@ -133,6 +118,19 @@ var SceneviewController = function(params = {}) {
   
   let updcam_adjust_pickplane = params.UpdcamUpdatepickplane  
   
+  let mpos
+  
+  {(async function trackMouse() {
+    while (true) {
+      let evt = await next(dom_evttarget, "mousemove")
+      mpos = {
+        x: ((evt.pageX - evt.target.offsetLeft) / evt.target.clientWidth) * 2 - 1,
+        y:-((evt.pageY - evt.target.offsetTop)  / evt.target.clientHeight) * 2 + 1  
+      }
+    }
+  })()}
+  
+  
   // First-person mode:
   //  If fpmode is enabled, when the camera is fully zoomed in, fpmode gets activated and altered logic is used to make the camera controller act like a 
   //  first-person controller.
@@ -159,6 +157,8 @@ var SceneviewController = function(params = {}) {
   let fpmode = false
   let fpunlocked = true
   let fptarget = new THREE.Spherical()
+  
+    
   this.setFPmode = function(mode, theta) {
     if (mode != fpmode) {
       fpmode = mode     
@@ -186,7 +186,7 @@ var SceneviewController = function(params = {}) {
       }
       fp_turn_start = this.campos.theta
       fp_turn_end = ntheta
-      this.evtman.dispatch_libek_event("fpadjust")
+      app_evttarget.dispatchEvent(new Event("fpadjust"))
     }
   }
   
@@ -243,22 +243,14 @@ var SceneviewController = function(params = {}) {
   })();
     
   this.run = async function() { 
-  
     if (fpmode_enabled) {
-      (async function fpmode_adjust() { 
-        
-        let main_evt = EventReaderPolicy(`read fpadjust`)
-        let frame_evt = EventReaderPolicy(`read frame`)
-        
-        let rdr = new EventReader(this.evtman)
-        rdr.returnType = EventReaderReturnType.Object
+      (async function fpmode_adjust() {
         while (true) {
-          await rdr.next(main_evt)  
-          
+          await next(app_evttarget, "fpadjust")
           let starttime = Date.now()
           let dt = 0
           while (dt < 1) {            
-            await rdr.next(frame_evt) 
+            await next(app_evttarget, "frame")
             let t = Date.now()
             dt = (t - starttime) / fpmode_turnlen  
             if (dt < 1) {
@@ -275,8 +267,9 @@ var SceneviewController = function(params = {}) {
     } 
       
     // A controller which shifts the pick plane around when the arrow keys are pressed.
+    //  This has NOT been tested for use with the new Event handlers (but is at least expected to work)
     if (params.PickPlane_ArrowkeyController) {
-      (async function PickPlane_ArrowkeyController() {          
+      (async function PickPlane_ArrowkeyController() {         
         //decision tables to control how the X and Z picking planes are shifted by arrow keys
         // index bits 1 and 2 are derived from the quadrant the camera is located in
         // index bits 3 and 4 are taken from the arrow key pressed
@@ -289,15 +282,6 @@ var SceneviewController = function(params = {}) {
         let R = 12
         
         let main_event
-                  
-        let rdr = new EventReader(this.evtman)
-        rdr.returnType = EventReaderReturnType.Object
-        
-        let configure = function() {
-          main_event = EventReaderPolicy("read arrows reconfigure exit")
-        }
-        configure()
-        
         let d
 
         // manage arrow keys.  This is a little complex due to logic to match arrow keys with the current 3d perspective
@@ -305,9 +289,9 @@ var SceneviewController = function(params = {}) {
           d = this.subunit
           //console.log("shift-amt:" + d)
           //console.log(_this.evtman.DownKeys)
-          if (this.evtman.DownKeys.Shift) {
-            d *= this.high_subunit_scale
-          }
+          //if (this.evtman.DownKeys.Shift) {
+          //  d *= this.high_subunit_scale
+          //}
           if (this.pickplane.normal.equals(direction.vector.UP)) {
             if (evt.code == "ArrowUp_down") {
               //pickplane.constant -= d
@@ -332,27 +316,25 @@ var SceneviewController = function(params = {}) {
           this.updateCamera(true)
         }).bind(this)
         
+        let evtman = new NextEventManager()
+        
         main:
         while (true) {
-          evt = await rdr.next(main_event)  
-          switch(evt.code) {
-            case "reconfigure": 
-              configure() 
-            break
-            case "exit": break main
-            case "ArrowUp_down":
+          evt = await evtman.next("arrows exit")
+          switch(evt.vname) {
+            case "ArrowUp":
               processArrow(U)
-            break
-            case "ArrowDown_down":
+              break
+            case "ArrowDown":
               processArrow(D)
-            break
-            case "ArrowLeft_down":
+              break
+            case "ArrowLeft":
               processArrow(L)
-            break
-            case "ArrowRight_down":
+              break
+            case "ArrowRight":
               //console.log(R)
               processArrow(R)
-            break
+              break
           }
         }
         
@@ -365,65 +347,57 @@ var SceneviewController = function(params = {}) {
         let btndown = params.OrbitTargetMBTN + "_down"
         let btnup = params.OrbitTargetMBTN + "_up"
         let main_evt, orbit_evt   
-        let configure = function() {
-          main_evt = EventReaderPolicy(`read ${btndown} mousewheel_pos mousewheel_neg reconfigure exit`)
-          orbit_evt = EventReaderPolicy(`read ${btnup} mousemove reconfigure finalize`)
-        }
-        configure()          
-        let rdr = new EventReader(this.evtman)
-        rdr.returnType = EventReaderReturnType.Object
-        
-        
-        
-        let prev_mpos, mpos
-        
+                
+        let prev_mpos//, mpos
+        let evtman = new NextEventManager()
         main:
-        while (true) {
-          let evt = await rdr.next(main_evt)  
-          switch(evt.code) {            
-            case "reconfigure": 
-              _configure() 
-            break
-            case "exit": break main              
-            case "mousewheel_pos":
-              this.campos.radius += this.radstep
-              if (this.campos.radius > this.radmax) {
-                this.campos.radius = this.radmax
+        while (true) { 
+          let evt = await evtman.next(btndown, dom_evttarget, "wheel")
+          switch(evt.vname) {           
+            case "wheel":
+              console.log(evt)
+              if (evt.deltaY > 0) {
+                this.campos.radius += this.radstep
+                if (this.campos.radius > this.radmax) {
+                  this.campos.radius = this.radmax
+                }
+                if (fpmode_enabled && fpmode) {
+                  fpmode_notify(false, false)
+                  this.setFPmode(false)
+                }
               }
-              if (fpmode_enabled && fpmode) {
-                fpmode_notify(false, false)
-                this.setFPmode(false)
-              }
-              this.updateCamera(false)
-            break
-            case "mousewheel_neg":
-              //console.log(evt.data)
-              this.campos.radius -= this.radstep
-              if (this.campos.radius < this.radmin) {
-                this.campos.radius = this.radmin
-                if (fpmode_enabled && !fpmode) {
-                  fpmode_notify(true, false)
-                  this.setFPmode(true)
+              else {
+                this.campos.radius -= this.radstep
+                if (this.campos.radius < this.radmin) {
+                  this.campos.radius = this.radmin
+                  if (fpmode_enabled && !fpmode) {
+                    fpmode_notify(true, false)
+                    this.setFPmode(true)
+                  }
                 }
               }
               this.updateCamera(false)
             break
             case btndown:
-              prev_mpos = evt.data
+              prev_mpos = mpos
+              //prev_mpos = {
+              //  x:((evt.pageX - evt.target.offsetLeft) / evt.target.clientWidth) * 2 - 1,
+              //  y:-((evt.pageY - evt.target.offsetTop)  / evt.target.clientHeight) * 2 + 1 
+              //}
               fpunlocked = false
               if (fpmode) {
                 fpmode_notify(true, true)
               }
               orbit:
               while (true) {
-                evt = await rdr.next(orbit_evt) 
-                switch(evt.code) {
-                  case "reconfigure": 
-                    configure() 
-                  break
-                  case "exit": break main
+                evt = await evtman.next(btnup, dom_evttarget, "mousemove")
+                switch(evt.vname) {
                   case "mousemove":
-                    let mpos = evt.data.clone()
+                    //let mpos = {
+                    //  x:((evt.pageX - evt.target.offsetLeft) / evt.target.clientWidth) * 2 - 1,
+                    //  y:-((evt.pageY - evt.target.offsetTop)  / evt.target.clientHeight) * 2 + 1 
+                    //}
+    
                     let dx = -(mpos.x - prev_mpos.x)*this.rotspeed
                     let dy = (mpos.y - prev_mpos.y)*this.rotspeed                
                     prev_mpos = mpos
@@ -465,32 +439,19 @@ var SceneviewController = function(params = {}) {
         let main_evt, frame_evt
         let btndown = params.RefocusTargetMBTN + "_down"         
         let vec = new THREE.Vector3()
-        let configure = function() {
-          main_evt = EventReaderPolicy(`read ${btndown} quickrefocus reconfigure exit`)
-          frame_evt = EventReaderPolicy(`read frame`)
-        }
-        configure()
-        let rdr = new EventReader(this.evtman)
-        rdr.returnType = EventReaderReturnType.Object
         
+        let evtman = new NextEventManager()
         main:
         while (true) {
-          let evt = await rdr.next(main_evt)  
-          switch(evt.code) {
-            case "reconfigure": 
-              configure() 
-            break
-            case "exit": break main
+          let evt = await evtman.next(btndown, app_evttarget, "quickrefocus" )  
+          switch(evt.vname) {
             case "quickrefocus":
               qrefocus = true
             case btndown:
               let start = this.camtarget.clone()
-                              
-              //console.log("refocus", start, this.refocustarget)
-              
               let starttime = Date.now()
               while (true) {
-                let __evt = await rdr.next(frame_evt)
+                let __evt = await evtman.next(app_evttarget, "frame")
                 let t = Date.now()
                 let dt
                 if (qrefocus) {
@@ -531,18 +492,10 @@ var SceneviewController = function(params = {}) {
       (async function ChaseTarget_MouseController() {  
         let main_evt, follow_evt
         let btndown = params.ChaseTargetMBTN + "_down"
-        let btnup = params.ChaseTargetMBTN + "_up"
-        let configure = function() {
-          main_evt = EventReaderPolicy(`read ${btndown} reconfigure exit`)
-          follow_evt = EventReaderPolicy(`read ${btnup} frame reconfigure finalize`)
-        }
-        configure()
-        
-        let rdr = new EventReader(this.evtman)
-        rdr.returnType = EventReaderReturnType.Object
+        let btnup = params.ChaseTargetMBTN + "_up"        
         
         let chase = (function() {
-          let mpos3d = pickPlanepos(this.disp, this.evtman.mpos, this.pickplane)
+          let mpos3d = pickPlanepos(this.disp, mpos, this.pickplane)
           let pos = mpos3d.clone()
           pos.sub(this.camtarget)
           pos.normalize()
@@ -562,24 +515,21 @@ var SceneviewController = function(params = {}) {
           this.updateCamera(true)
         }).bind(this)
         
+        let evtman = new NextEventManager()
+        
         main:
-        while (true) {
-          let evt = await rdr.next(main_evt)  
-          switch(evt.code) {
-            case "reconfigure": 
-              configure() 
-            break
-            case "exit": break main
+        while (true) { 
+          let evt = await evtman.next(dom_evttarget, btndown)
+          switch(evt.vname) {
             case btndown:          
               chase()
               dochase:
-              while(true) {
-                evt = await rdr.next(follow_evt) 
-                switch(evt.code) {
+              while(true) { 
+                evt = await evtman.next(dom_evttarget, btnup, app_evttarget, "frame")
+                switch(evt.vname) {
                   case "reconfigure": 
                     _configure() 
                   break
-                  case "exit": break main
                   case "frame":
                     chase()
                   break

@@ -139,6 +139,7 @@ var Player = function(zone, align, init_fpmode) {
     let iLEFT = inputs.KeyA || inputs.ArrowLeft
     let iRIGHT = inputs.KeyD || inputs.ArrowRight
         
+    //console.log(inputs)
         
     let dir       
     let prev_force

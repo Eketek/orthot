@@ -1669,7 +1669,7 @@ var AnimateCreature = function(zone, cr, nmap, _orient, trackcam=false) {
   let configurecam = function(refocus) {
     if (trackcam) {
       if (refocus) {
-        inputCTL.EventManager.dispatch_libek_event("quickrefocus")
+        orthotCTL.event.dispatchEvent(new Event("quickrefocus"))
         actually_trackcam = false
       }
       else {

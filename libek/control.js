@@ -12,7 +12,7 @@ import { NextEventManager, next, on } from './nextevent.js'
      buttons:  [required]  space-delimited list of buttons names or button groups to read
      evtman:   [required]  A libek.event.Manager
      target:   [required]  A DOM element to listen to
-     readheldbuttons:   [option]  If true, watched buttons which are held down will be included in the query-result
+     readheldbuttons:   [option]  If true, the state will be retained (buttons will only clear when User releases them), the state will reset when queried
      onInputAvailable:  [option]  If provided, this is a callback for indicating when new input is available 
                                   query() will still need to be called to fetch the buttons
                                   (this is intended to help make tick-based applications more responsive when nothing important is going on)
@@ -47,8 +47,11 @@ var QueryTriggeredButtonControl = function(params={}) {
     let btn_evt
     while (true) {
       //let evt = await rdr.next(btn_evt)  
-      let evt = await evtman.next(btns)
+      let evt = await evtman.next(btns, "focusout")
       switch(evt.type) {
+        case "focusout":
+          state = {}
+          break
         case "keydown":
           state[evt.code] = true
           break

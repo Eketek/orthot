@@ -3,6 +3,7 @@
     Replaced "EventReader" (libek/event.js) interface with "NextEvent" (libek/nextevent.js)
       (this is for allowing async functions to receive events)
     Added a generic EventTarget for passing messages between loosely coupled components (orthotCTL.events)
+    Keyboard handler state now resets when the page loses focus.
 
   8 Oct 2019
     Added a brief description of the project to the container HTML document

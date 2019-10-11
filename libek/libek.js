@@ -5,11 +5,12 @@ export {
   getAsset, storeAsset, releaseAsset,
   Material, assignMaterials,
   getChildrenRecursive,
-  loadMuch, loadZIP,
+  load, loadMuch, loadZIP, load_to_ArrayBuffer, fetchText,
   debug_tip
 }
 import { flatten } from './util.js'
-import { EkvxLoader } from './ekvx.js'
+import { EkvxLoader, EkvxLoaderLoader } from './ekvx.js'
+import { animtext_Loader, parse_Animtext } from './animtext.js'
 
 var PI = Math.PI
 var T = Math.PI*2     // "turn"
@@ -395,7 +396,10 @@ var DisposeMaterial = function(mat) {
 
 var STDLoader = {
   obj:new THREE.OBJLoader(),
-  texture:new THREE.TextureLoader()
+  texture:new THREE.TextureLoader(),
+  atxt:animtext_Loader,
+  animtxt:animtext_Loader,
+  ekvx:EkvxLoaderLoader
 }
 
 var loadOBJ = async function(url) {
@@ -418,6 +422,14 @@ var load_to_ArrayBuffer = async function(url, fetch_options) {
     fr.onloadend = function() {
       resolve(fr.result)
     }
+  })
+}
+
+var fetchText = async function(url, fetchOPTS) {
+  return new Promise( async resolve => {
+    let resp = await fetch(url, fetchOPTS)
+    let text = await resp.text()
+    resolve(text)
   })
 }
 
@@ -492,7 +504,17 @@ var loadMuch = async function(assets, ... entries) {
   })
 }
 
-var loadZIP = async function(assets, url, fetch_options) {
+// Load assets from a remote zip file and stage the contents for use by the application
+//  params:
+//    assets:  An Associative array to attach the assets to
+//      Each asset is assigned to assets.<AssetName>
+//      Asset names default to whatever the name in the ZIP file (with filename extension removed)
+//      Asset names can be overriden by specifying a name in the manifest file (*.mf)
+//    texts:  A separate associative array to attach parser outputs to (this is split off from assets to make it easier to avoid naming conflicts)
+//      text names will generally be whatever name the text parser finds in the presumably sensible location.
+//    url:  location to load the ZIP file from
+//    fetch_options:  [optional] parameters to initialize the fetch()
+var loadZIP = async function(assets, texts, url, fetch_options) {
   let buf = await load_to_ArrayBuffer(url, fetch_options)
   let jz = new JSZip()
   let archive = await jz.loadAsync(buf)
@@ -545,16 +567,28 @@ var loadZIP = async function(assets, url, fetch_options) {
       case 'mf':
       case '':
         break
-      case 'ekvx':
-        let ab = await entry.async("arraybuffer")
+      case 'ekvx': {
         try {
+          let ab = await entry.async("arraybuffer")
           assets[name] = new EkvxLoader(ab)
         }
         catch(err) {
           console.log(`ERROR parsing ${fname}: `, err)
         }
-        break
-      case 'obj':
+      }
+      break
+      case 'atxt':
+      case 'animtxt': {
+        txt = await entry.async("string")
+        try {
+          Object.assign(texts, parse_Animtext(txt))
+        }
+        catch(err) {
+          console.log(`ERROR parsing ${fname}: `, err)
+        }
+      }
+      break
+      case 'obj': {
         let txt = await entry.async("string")
         try {
           assets[name] = STDLoader.obj.parse(txt)
@@ -562,12 +596,13 @@ var loadZIP = async function(assets, url, fetch_options) {
         catch(err) {
           console.log(`ERROR parsing ${fname}: `, err)
         }
-        break
+      }
+      break
       case 'png':
       case 'jpg':
       case 'jpeg':
         console.log(`Support for loading '${ext}' files from zip archive has not yet been hacked in!`)
-        break
+      break
       default:
         console.log(`Unsupported format: '${ext}' (${fname})`)
       break

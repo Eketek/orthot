@@ -1,14 +1,15 @@
 export { renderCTL, inputCTL, sviewCTL, orthotCTL }
 
-import { tt, initLIBEK, Display, loadMuch, loadZIP, assignMaterials, getAsset, storeAsset, pickPlanepos, debug_tip } from '../libek/libek.js'
+import { tt, initLIBEK, Display, load, loadMuch, loadZIP, assignMaterials, getAsset, storeAsset, pickPlanepos, debug_tip } from '../libek/libek.js'
 import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
 import { direction } from '../libek/direction.js'
 import { Hackground } from '../libek/hackground.js'
-import { clamp, putFloatingElement } from '../libek/util.js'
+import { clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
 
 import { Zone } from './zone.js'
+import { configureTextDisplay, activateTextDisplay, deactivateTextDisplay, setTextDisplayLocale } from './textdisplay.js'
 
 /*  Orthot III application logic
     This prepares global controls, loads game data, configures base objects (default materials),
@@ -30,11 +31,13 @@ var orthotCTL = window.octl = {
   assets:{},
   tiles:{},
   version:"0.3.0",
-  event:new EventTarget()
+  event:new EventTarget(),
+  texts:{},
+  fixedTexts:{}   //non-overrideable texts
 }
 
 
-$(async function() {
+$(async function MAIN() {
 
   initLIBEK()
 
@@ -43,6 +46,10 @@ $(async function() {
   disp_elem.focus()
   renderCTL.display = Display(disp_elem, true)
 
+
+  configureTextDisplay($("#textdisplay")[0], disp_elem)
+  //activateTextDisplay(`A S D F`)
+  
   //renderCTL.display.renderer.setClearColor( "blue", 0.1 )
   //console.log(renderCTL)
 
@@ -50,8 +57,10 @@ $(async function() {
     magFilter:THREE.NearestFilter,
     anisotropy:4,
   }
+  
 
   let MAIN_ZONES = {}
+  let MAIN_TEXTS = {}
 
   await loadMuch(
     orthotCTL.assets,
@@ -59,8 +68,12 @@ $(async function() {
     {url:"assets/textures/wall_8bit_fg.png", properties:TextureProps},
     {url:"assets/textures/symbols.png", properties:TextureProps},
   )
-  await loadZIP(orthotCTL.assets, 'assets/models.zip')
-  await loadZIP(MAIN_ZONES, 'assets/ekvxdat.zip')
+  await loadZIP(orthotCTL.assets, {}, 'assets/models.zip')
+  await loadZIP(MAIN_ZONES, MAIN_TEXTS, 'assets/ekvxdat.zip')
+
+  //console.log("TEST-TXTLOADER---------")
+  //let testTXT = await load("orthot/test4.atxt")
+  //console.log("---------TEST-TXTLOADER")
 
   orthotCTL.tiles.key = {
     source:orthotCTL.assets.symbols.image,
@@ -314,11 +327,12 @@ $(async function() {
   });
 
 
-  let loadDataPack = function(packname, mainareaname, zones) {
+  let loadDataPack = function(packname, mainareaname, data, texts) {
     orthotCTL.gdatapack = {
       name:packname,
       mainAreaname:mainareaname,
-      zones:zones
+      zones:data,
+      texts:texts
     }
     loadProgress()
 
@@ -330,13 +344,14 @@ $(async function() {
     }
   }
 
-  loadDataPack("MainGdataPack", "MainArea", MAIN_ZONES)
+  loadDataPack("MainGdataPack", "MainArea", MAIN_ZONES, MAIN_TEXTS)
   orthotCTL.loadScene("MainArea")
 
   orthotCTL.forceReloadMainData = async function() {
     let zones = {}
-    await loadZIP(zones, 'assets/ekvxdat.zip', {cache:"reload"})
-    loadDataPack("MainGdataPack", "MainArea", zones)
+    let texts = {}
+    await loadZIP(zones, orthotCTL.texts, 'assets/ekvxdat.zip', {cache:"reload"})
+    loadDataPack("MainGdataPack", "MainArea", zones, texts)
     orthotCTL.loadScene("MainArea")
   }
 
@@ -439,7 +454,6 @@ $(async function() {
         elem.on(k, event_handlers[k])
       }
     }
-
 
     $(location).append(elem)
 

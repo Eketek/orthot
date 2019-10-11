@@ -1,4 +1,10 @@
 0.3.0:
+  10-11 Oct 2019
+    Add various internals for an animated text display
+    A slightly more quirky name to better represent a slightly quirky loader (loadEKVX -> EkvxLoaderLoader)
+      (EKVX is only downloaded and parsed when "loaded", yielding a prepared Loader, which may then be used any number of times to initialize and re-initialize
+       puzzles)
+
   9 Oct 2019
     Replaced "EventReader" (libek/event.js) interface with "NextEvent" (libek/nextevent.js)
       (this is for allowing async functions to receive events)

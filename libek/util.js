@@ -1,4 +1,10 @@
-export { objprop, clamp, flatten, property, mergeObjects, properties_fromstring, parseVec3, parseColor, toBinColor, putFloatingElement }
+export {
+  objprop, property, mergeObjects, properties_fromstring,
+  clamp,
+  flatten, anythingIN,
+  parseVec3, parseColor, toBinColor,
+  putFloatingElement, centerElementOverElement
+}
 var objprop = function(obj, name, defaultVal) {
   if (obj[name]) {
     return obj[name]
@@ -32,6 +38,14 @@ var flatten = function(arr, levels=1000) {
   }
   return r
 }
+
+var anythingIN = function(obj) {
+  for (let k in obj) {
+    return true
+  }
+  return false
+}
+
 var property = function(name, objects, defaultVal, transform) {
   if (!Array.isArray(objects)) {
     objects = [objects]
@@ -122,6 +136,18 @@ var toBinColor = function(arg) {
   return (Math.round(c.r*255) << 16) | ( Math.round(c.g*255) << 8 ) | ( Math.round(c.b*255) )
 }
 
+var centerElementOverElement = function(element, target) {
+  let elementRect = element.getBoundingClientRect()
+  let targetRect = target.getBoundingClientRect()
+  
+  
+  let cx = ((targetRect.width)-(elementRect.width))/2 + targetRect.left
+  let cy = ((targetRect.height)-(elementRect.height))/2 + targetRect.top
+  
+  element.style.left = cx + "px"
+  element.style.top = cy + "px"
+}
+
 var putFloatingElement = function(element, target) {
   let elementRect = element.getBoundingClientRect()
   let targetRect = target.getBoundingClientRect()
@@ -130,7 +156,6 @@ var putFloatingElement = function(element, target) {
   let w = elementRect.width
   let h = elementRect.height
 
-  console.log(x,y,w,h, window.innerWidth)
   if ( (x+w) > window.innerWidth) {
     x = targetRect.right-elementRect.width
   }
@@ -145,8 +170,6 @@ var putFloatingElement = function(element, target) {
   }
   element.style.left = x + "px"
   element.style.top = y + "px"
-
-  console.log(elementRect, targetRect, x,y,w,h)
 }
 
 

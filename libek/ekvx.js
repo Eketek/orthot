@@ -1,4 +1,6 @@
-export { loadEKVX, EkvxLoader }
+export { EkvxLoaderLoader, EkvxLoader }
+
+import { load_to_ArrayBuffer } from './libek.js'
 import { DataReader } from './datareader.js'
 
 /*  Parser for the Eketech Voxel Format (presently only used for puzzles for Orthot)
@@ -12,7 +14,7 @@ import { DataReader } from './datareader.js'
     The Eketech Voxel Format also contain additional data which was used for vertex-lighting by Orthot II (but which for now is just parsed over and ignored)
 */
 
-var loadEKVX = {
+var EkvxLoaderLoader = {
   load:async function(arg, cb) {
     if (typeof(arg) == "string") {
       cb(new EkvxLoader(await load_to_ArrayBuffer(arg)))

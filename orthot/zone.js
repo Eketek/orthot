@@ -1551,7 +1551,7 @@ var Zone = function(ekvx, override_startloc, name) {
             */
             break
           case "start": {
-              //console.log(datas)
+              console.log(datas)
               let campos = property("camPos", datas, undefined, parseVec3)
               if (flipWorld) {
                 campos.z *= -1
@@ -1565,6 +1565,9 @@ var Zone = function(ekvx, override_startloc, name) {
                 loc:loc,
                 campos:campos
               }
+              //tip
+              //death | defeat
+              
             }
             break
           case "cammode":

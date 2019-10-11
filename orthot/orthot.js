@@ -72,7 +72,7 @@ $(async function MAIN() {
   await loadZIP(MAIN_ZONES, MAIN_TEXTS, 'assets/ekvxdat.zip')
 
   //console.log("TEST-TXTLOADER---------")
-  //let testTXT = await load("orthot/test4.atxt")
+  //let testTXT = await load("orthot/test4.atxt", undefined, {cache:"reload"})
   //console.log("---------TEST-TXTLOADER")
 
   orthotCTL.tiles.key = {

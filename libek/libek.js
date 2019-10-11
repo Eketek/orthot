@@ -412,9 +412,9 @@ var loadOBJ = async function(url) {
 }
 
 
-var load_to_ArrayBuffer = async function(url, fetch_options) {
+var load_to_ArrayBuffer = async function(url, fetchOPTS) {
   return new Promise( async resolve => {
-    let resp = await fetch(url, fetch_options)
+    let resp = await fetch(url, fetchOPTS)
     let fr = new FileReader()
 
     fr.readAsArrayBuffer(await resp.blob())
@@ -433,7 +433,7 @@ var fetchText = async function(url, fetchOPTS) {
   })
 }
 
-var load = async function(url, loader) {
+var load = async function(url, loader, fetchOPTS) {
 
   let cb
   let p = new Promise( resolve => { cb = resolve })
@@ -446,7 +446,12 @@ var load = async function(url, loader) {
   }
 
   if (loader) {
-    loader.load(url, obj => { cb(obj) } )
+    if (loader.isLibekLoader) {   // A hack to allow test code to forcibly bypass the http cache
+      loader.load(url, obj => { cb(obj) }, fetchOPTS )
+    }
+    else {
+      loader.load(url, obj => { cb(obj) } )
+    }
   }
   else {
     cb()

@@ -15,9 +15,10 @@ import { DataReader } from './datareader.js'
 */
 
 var EkvxLoaderLoader = {
-  load:async function(arg, cb) {
+  isLibekLoader:true,
+  load:async function(arg, cb, fetchOPTS) {
     if (typeof(arg) == "string") {
-      cb(new EkvxLoader(await load_to_ArrayBuffer(arg)))
+      cb(new EkvxLoader(await load_to_ArrayBuffer(arg, fetchOPTS)))
     }
     else {
       cb(new EkvxLoader(arg))

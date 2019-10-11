@@ -3,16 +3,17 @@ import { fetchText } from './libek.js'
 
 
 var animtext_Loader = {
-  load:async function(arg, cb) {
+  isLibekLoader:true,
+  load:async function(arg, cb, fetchOPTS) {
     if (typeof(arg) == "string") {
-      cb(parse_Animtext(await fetchText(arg)))
+      cb(parse_Animtext(await fetchText(arg, fetchOPTS)))
     }
     else if (typeof(arg) == "object") {
       if (arg.text) { 
         cb(parse_Animtext(arg.text))
       }
       else if (arg.url) {
-        cb(parse_Animtext(await fetchText(arg.url)))
+        cb(parse_Animtext(await fetchText(arg.url, fetchOPTS)))
       }
     }
   }
@@ -63,7 +64,7 @@ var parse_Animtext = function(txt) {
     block.name = block.segments[0].command
     delete block.segments[0].command
   }
-  console.log(blocks)
+  //console.log(blocks)
   return blocks
 }
 

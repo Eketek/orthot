@@ -370,7 +370,7 @@ var Player = function(zone, align, init_fpmode) {
         console.log(reason)
       }
       await delay(4000)
-      zone.reset()
+      zone.reset("defeated")
     }
 
   }

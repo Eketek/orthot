@@ -137,6 +137,9 @@ $(async function MAIN() {
   assignMaterials(orthotCTL.assets.icefloor, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}, "black"])
   assignMaterials(orthotCTL.assets.mouse, ["hsl(20, 100%, 50%)", "hsl(0, 100%, 70%)", {color:"green", emissive:"green", emissiveIntensity:1}, "hsl(30, 100%, 20%)"])
   assignMaterials(orthotCTL.assets.moose, ["hsl(20, 100%, 50%)", "black", "hsl(30, 100%, 20%)", {color:"red", emissive:"red", emissiveIntensity:1}])
+  
+  assignMaterials(orthotCTL.assets.InfoBlockBase, ["green", "yellow"])
+  assignMaterials(orthotCTL.assets.InfoQMark, ["yellow"])
 
   let markmats = [{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
   let cursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]

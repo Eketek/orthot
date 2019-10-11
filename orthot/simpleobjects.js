@@ -1,4 +1,4 @@
-export { Wall, ScenePortal, Stair, PushBlock, Crate, IceBlock, Key, Lock, Flag, Exit }
+export { Wall, ScenePortal, InfoBlock, Stair, PushBlock, Crate, IceBlock, Key, Lock, Flag, Exit }
 
 import { getAsset, Material } from '../libek/libek.js'
 import { direction, setOrientation } from '../libek/direction.js'
@@ -9,6 +9,7 @@ import { OrthotObject, StandardObject, MovableObject } from './object.js'
 import { Surface } from './surface.js'
 import { Strength, ObjectState } from './enums.js'
 import { AnimateBlock } from './animation.js'
+import { activateTextDisplay, deactivateTextDisplay } from './textdisplay.js'
 
 var Wall = function(zone) {
   OrthotObject.call(this, zone)
@@ -104,6 +105,62 @@ var Stair = function(zone, color, align) {
 
   this.ascendDIR = align.forward
   this.descendDIR = direction.invert[align.forward]
+}
+var InfoBlock = function(zone, visible, normMSG, defeatMSG) {
+  OrthotObject.call(this, zone)
+
+  let msg = normMSG
+  if (defeatMSG) {
+    msg = defeatMSG
+  }
+
+  this.intruded = function(other) {
+    if (other.isPlayer) {
+      activateTextDisplay(msg)
+      msg = normMSG
+    }
+  }
+  
+  this.departed = function(other) {
+    if (other.isPlayer) {
+      deactivateTextDisplay()
+    }
+    msg = normMSG
+  }
+  
+  if (visible) {
+    let baseOBJ = getAsset(orthotCTL.assets, "InfoBlockBase")
+    this.staticObjects = [baseOBJ]
+  
+    let orientation = {}
+    setOrientation(orientation, direction.code.NORTH, direction.code.UP)
+
+    let _destroy = this.destroy
+    this.destroy = function() {
+      if (baseOBJ.parent) {
+        baseOBJ.parent.remove(baseOBJ)
+      }
+      releaseAsset(orthotCTL.assets, baseOBJ)
+      _destroy()
+    }
+
+    this.idle = function() {
+      let axes = [ new THREE.Vector3(-0.1,1,0).normalize(), new THREE.Vector3(0,1,0), new THREE.Vector3(0,1,0.25).normalize() ]
+      let speed = [0.3*Math.random() + 1, (-0.15)*Math.random(), -0.3*Math.random() + 1]
+      this.animCTL.startContinuousMultiaxialRotator(speed, axes, new THREE.Vector3(0,0.5,0))
+    }
+
+    this.initGraphics = (function() {
+      AnimateBlock(this.zone, this, orientation)
+      this.idle()
+      return true
+    }).bind(this)
+
+    this.mdlgen = function() {
+      let mdl = getAsset(orthotCTL.assets, "InfoQMark")
+      return mdl
+    }
+  }
 }
 
 var Flag = function(zone, align, code) {

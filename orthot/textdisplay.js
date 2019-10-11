@@ -1,4 +1,6 @@
-export { configureTextDisplay, activateTextDisplay, deactivateTextDisplay, setTextDisplayLocale }
+export { 
+  configureTextDisplay, activateTextDisplay, deactivateTextDisplay, setTextDisplayLocale
+}
 
 import { centerElementOverElement } from '../libek/util.js'
 import { on, next, NextEventManager } from '../libek/nextevent.js'
@@ -45,7 +47,6 @@ var fade = async function(len, targetOPA) {
   let pos = incr > 0
   
   while (time < end) {
-    console.log(time, end, opa)
     await next(orthotCTL.event, "frame")
     let ntime = Date.now()
     opa += (ntime-time)*incr
@@ -145,9 +146,24 @@ var unapplyModifier = function() {
   }
 }
 
+var busy = false
+var running = false
+var autocancel = false
 var activateTextDisplay = async function(arg) {
+  if (busy) {
+    console.log(
+      "---------------------------------------------------------------------------\n"+
+      "| TextDisplay is too busied displaying text to be busied displaying text. |\n"+
+      "| Please instead read in your readout from the JavaScript console.        |\n"+
+      "---------------------------------------------------------------------------\n", 
+      getText(arg),
+      "\n-------------------------------------------------------------------------"
+    )
+    return
+  }
+  busy = true
+  running = true
   arg = getText(arg)
-  console.log(arg)
   await applyModifier(baseModifier)
   if (Array.isArray(arg)) {
     for (let i = 0; i < arg.length; i++) {
@@ -174,13 +190,24 @@ var activateTextDisplay = async function(arg) {
   else {
     TextDisplay.innerText = arg
     reposition()
-    await fade(3033, 1)
+    await fade(333, 1)
   }
+  if (autocancel) {
+    await fade(333, 0)
+    busy = false
+  }
+  running = false
 }
 
 var deactivateTextDisplay = async function() {
-  await fade(333, 0)
-  unapplyModifier()
+  if (running) {
+    autocancel = true
+  }
+  else {
+    await fade(333, 0)
+    busy = false
+  }
+  //unapplyModifier()
 }
 
 

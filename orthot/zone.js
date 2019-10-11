@@ -9,7 +9,7 @@ import { renderCTL, sviewCTL, inputCTL, orthotCTL } from './orthot.js'
 import { parseO2Orientation } from './util.js'
 import { Container } from './container.js'
 import { direction, rotateDirection_bydirections } from '../libek/direction.js'
-import { Wall, ScenePortal, Stair, PushBlock, Crate, IceBlock, Key, Lock, Flag, Exit } from './simpleobjects.js'
+import { Wall, ScenePortal, InfoBlock, Stair, PushBlock, Crate, IceBlock, Key, Lock, Flag, Exit } from './simpleobjects.js'
 import { Ladder, Portal, Button, Icefloor } from './attachments.js'
 import { Gate, GateGroup } from './gate.js'
 import { Player } from './player.js'
@@ -439,10 +439,7 @@ var Zone = function(ekvx, override_startloc, name) {
     let [x,y,z,ctn, o] = unpack_LOC_ARGS(args)
 
     if (o.ctn) {
-      let i = o.ctn.content.indexOf(o)
-      if (i != -1) {
-        o.ctn.content.splice(i,1)
-      }
+      o.ctn.removeObject(o)
     }
     o.ctn = ctn
 
@@ -1567,8 +1564,23 @@ var Zone = function(ekvx, override_startloc, name) {
               }
               //tip
               //death | defeat
+              let tipMSG = property("tip", datas)
+              let defeatMSG
+              if (this.resetCause == "defeat") {
+                let defeatMSG = property("defeat", datas)
+                if (!defeatMSG) {
+                  defeatMSG = property("death", datas)
+                }   
+              }           
+              
+              let info_obj = new InfoBlock(this, false, tipMSG, defeatMSG)
+              loaded_objects.push(info_obj)
+              this.putGameobject(x,y,z, info_obj)
               
             }
+            break
+          case "info":
+            gobj = new InfoBlock(this, true, property("tip", datas))
             break
           case "cammode":
             console.log(datas)
@@ -1670,7 +1682,7 @@ var Zone = function(ekvx, override_startloc, name) {
             this.attach(x,y,z, btn)
             break
           default:
-            //console.log(datas)
+            console.log(datas)
             break
         }
       }
@@ -1694,6 +1706,15 @@ var Zone = function(ekvx, override_startloc, name) {
         }
         let ctn = ld_gobj.ctn
         ld_gobj.worldpos.set(ctn.x, ctn.y, ctn.z)
+        
+        // Easiest way I can think of to crank out polygons for InfoBlock-Base without having to add another layer of complexity to the animation system
+        //  <<(Featuritis deferred)>>
+        if (ld_gobj.staticObjects) {
+          for (let obj of ld_gobj.staticObjects) {
+            this.scene.add(obj)
+            obj.position.set(ctn.x, ctn.y, ctn.z)
+          }
+        }
       }
       ld_gobj.ready()
     }
@@ -1822,7 +1843,8 @@ var Zone = function(ekvx, override_startloc, name) {
     }
   }
 
-  this.reset = function() {
+  this.reset = function(resetCause) {
+    this.resetCause = resetCause
     this.destroyObjects()
     dlight.position.set(0,1000,0)
     dlTarget.position.set(0,0,0)

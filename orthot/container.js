@@ -51,6 +51,18 @@ var Container = function(x,y,z) {
       }
     }
   }
+  
+  this.removeObject = function(obj) {
+    let idx = this.content.indexOf(obj)
+    if (idx != -1) {
+      this.content.splice(idx, 1)
+      for (let other of this.content) {
+        if (other.departed) {
+          other.departed(obj)
+        }
+      }
+    }
+  }
 
   /*  Query the container for an object matching the specified type
   */

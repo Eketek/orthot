@@ -1,7 +1,7 @@
 export {
   objprop, property, mergeObjects, properties_fromstring,
   clamp,
-  flatten, anythingIN,
+  flatten, anythingIN, removeItems,
   parseVec3, parseColor, toBinColor,
   putFloatingElement, centerElementOverElement
 }
@@ -37,6 +37,18 @@ var flatten = function(arr, levels=1000) {
     r.push(arr)
   }
   return r
+}
+
+var removeItems = function(arr, ... items) {
+  mainloop:
+  for (let i = arr.length-1; i >= 0; i--) {
+    for (let item of items) {
+      if (arr.indexOf(item) != -1) {
+        arr.splice(i, 1)
+        continue mainloop
+      }
+    }
+  }
 }
 
 var anythingIN = function(obj) {

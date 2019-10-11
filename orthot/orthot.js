@@ -1,6 +1,12 @@
 export { renderCTL, inputCTL, sviewCTL, orthotCTL }
 
-import { tt, initLIBEK, Display, load, loadMuch, loadZIP, assignMaterials, getAsset, storeAsset, pickPlanepos, debug_tip } from '../libek/libek.js'
+import { 
+  tt, initLIBEK, 
+  Display, 
+  load, loadMuch, loadZIP, fetchText,
+  assignMaterials, getAsset, storeAsset, 
+  pickPlanepos, debug_tip 
+} from '../libek/libek.js'
 import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
 import { direction } from '../libek/direction.js'
@@ -58,18 +64,67 @@ $(async function MAIN() {
     anisotropy:4,
   }
   
-
   let MAIN_ZONES = {}
   let MAIN_TEXTS = {}
-
-  await loadMuch(
-    orthotCTL.assets,
-    {url:"assets/textures/patterns.png", properties:TextureProps},
-    {url:"assets/textures/wall_8bit_fg.png", properties:TextureProps},
-    {url:"assets/textures/symbols.png", properties:TextureProps},
-  )
-  await loadZIP(orthotCTL.assets, {}, 'assets/models.zip')
-  await loadZIP(MAIN_ZONES, MAIN_TEXTS, 'assets/ekvxdat.zip')
+  try {
+    // Asset management - check assets/verison.txt, compare everything with stored version numbers
+    //  If the version is old, use fetch option {cache:"reload"} to force a reload of any old data
+    //  Otherwise, use default fetch options
+    // While so doing, setup an asynchronous download of everything (and wait for everything to be completed)
+    //  Should probably run some sort of display hack and show a progress bar while waiting.
+    let dver_file = await fetchText("assets/version.txt", {cache:"no-store"})
+    let lines = dver_file.split('\n')
+    let current_versions = {}
+    let prev_versions = {}
+    for (let line of lines) {
+      line = line.trim()
+      if (line != '') {
+        let parts = line.split(' ')
+        current_versions[parts[0]] = 0|parseInt(parts[1])
+      }
+    }  
+    let reloadOPT = { cache:"reload" }
+    
+    // accepts a property name and loader function, checks the previous known version against the reported current version,
+    //  and if the file is indicated to be old, calls the loader function with a forced reload fetch option
+    //  (if not old, the call is made with fetch defaults, so as to accept whatever is cached)
+    let update = async function(propname, loadit) {
+      let curr_ver = current_versions[propname]
+      let prev_ver = 0|parseInt(window.localStorage[propname+"VER"])
+      let result = await loadit((curr_ver > prev_ver) ? reloadOPT : undefined)
+      return result
+    }
+    
+    // call each update, but aggregate all the promises
+    let promises = [
+      update("texture", (fetchOPTS)=>{
+        return loadMuch(
+          orthotCTL.assets,
+          fetchOPTS,
+          {url:"assets/textures/patterns.png", properties:TextureProps},
+          {url:"assets/textures/wall_8bit_fg.png", properties:TextureProps},
+          {url:"assets/textures/symbols.png", properties:TextureProps},
+        )
+      }),
+      update("model", (fetchOPTS)=>{
+        return loadZIP(orthotCTL.assets, {}, 'assets/models.zip', fetchOPTS)
+      }),
+      update("ekvx", (fetchOPTS)=>{
+        return loadZIP(MAIN_ZONES, MAIN_TEXTS, 'assets/ekvxdat.zip', fetchOPTS)
+      }),
+    ]
+    
+    // Whene everything is loaded, update local storage with the versions of the cached files
+    await Promise.all(promises)
+    console.log("Loaded Orthot III data")
+    for (let name in current_versions) {
+      window.localStorage[name+"VER"] = current_versions[name]
+    }
+  }
+  catch(err) {
+    console.log("FAILED to load Orthot III data because:", err)
+    return
+  }
 
   //console.log("TEST-TXTLOADER---------")
   //let testTXT = await load("orthot/test4.atxt", undefined, {cache:"reload"})

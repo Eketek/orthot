@@ -1,0 +1,4 @@
+model 1
+ekvx 1
+text 1
+texture 1

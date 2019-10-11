@@ -146,7 +146,7 @@ var InfoBlock = function(zone, visible, normMSG, defeatMSG) {
 
     this.idle = function() {
       let axes = [ new THREE.Vector3(-0.1,1,0).normalize(), new THREE.Vector3(0,1,0), new THREE.Vector3(0,1,0.25).normalize() ]
-      let speed = [0.3*Math.random() + 1, (-0.15)*Math.random(), -0.3*Math.random() + 1]
+      let speed = [0.5*Math.random() + 1, (-0.15)*Math.random(), -0.1*Math.random() + 1]
       this.animCTL.startContinuousMultiaxialRotator(speed, axes, new THREE.Vector3(0,0.5,0))
     }
 

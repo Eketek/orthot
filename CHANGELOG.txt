@@ -5,6 +5,9 @@
       (EKVX is only downloaded and parsed when "loaded", yielding a prepared Loader, which may then be used any number of times to initialize and re-initialize
        puzzles)
     Added an internal http cache bypass mechanism
+    Added a proper loader
+      It forces a reload (bypassing HTTP cache) when the cache contains old data.
+      It also loads all data asynchronously (the game should a bit faster)
 
   9 Oct 2019
     Replaced "EventReader" (libek/event.js) interface with "NextEvent" (libek/nextevent.js)

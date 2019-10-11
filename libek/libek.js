@@ -469,7 +469,7 @@ var load = async function(url, loader, fetchOPTS) {
         loader:  [Optional] A function which accepts a URL and passes the result to a callback when it completes - If not specified, libek.load() will select
                             one based on filename extension
   */
-var loadMuch = async function(assets, ... entries) {
+var loadMuch = async function(assets, fetchOPTS, ... entries) {
   entries = flatten(entries)
   let plist = new Array(entries.length)
   for (let i = 0; i < entries.length; i++) {
@@ -479,7 +479,7 @@ var loadMuch = async function(assets, ... entries) {
       plist[i] = load(entry)
     }
     else {
-      plist[i] = load(entry.url, entry.loader)
+      plist[i] = load(entry.url, entry.loader, fetchOPTS)
     }
   }
   await Promise.all(plist).then( vals => {

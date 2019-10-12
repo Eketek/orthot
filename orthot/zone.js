@@ -220,7 +220,7 @@ var Zone = function(ekvx, override_startloc, name) {
       return false
     }
     //update geometry
-    vxc.buildChunks()
+    let chk_built = vxc.buildChunks()
 
     //timekeeping
     let t = Date.now()
@@ -232,14 +232,14 @@ var Zone = function(ekvx, override_startloc, name) {
     prevreltime = reltime
     
     if (reltime < 1) {
-      return false
+      return false|chk_built
     }
     
     if ( (cmdSequences_long.length == 0) && (cmdSequences_short.length == 0) ) {
       prevreltime -= 1
       prevtick = t
       tick()
-      return false
+      return false|chk_built
     }
 
     for (let i = 0; i < cmdSequences_long.length; i++) {

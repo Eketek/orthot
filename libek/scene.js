@@ -70,7 +70,9 @@ let VxScene = function(params={}) {
           break
         }
       }
+      return true
     }
+    return false
   }
 
   //assign a terrain value without touching chunk data (this is for quickly resetting scenes which do not use dynamic terrain)

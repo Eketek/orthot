@@ -43,17 +43,353 @@ fadein 250
   If you are very new here, I recommend taking the teleporter just ahead and to the right.
   In that area, you may find a few more details.  But, if you've come this far already and
   you are a bit adventurous, you are free also to learn by experimentation.
-.
 wait 2500
+.
 fadein 250
   Eketek gives you his full assurance that you will not be billed for any consumption of
   energy resulting from the usage of his teleporters.  Eketek also asserts that his
   teleporters do not have any problems or side-effects which you or anyone else need to know
   anything about.
 
+codegate
+fadein 100
+  Access Denied!
+fadein 100
+  ------------------------------------------------------------------------------------
+fadein 250
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+wait 1500
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+wait 750
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+wait 500
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+wait 500
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+wait 2000
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+fadein 200
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+  Until I am satisfied with the record of your progress, this gate will remain closed.
+wait 1000
+fadein 200
+                                                    -- Sincerely, Eketek
+
+settings
+fadein 100
+  Settings
+fadein 100
+  -----------------------------------------------------------------------------------------
+fadeinwords 500
+  Settings settings settings ...
+fadeinwords 50
+  Not much that would be "settings" has been implemented yet.
+wait 500
+.
+fadein 200
+  If you like, you can click the button in the upper-right corner that says "hi-resp" to 
+  toggle High-Responsive Mode.
+fadein 200
+    Everything in Orthot occurs at fixed intervals (generally 5 "ticks" per second).
+fadein 200
+    Ordinarilly, if anything is moving, any moves you intend to make will be delayed until
+    the start of the next "tick" (basically to allow animations to run smoothly).
+fadein 200
+    But, if High-Responsive Mode is on, everything that is in motion when you press a 
+    movement button will be instantly teleported forward, allowing your movement to start 
+    instantaneously.
+
+start
+fadein 100
+  A Puzzle
+fadein 100
+  --------------------------------------------------------------------------------
+fadein 200
+  This area is a puzzle...  
+wait 400
+fadein 200
+    sort of...
+wait 400
+fadein 200
+      Or maybe something more like an ill-conceived instruction manual.
+.
+wait 400
+fadein 200
+  Anyway, your mission today is to move to the exit.  
+wait 200
+  To reach it, you're going to have to walk.  Along the way, you will encounter a
+  few common features of Orthot -- namely, walkable floor, ledges, stairs, and 
+  ladders.
+
+fall
+fadein 100
+  What have we down there?!!
+fadein 100
+  ------------------------------------------------------------
+fadein 200
+  Looks like a level designer failed to install barriers here.
+fadein 200
+  What do you suppose is down there?
+fadein 200
+  Is it a shortcut to the ground?
+wait 1200
+.
+fadein 200
+  There's only one way to find out!
+
+introdeath
+fadein 300
+  --------
+  | Boo. |
+  --------
+
+return
+fadein 100
+  Return
+fadein 100
+  -----------------------------------------------------------------------------------------.
+fadein 200
+  If this puzzle is too challenging for you, this here teleporter will return you to the
+  main area.
+wait 500
+.
+fadein 200
+  All puzzles have a teleporter placed near the entrance which will return you to where you
+  came from.
+wait 3000
+.
+fadein 200
+  Except for the ones which don't.
+wait 1500
+fadein 200
+  For that problem to be corrected, Eketek would need to be appointed to the office of 
+  "Dictator".
+wait 4000
+fadein 200
+  Then Eketek would need to decide that the problem of puzzle designers failing or refusing
+  to comply with content standards is somehow important enough an issue as to warrant the
+  application of dictatorial powers.
+wait 5000
+fadein 200
+  Then Eketek would have to acquire complete a copy of all content, both public and private,
+  and he would have to commit time and resources to review it.
+wait 4000
+fadein 200
+  [ REDACTED ]
+wait 4000
+fadein 200
+  Then all puzzles will have a teleporter placed near the entrance which will return you to
+  where you came from.
 
 
+reset
+fadein 100
+  Reset
+fadein 100
+  -------------------------------------------------------------------------------------------
+fadein 200
+  If you ever get stuck somewhere or you put a puzzle into an unsolveable state, you can 
+  always click the "RESET" button.
+.
+fadein 200
+  The reset button will reset the puzzle to its initial state.  Everything goes back to where
+  it stated, and you get teleported to the start position.
 
+reset_caught
+fadein 100
+  **HA!**  Now you HAVE to click that RESET button!
+
+view
+fadein 100
+  Controls
+  -------------------------------------------------------
+fadein 200
+  Press arrow keys to move  (or WASD buttons)
+  Left click and drag to look at different positions
+  Middle-click to reset the view to your current position
+  Right click and drag to look in different directions
+  Roll the mouse wheel to zoom in and out
+
+stairs
+fadein 100
+  Stairs
+  -----------------------------------------------------------------
+fadein 200
+  Stairs work just like the stairways you've always known
+fadein 200
+  Example:
+stairwords up 400
+  Stairs may be ascended, travelling from places low to places high
+  .
+  .
+  .
+  .
+  .
+  .
+  .
+  .
+  .
+  .
+stairwords down 400
+  You may descend stairs, travelling from places high to places low
+  .
+  .
+  .
+  .
+  .
+  .
+  .
+  .
+  .
+  .
+
+ladders
+force-nbsp
+fadein 100
+  Ladders
+fadein 1200
+  ---------------------------------------------
+                 ||     .     ||               
+                 ||    /|\    ||               
+                 ||   / | \   ||               
+                 ||  /  |  \  ||               
+                 ||     |     ||               
+                =================              
+                 ||     |     ||               
+                 ||     |     ||               
+                 ||     |     ||               
+                =================              
+                 ||     |     ||               
+                 ||     |     ||               
+                 ||     |     ||               
+                =================              
+                 ||     |     ||               
+                 ||     |     ||               
+                 ||     |     ||               
+                =================              
+                 ||     |     ||               
+                 ||     |     ||               
+                 ||     |     ||               
+                =================              
+                 ||     |     ||               
+                 ||           ||               
+                 ||           ||               
+  ---------------------------------------------
+wait 800
+.
+fadein 400
+  Need I expound more on this topic?
+
+
+exit
+fadein 200
+  Solved
+fadein 200
+  --------------------------------------------------------------
+  Congratulations, you have solved the puzzle!
+wait 750
+fadein 200
+  ...
+wait 500
+fadein 200
+  is what someone might say to you, should someone observe you 
+  finding the exit.
+wait 500
+.
+fadein 200
+  Hint:  It is immediately in front of you, has the shape of a 
+  light blue transparent object, and it has a yellow 'E' inside.
+  
+pblocks
+fadein 200
+  Push the blocks
+fadein 200
+  ---------------------------------------------------------------------------------------
+fadein 200
+  Blocks have many uses.
+wait 500
+fadein 200
+  Blocks which are bolted down and placed under lock, key, and armed guard -- not so much
+wait 500
+.
+fadein 200
+  These blocks  have no such protection, and thus should prove very useful indeed.
+wait 500
+fadein 200
+  I recommend pushing one of them into a trench, just to see what happens.
+wait 500
+.
+fadein 200
+  Do you think you can solve this puzzle without these blocks?
+fadein 200
+  I don't think you can.
+  
+pblocksstairs
+fadein 200
+  Push the blocks
+fadein 200
+  -------------------------------------------------------------------------------
+fadein 200
+  Around here, we actually reward the act of pushing furnishings down staircases.
+  But be warned:  What goes down is not about to go back up.
+  
+keys
+fadein 200
+  Locks and Keys
+fadein 200
+  -------------------------------------------------------------------------------
+fadein 400
+  Locks are great for restricting access to certain areas.  And keys are even 
+  greater for un-restricting access to those same areas.
+wait 1000
+.
+fadein 1000
+  I have it on very good authority that all keys of a certain color are able to
+  unlock all locks of the same color.
+fadein 1000
+  I have it on equally good authority that all locks of a certain color may be
+  unlocked by all keys of the same color.
+fadein 1000
+  But keys and locks which have mismatched colors:  Not Happening!
+wait 1000
+.
+fadein 400
+  If you are ever in doubt about which locks a key which you have picked up will
+  open, look to the left and a up a bit, then move your mouse cursor over to the
+  picture of the key, then, [without moving your mouse] look back at the locks.
+  Marks will be placed on top of each lock which the moused-over key can unlock.
+wait 1000
+.
+fadein 400
+  Also, keys are very easy to use.  To pick one up, simply walk into the space the
+  key occupies.  Then to use the key, walk up to push the corresponding lock.
+  You can even unlock from above by walking over the lock.
+wait 1000
+.  
+fadein 400
+  Best UX design ever.  What could possibly go wrong?
 
 
 

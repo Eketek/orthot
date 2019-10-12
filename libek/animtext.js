@@ -45,6 +45,7 @@ var parse_Animtext = function(txt) {
     let segment_parts = block_part.split(/\n(?=\S)/)
     let block = {
       isAnimText:true,
+      space:' ',
       segments:[]
     }
     blocks.push(block)

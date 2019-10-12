@@ -133,8 +133,22 @@ $(async function MAIN() {
     return
   }
   
-  for (let block of orthotCTL.assets.maintexts) {
-    orthotCTL.texts[block.name] = block
+  let setupMainTexts = function(src) {
+    orthotCTL.texts = {}
+    for (let block of src) {
+      orthotCTL.texts[block.name] = block
+    }
+  }
+  setupMainTexts(orthotCTL.assets.maintexts)
+  
+  orthotCTL.forceReloadMaintexts = async function() {
+    let txts = {}
+    await loadMuch(
+      txts,
+      {cache:"reload"},
+      {url:"assets/maintexts.atxt"},
+    )
+    setupMainTexts(txts.maintexts)
   }
 
   //console.log("TEST-TXTLOADER---------")

@@ -14,10 +14,12 @@ var configureTextDisplay = function(textdisp, beneath) {
   BeneathElement = beneath
 }
 
+let NBSP = "\u00A0"
 var LOCALE = "EN"
 var setTextDisplayLocale = function(locale) {
   LOCALE = locale
 }
+
 
 var reposition = function() {
   centerElementOverElement(TextDisplay, BeneathElement)
@@ -95,9 +97,9 @@ var resetStyle = function() {
   TextDisplay.style["border-color"] = "black"
   TextDisplay.style["border-width"] = 2
   TextDisplay.style["border-style"] = "solid"
+  TextDisplay.style["min-width"] = "0px"
   TextDisplay.style["max-width"] = "75%"
-  TextDisplay.style["min-width"] = "10%"
-  TextDisplay.style["min-height"] = ""
+  TextDisplay.style["min-height"] = "0px"
   TextDisplay.style["max-height"] = ""
   TextDisplay.style["padding"] = "4px"
   TextDisplay.style["font-family"] = "monospace"
@@ -129,7 +131,7 @@ var toHtmlText = function(segment) {
     let i = 2
     for (;i < line.length; i++) {
       if (line[i] != ' ') break
-      r = r + '\u00A0'
+      r = r + NBSP
     }
     r = r + line.substring(i) + "\n"
   }
@@ -143,10 +145,10 @@ var toTestText = function(block) {
       testTXT = testTXT + "\n"
     }
     for (let line of seg.texts) {
-      for (let i = 0;i < line.length; i++) {
-        if (line[i] != ' ') break
-        testTXT = testTXT + '\u00A0'
-      }
+      //for (let i = 0;i < line.length; i++) {
+      //  if (line[i] != ' ') break
+      //  testTXT = testTXT + '\u00A0'
+      //}
       testTXT = testTXT + line.substring(2) + "\n"
     }
   }
@@ -157,9 +159,7 @@ var autosize = function(block) {
   TextDisplay.innerText = toTestText(block)
   reposition()
   let bounds = TextDisplay.getBoundingClientRect()
-  TextDisplay.style["min-width"] = bounds.width
   TextDisplay.style["max-width"] = bounds.width
-  TextDisplay.style["min-height"] = bounds.height
   TextDisplay.style["max-height"] = bounds.height
   TextDisplay.innerText = ""
 }
@@ -210,12 +210,14 @@ var activateTextDisplay = async function(arg, successCB) {
   }
   else if (typeof(arg) == "object") {
     if (arg.isAnimText) {
-      autosize(arg)
-      processBlock:
-      for (let seg of arg.segments) {
+      let block = arg
+      autosize(block)
+      processSegments:
+      for (let seg of block.segments) {
         if (autocancel) {
           break
         }
+        let space = block.space
         let cmdparts, cmd
         if (seg.command) {
           cmdparts = seg.command.split(' ')
@@ -232,12 +234,33 @@ var activateTextDisplay = async function(arg, successCB) {
           textElem.innerText = toHtmlText(seg)
         }
         switch(cmd) {
+          case "force-nbsp": {
+            if (block.space == NBSP) {
+              continue processSegments
+            }
+            block.space = NBSP
+            space = NBSP
+            for (let _seg of block.segments) {
+              for (let i = 0; i < _seg.texts.length; i++) {
+                let line = "";
+                for (let char of _seg.texts[i]) {
+                  if (char == ' ') {
+                    line = line + NBSP
+                  }
+                  else {
+                    line = line + char
+                  }
+                }
+                _seg.texts[i] = line
+              }
+            }
+          } break
           case "":
             if (seg.texts.length == 0) break
           case "text": {
             if (textElem) {
               setText(toHtmlText(seg))
-              if (arg.segments.length == 1) {
+              if (block.segments.length == 1) {
                 TextDisplay.appendChild(textElem)
                 await fade(100, 0, 1, textElem)
               }
@@ -284,6 +307,87 @@ var activateTextDisplay = async function(arg, successCB) {
               }
             }
           } break
+          case "fadeinwords": {
+            if (textElem) {
+              let elem
+              let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 1000)
+              textElem.innerText = ""
+              TextDisplay.appendChild(textElem)
+              for (let i = 0; i < seg.texts.length; i++) {
+                let line = seg.texts[i]
+                line = line.substring(2)
+                let word = ""
+                for (let c of line) {
+                  if (autocancel) {
+                    break processSegments
+                  }
+                  switch(c) {
+                    default:
+                      word = word + c
+                      break
+                    case space:
+                      if (word.trim() != "") {
+                        elem = document.createElement("span")
+                        elem.innerText = word
+                        textElem.appendChild(elem)
+                        await fade(fadeTime, 0, 1, elem)
+                        word = ""
+                      }
+                      word = word + space
+                      break
+                  }
+                }
+                if (word.trim() != "") {
+                  elem = document.createElement("span")
+                  elem.innerText = word
+                  textElem.appendChild(elem)
+                  await fade(fadeTime, 0, 1, elem)
+                  word = ""
+                }
+                if (i != seg.texts.length-1) {
+                  elem = document.createElement("br")
+                  textElem.appendChild(elem)
+                }
+              }
+            }
+          } break
+          case "stairwords": {
+            let dir = cmdparts[0]
+            let fadeTime = clamp(Number.parseFloat(cmdparts[1]), 0, 1000)
+            textElem.innerText = ""
+            TextDisplay.appendChild(textElem)
+            let words = seg.texts[0]
+            //console.log(seg)
+            if (!words) break
+            words = words.substring(2)
+            words = words.split(space)
+            //console.log(words)
+            let spaces = ""
+            let elems = []
+            for (let i = 0; i < words.length; i++) {
+              let wordElem = document.createElement("div")
+              elems.push(wordElem)
+              wordElem.style.opacity = 0
+              wordElem.innerText = spaces + words[i]
+              spaces = spaces + NBSP.repeat(words[i].length+1)
+              //console.log(space+words[i], '|' + space + nbsp.repeat(words[i].length+1) + '|')
+              //console.log(dir, wordElem)
+              if (dir.toLowerCase() == "up") {
+                //console.log("prepend?")
+                textElem.insertBefore(wordElem, textElem.firstChild)
+              }
+              else {
+                //console.log("append?")
+                textElem.appendChild(wordElem)
+              }
+            }
+            for (let i = 0; i < words.length; i++) {
+              await fade(fadeTime, 0, 1, elems[i])
+              if (autocancel) {
+                break processSegments
+              }
+            }
+          } break
         }
       }
     }
@@ -297,11 +401,12 @@ var activateTextDisplay = async function(arg, successCB) {
 
 var fadeoutTextDisplay = async function() {
   let fadeoutPromise = fade(750, 1, 0)
+  let wantAmt = 750/TextDisplay.childNodes.length
   while (true) {
     let textElem = TextDisplay.lastChild
     if (!textElem) break
     if (!textElem.tagName) break
-    await fade(60, 1, 0, textElem)
+    await fade(30, 1, 0, textElem)
     TextDisplay.removeChild(textElem)
   }
   await fadeoutPromise  

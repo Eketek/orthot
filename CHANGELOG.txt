@@ -2,6 +2,7 @@
   12 Oct 2019:
     Added logic to retry displaying InfoBlock messages if TextDisplay is preoccupied with the previous message
     Fixed an error in tick execution process
+    Added descriptive texts for everything up to the initial progress-blocking gate (the early tutorial-ish puzzles)
     
   10-12 Oct 2019
     Added a simple dialog box animation system for showing tooltips, flavor text, and error messages

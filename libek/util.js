@@ -153,8 +153,8 @@ var centerElementOverElement = function(element, target) {
   let targetRect = target.getBoundingClientRect()
   
   
-  let cx = ((targetRect.width)-(elementRect.width))/2 + targetRect.left
-  let cy = ((targetRect.height)-(elementRect.height))/2 + targetRect.top
+  let cx = (targetRect.left+targetRect.right)/2 - (elementRect.width)/2
+  let cy = (targetRect.top+targetRect.bottom)/2 - (elementRect.height)/2
   
   element.style.left = cx + "px"
   element.style.top = cy + "px"

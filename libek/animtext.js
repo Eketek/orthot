@@ -43,7 +43,7 @@ var parse_Animtext = function(txt) {
     //Find all segment delimiters
     //  regex searches for a newline, followed by a non-whitespace character (excluding the non-whitepace char from the match)
     let segment_parts = block_part.split(/\n(?=\S)/)
-    let block = {
+    let block = {      
       segments:[]
     }
     blocks.push(block)
@@ -64,6 +64,7 @@ var parse_Animtext = function(txt) {
     block.name = block.segments[0].command
     delete block.segments[0].command
   }
+  blocks[0].isAnimText = true
   //console.log(blocks)
   return blocks
 }

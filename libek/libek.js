@@ -515,11 +515,9 @@ var loadMuch = async function(assets, fetchOPTS, ... entries) {
 //      Each asset is assigned to assets.<AssetName>
 //      Asset names default to whatever the name in the ZIP file (with filename extension removed)
 //      Asset names can be overriden by specifying a name in the manifest file (*.mf)
-//    texts:  A separate associative array to attach parser outputs to (this is split off from assets to make it easier to avoid naming conflicts)
-//      text names will generally be whatever name the text parser finds in the presumably sensible location.
 //    url:  location to load the ZIP file from
 //    fetch_options:  [optional] parameters to initialize the fetch()
-var loadZIP = async function(assets, texts, url, fetch_options) {
+var loadZIP = async function(assets, url, fetch_options) {
   let buf = await load_to_ArrayBuffer(url, fetch_options)
   let jz = new JSZip()
   let archive = await jz.loadAsync(buf)
@@ -586,7 +584,7 @@ var loadZIP = async function(assets, texts, url, fetch_options) {
       case 'animtxt': {
         txt = await entry.async("string")
         try {
-          Object.assign(texts, parse_Animtext(txt))
+          assets[name] = parse_Animtext(txt)
         }
         catch(err) {
           console.log(`ERROR parsing ${fname}: `, err)

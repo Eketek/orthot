@@ -1,6 +1,9 @@
 0.3.0:
-  10-11 Oct 2019
-    Add various internals for an animated text display
+  10-12 Oct 2019
+    Added a simple dialog box animation system for showing tooltips, flavor text, and error messages
+      Textbox animation is mostly intended to perform simple opreations based on a list of commands -- appending or replacing text blocks, fading them in and 
+      out, altering various style, and pretty much anything else that is simple and doesn't introduce XSS vulnerabilities 
+        (At some point in the future, it might be worth considering adding a markdown library and pairing it with an html sanitizer).
     A slightly more quirky name to better represent a slightly quirky loader (loadEKVX -> EkvxLoaderLoader)
       (EKVX is only downloaded and parsed when "loaded", yielding a prepared Loader, which may then be used any number of times to initialize and re-initialize
        puzzles)

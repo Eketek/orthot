@@ -107,10 +107,17 @@ $(async function MAIN() {
         )
       }),
       update("model", (fetchOPTS)=>{
-        return loadZIP(orthotCTL.assets, {}, 'assets/models.zip', fetchOPTS)
+        return loadZIP(orthotCTL.assets, 'assets/models.zip', fetchOPTS)
       }),
       update("ekvx", (fetchOPTS)=>{
-        return loadZIP(MAIN_ZONES, MAIN_TEXTS, 'assets/ekvxdat.zip', fetchOPTS)
+        return loadZIP(MAIN_ZONES, 'assets/ekvxdat.zip', fetchOPTS)
+      }),
+      update("text", (fetchOPTS)=>{
+        return loadMuch(
+          orthotCTL.assets,
+          fetchOPTS,
+          {url:"assets/maintexts.atxt"},
+        )
       }),
     ]
     
@@ -124,6 +131,10 @@ $(async function MAIN() {
   catch(err) {
     console.log("FAILED to load Orthot III data because:", err)
     return
+  }
+  
+  for (let block of orthotCTL.assets.maintexts) {
+    orthotCTL.texts[block.name] = block
   }
 
   //console.log("TEST-TXTLOADER---------")

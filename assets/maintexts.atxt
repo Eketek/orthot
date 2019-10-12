@@ -1,0 +1,32 @@
+welcome
+autosize predict
+fadein 100
+  -------------------------------------------------------------------------------------------
+fadein 100
+  Orthot is a 3D puzzle in the "Excessive Internal Complexity" genre.
+fadein 100
+  -------------------------------------------------------------------------------------------
+fadein 250
+  Each puzzle is a separate challenge, the goal of which is to reach the marked exit point.
+  Puzzles are built out of a collection of puzzle elements which you may interact with and 
+  which interact with each other. 
+fadein 100
+  -------------------------------------------------------------------------------------------
+fadein 100
+  There are a wide variety of types of puzzles which you may encounter:
+    Mazes
+    Hidden object search
+    Arrangement of blocks into particular patterns
+    Logical problems
+    Evading implacable foes
+    Or anything else can be built out of interative blocks.
+fadein 100
+  -------------------------------------------------------------------------------------------
+fadein 100
+  Press arrow keys to move  (or WASD buttons)
+  Left click and drag to look at different positions
+  Middle-click to reset the view to your current position  
+  Right click and drag to look in different directions
+  Roll the mouse wheel to zoom in and out
+fadein 100
+  -------------------------------------------------------------------------------------------

@@ -149,20 +149,23 @@ var unapplyModifier = function() {
 var busy = false
 var running = false
 var autocancel = false
+var showing = false
 var activateTextDisplay = async function(arg) {
   if (busy) {
     console.log(
       "---------------------------------------------------------------------------\n"+
       "| TextDisplay is too busied displaying text to be busied displaying text. |\n"+
       "| Please instead read in your readout from the JavaScript console.        |\n"+
-      "---------------------------------------------------------------------------\n", 
+      "---------------------------------------------------------------------------\n",
       getText(arg),
       "\n-------------------------------------------------------------------------"
     )
     return
   }
+  autocancel = false
   busy = true
   running = true
+  showing = true
   arg = getText(arg)
   await applyModifier(baseModifier)
   if (Array.isArray(arg)) {
@@ -200,12 +203,16 @@ var activateTextDisplay = async function(arg) {
 }
 
 var deactivateTextDisplay = async function() {
+  if (!showing) {
+    return
+  }
   if (running) {
     autocancel = true
   }
   else {
     await fade(333, 0)
     busy = false
+    showing = false
   }
   //unapplyModifier()
 }

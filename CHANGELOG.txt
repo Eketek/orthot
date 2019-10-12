@@ -7,6 +7,7 @@
     Added a proper loader
       It forces a reload (bypassing HTTP cache) when the cache contains old data.
       It also loads all data asynchronously (the game should a bit faster)
+    Added fallback behavior for scenes which lack a starting position.
 
   9 Oct 2019
     Replaced "EventReader" (libek/event.js) interface with "NextEvent" (libek/nextevent.js)

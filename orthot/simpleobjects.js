@@ -1,6 +1,6 @@
 export { Wall, ScenePortal, InfoBlock, Stair, PushBlock, Crate, IceBlock, Key, Lock, Flag, Exit }
 
-import { getAsset, Material } from '../libek/libek.js'
+import { getAsset, releaseAsset, Material } from '../libek/libek.js'
 import { direction, setOrientation } from '../libek/direction.js'
 import { parseColor } from '../libek/util.js'
 
@@ -73,7 +73,6 @@ var Exit = function(zone, align, dest, target) {
       console.log("Completed Puzzle '" + zone.name + "'")
       renderCTL.indicateCompletion()
       orthotCTL.addProgress(zone.name)
-      //console.log("sceneportal-data", this._ekvxdata_)
       orthotCTL.loadScene(dest, target)
     }
   }

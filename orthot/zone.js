@@ -1,5 +1,5 @@
 export { Zone }
-import { trit, T, getAsset, storeAsset, Material } from '../libek/libek.js'
+import { trit, T, getAsset, storeAsset, releaseAsset, Material } from '../libek/libek.js'
 import { property, properties_fromstring, mergeObjects, parseVec3, parseColor } from '../libek/util.js'
 import { BoxTerrain, DECAL_UVTYPE } from '../libek/gen.js'
 import { VxScene } from '../libek/scene.js'
@@ -15,6 +15,7 @@ import { Gate, GateGroup } from './gate.js'
 import { Player } from './player.js'
 import { Collision, ObjectState } from './enums.js'
 import { Mouse, Moose } from './creatures.js'
+import { deactivateTextDisplay } from './textdisplay.js'
 
 var Zone = function(ekvx, override_startloc, name) {
   this.isZone = true
@@ -1356,7 +1357,18 @@ var Zone = function(ekvx, override_startloc, name) {
   }).bind(this);
 
 
-
+  let defineWallTerrain = function(id, color) {
+    bxtbldr.defineSurface_8bit(id, {
+      color:color,
+      uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
+    })
+    bxtbldr.defineSurface_8bit(id+'H', {
+      color:color,
+      uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
+    })
+    bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
+  }
+  
   ekvx.loadConfig( (id, rawtemplate) => {
     let template = properties_fromstring(rawtemplate.data)
 
@@ -1368,25 +1380,15 @@ var Zone = function(ekvx, override_startloc, name) {
       case undefined:
         return undefined
       case 'wall': {
+        template.id = id
         if (!template.color) {
           template.color = "rgba,1,1,1,1"
         }
         if (walltemplates[template.color]) {
           return walltemplates[template.color]
         }
+        defineWallTerrain(id, template.color)
         walltemplates[template.color] = template
-
-        bxtbldr.defineSurface_8bit(id, {
-          color:template.color,
-          uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
-        })
-        bxtbldr.defineSurface_8bit(id+'H', {
-          color:template.color,
-          uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
-        })
-        bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
-
-        template.id = id
       }
         break
       default:
@@ -1548,7 +1550,6 @@ var Zone = function(ekvx, override_startloc, name) {
             */
             break
           case "start": {
-              console.log(datas)
               let campos = property("camPos", datas, undefined, parseVec3)
               if (flipWorld) {
                 campos.z *= -1
@@ -1562,20 +1563,21 @@ var Zone = function(ekvx, override_startloc, name) {
                 loc:loc,
                 campos:campos
               }
-              //tip
-              //death | defeat
               let tipMSG = property("tip", datas)
               let defeatMSG
-              if (this.resetCause == "defeat") {
-                let defeatMSG = property("defeat", datas)
+              if (this.resetCause == "defeated") {
+                defeatMSG = property("defeat", datas)
                 if (!defeatMSG) {
                   defeatMSG = property("death", datas)
-                }   
-              }           
+                }
+              }
               
-              let info_obj = new InfoBlock(this, false, tipMSG, defeatMSG)
-              loaded_objects.push(info_obj)
-              this.putGameobject(x,y,z, info_obj)
+              // If the startblock data has a message specified, set up am invisible InfoBlock for it
+              if ( (tipMSG != undefined) | (defeatMSG != undefined) ) {
+                let info_obj = new InfoBlock(this, false, tipMSG, defeatMSG)
+                loaded_objects.push(info_obj)
+                this.putGameobject(x,y,z, info_obj)
+              }
               
             }
             break
@@ -1687,7 +1689,7 @@ var Zone = function(ekvx, override_startloc, name) {
         }
       }
 
-      if (gobj) {
+      if (gobj) {loadData
         loaded_objects.push(gobj)
         this.putGameobject(x,y,z, gobj)
       }
@@ -1718,10 +1720,64 @@ var Zone = function(ekvx, override_startloc, name) {
       }
       ld_gobj.ready()
     }
+    
 
     let start_target = targets[override_startloc]
     if (!start_target) {
       start_target = targets.__STARTLOC
+    }
+    // Fallback for an undefined starting position:  invent one.
+    if (!start_target) {
+      start_align = {
+        up:direction.code.UP,
+        forward:direction.code.NORTH,
+      }
+      start_fpmode = false
+      
+      let x = Math.floor((_min.x+_max.x)/2)
+      let y = Math.floor((_min.y+_max.y)/2)
+      let z = Math.floor(_min.z-3)
+      
+      let msg
+      if (_max.x == Number.MIN_VALUE) {
+        msg = "CONTENTCREATOR forgot to create content, so EKETEK enabled EASY MODE for you.\nHave Fun!" 
+        x = 0
+        y = 0
+        z = 0
+        _min.x = -5
+        _min.y = -5
+        _min.z = -5
+        _max.x = 5
+        _max.y = 5
+        _max.z = 5
+      }
+      else {
+        msg = "CONTENTCREATOR forgot to define a start position, so EKETEK enabled EASY MODE for you.\nHave Fun!"
+        _min.x -= 5
+        _min.z -= 5
+      }
+      start_target = {
+        loc:{ x:x, y:y, z:z },
+        campos:{ x:x-3, y:y+4, z:z-5 }
+      }
+      
+      let info_obj = new InfoBlock(this, false, msg)
+      loaded_objects.push(info_obj)
+      this.putGameobject(x,y,z, info_obj)
+      
+      let id = 99999999
+      defineWallTerrain( id, "rgba,0,0,0,1")
+      
+      let buildWall = (function(x,y,z) {
+        let loc = vxc.get(x,y,z)
+        vxc.loadTerrain(x,y,z, id)
+        this.putGameobject(loc, new Wall(this))
+      }).bind(this)
+      for (let _x = x-4; _x <= x+4; _x++) {
+        for (let _z = z-1; _z <= z+1; _z++) {
+          buildWall(_x, y-1, _z)
+        }
+      }
     }
     startloc = start_target.loc
     sviewCTL.setFPmode(false)
@@ -1737,9 +1793,8 @@ var Zone = function(ekvx, override_startloc, name) {
         up:start_align.up
       }
     }
-
     player = new Player(this, pl_align, start_fpmode)
-
+    
     player.initGraphics()
     this.putGameobject(start_target.loc, player)
     this.scene.add(player.obj)
@@ -1814,6 +1869,7 @@ var Zone = function(ekvx, override_startloc, name) {
   loadData()
 
   this.unload = function() {
+    deactivateTextDisplay()
     this.destroyObjects()
     this.destroyTerrain()
     if (this.scene.children.length > 0) {
@@ -1844,6 +1900,7 @@ var Zone = function(ekvx, override_startloc, name) {
   }
 
   this.reset = function(resetCause) {
+    deactivateTextDisplay()
     this.resetCause = resetCause
     this.destroyObjects()
     dlight.position.set(0,1000,0)
@@ -1869,6 +1926,16 @@ var Zone = function(ekvx, override_startloc, name) {
 
     vxc.resetData()
     vxc.default = Container
+    _min = {
+      x:Number.MAX_VALUE,
+      y:Number.MAX_VALUE,
+      z:Number.MAX_VALUE,
+    }
+    _max = {
+      x:Number.MIN_VALUE,
+      y:Number.MIN_VALUE,
+      z:Number.MIN_VALUE,
+    }
     loadData()
   }
 }

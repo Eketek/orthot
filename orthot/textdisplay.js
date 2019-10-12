@@ -23,9 +23,6 @@ var reposition = function() {
   centerElementOverElement(TextDisplay, BeneathElement)
 }
 
-// speed factor -- used by the deactivator to speed up a running text program so it can be closed sooner.
-var speed = 1
-
 // Ease the text-display opacity from its current value to a target value
 //let opa = 0
 var fade = async function(len, opa, targetOPA, elem) {
@@ -60,7 +57,7 @@ var fade = async function(len, opa, targetOPA, elem) {
   while (time < end) {
     await next(orthotCTL.event, "frame")
     let ntime = Date.now()
-    opa += (ntime-time)*incr*speed
+    opa += (ntime-time)*incr
     time = ntime
     if (pos) {
       if (opa > targetOPA) {
@@ -142,6 +139,9 @@ var toHtmlText = function(segment) {
 var toTestText = function(block) {
   let testTXT = ""
   for (let seg of block.segments) {
+    if (seg.command == ".") {
+      testTXT = testTXT + "\n"
+    }
     for (let line of seg.texts) {
       for (let i = 0;i < line.length; i++) {
         if (line[i] != ' ') break
@@ -198,7 +198,6 @@ var activateTextDisplay = async function(arg, successCB) {
   busy = true
   running = true
   showing = true
-  speed = 1
   resetStyle()
   
   let numLines = 0
@@ -211,11 +210,12 @@ var activateTextDisplay = async function(arg, successCB) {
   }
   else if (typeof(arg) == "object") {
     if (arg.isAnimText) {
-      //console.log(`DISPLAYING ANIM-TEXT`, arg)
-      //console.log(arg)
       autosize(arg)
       processBlock:
       for (let seg of arg.segments) {
+        if (autocancel) {
+          break
+        }
         let cmdparts, cmd
         if (seg.command) {
           cmdparts = seg.command.split(' ')
@@ -226,39 +226,62 @@ var activateTextDisplay = async function(arg, successCB) {
           cmdparts = []
         }
         cmdparts = cmdparts.slice(1)
-        let textElem = document.createElement("div")
-        textElem.innerText = toHtmlText(seg)
-        
+        let textElem
+        if (seg.texts.length > 0) {
+          textElem = document.createElement("div")
+          textElem.innerText = toHtmlText(seg)
+        }
         switch(cmd) {
           case "":
             if (seg.texts.length == 0) break
-          case "text":
-            setText(toHtmlText(seg))
-            if (arg.segments.length == 1) {
+          case "text": {
+            if (textElem) {
+              setText(toHtmlText(seg))
+              if (arg.segments.length == 1) {
+                TextDisplay.appendChild(textElem)
+                await fade(100, 0, 1, textElem)
+              }
+            }
+          } break
+          case '.':
+            TextDisplay.appendChild(document.createElement("br"))
+            if (textElem) {
               TextDisplay.appendChild(textElem)
-              await fade(100, 0, 1, textElem)
             }
             break
+          case "wait": {
+            let waitTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
+            await delay(waitTime)
+            if (textElem) {
+              TextDisplay.appendChild(textElem)
+            }
+          } break
           case "fade": {
-            let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
-            let fadeTo = clamp(Number.parseFloat(cmdparts[0]), 0, 1)
-            TextDisplay.appendChild(textElem)
-            await fade(fadeTime, fadeTo, textElem)
+            if (textElem) {
+              let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
+              let fadeTo = clamp(Number.parseFloat(cmdparts[0]), 0, 1)
+              TextDisplay.appendChild(textElem)
+              await fade(fadeTime, fadeTo, textElem)
+            }
           } break
           case "fadein": {
-            let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
-            TextDisplay.appendChild(textElem)
-            await fade(fadeTime, 0, 1, textElem)
+            if (textElem) {
+              let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
+              TextDisplay.appendChild(textElem)
+              await fade(fadeTime, 0, 1, textElem)
+            }
           } break
           case "fadeout": {
-            let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
-            textElem = TextDisplay.lastChild
             if (textElem) {
-              await fade(fadeTime, 1, 0, textElem)
-              TextDisplay.removeChild(textElem)
-            }
-            else {
-              console.log("TextDisplay ERROR:  Nothing left to fade out!")
+              let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
+              textElem = TextDisplay.lastChild
+              if (textElem) {
+                await fade(fadeTime, 1, 0, textElem)
+                TextDisplay.removeChild(textElem)
+              }
+              else {
+                console.log("TextDisplay ERROR:  Nothing left to fade out!")
+              }
             }
           } break
         }
@@ -273,12 +296,12 @@ var activateTextDisplay = async function(arg, successCB) {
 }
 
 var fadeoutTextDisplay = async function() {
-  let fadeoutPromise = fade(750*speed, 1, 0)
+  let fadeoutPromise = fade(750, 1, 0)
   while (true) {
     let textElem = TextDisplay.lastChild
     if (!textElem) break
     if (!textElem.tagName) break
-    await fade(60*speed, 1, 0, textElem)
+    await fade(60, 1, 0, textElem)
     TextDisplay.removeChild(textElem)
   }
   await fadeoutPromise  
@@ -292,7 +315,6 @@ var deactivateTextDisplay = async function() {
     return
   }
   if (running) {
-    speed = 4
     autocancel = true
   }
   else {

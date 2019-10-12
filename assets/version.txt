@@ -1,4 +1,4 @@
 model 1
 ekvx 1
-text 1
+text 2
 texture 1

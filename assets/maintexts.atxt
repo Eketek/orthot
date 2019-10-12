@@ -1,14 +1,11 @@
 welcome
-autosize predict
-fadein 100
-  -------------------------------------------------------------------------------------------
 fadein 100
   Orthot is a 3D puzzle in the "Excessive Internal Complexity" genre.
 fadein 100
   -------------------------------------------------------------------------------------------
 fadein 250
   Each puzzle is a separate challenge, the goal of which is to reach the marked exit point.
-  Puzzles are built out of a collection of puzzle elements which you may interact with and 
+  Puzzles are built out of a collection of puzzle elements which you may interact with and
   which interact with each other. 
 fadein 100
   -------------------------------------------------------------------------------------------
@@ -28,5 +25,40 @@ fadein 100
   Middle-click to reset the view to your current position  
   Right click and drag to look in different directions
   Roll the mouse wheel to zoom in and out
+
+puzzles
+fadein 100
+  Main Area
 fadein 100
   -------------------------------------------------------------------------------------------
+fadein 250
+  Though much of this world is complicated and dangerous, this particular area is not.
+.
+fadein 250
+  In fact, the only thing to do around here is to travel to other more interesting locations.
+  These other locations may be accessed by stepping into a nearby teleporter (the light-blue
+  transparent cubes).
+.
+fadein 250
+  If you are very new here, I recommend taking the teleporter just ahead and to the right.
+  In that area, you may find a few more details.  But, if you've come this far already and
+  you are a bit adventurous, you are free also to learn by experimentation.
+.
+wait 2500
+fadein 250
+  Eketek gives you his full assurance that you will not be billed for any consumption of
+  energy resulting from the usage of his teleporters.  Eketek also asserts that his
+  teleporters do not have any problems or side-effects which you or anyone else need to know
+  anything about.
+
+
+
+
+
+
+
+
+
+
+
+

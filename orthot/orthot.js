@@ -647,7 +647,7 @@ $(async function MAIN() {
   // visualizarion routines.  These are called as objects or interface-elements are moused-over and moused-out
   let shownItem
   let tiptext = ""
-  orthotCTL.showDescription = function(item) {mode
+  orthotCTL.showDescription = function(item) {
     if (shownItem && shownItem != item) {
       orthotCTL.hideDescription(shownItem)
     }
@@ -655,6 +655,7 @@ $(async function MAIN() {
     tiptext = item.description ? item.description : ""
     if (item.visualizer) {
       item.visualizer(true)
+      controlActive = true
     }
   }
   orthotCTL.updateDescription = function(item) {
@@ -664,6 +665,7 @@ $(async function MAIN() {
     tiptext = item.description ? item.description : ""
     if (item.visualizer) {
       item.visualizer(true)
+      controlActive = true
     }
   }
 
@@ -675,6 +677,7 @@ $(async function MAIN() {
     tiptext = ""
     if (item.visualizer) {
       item.visualizer(false)
+      controlActive = true
     }
   }
 

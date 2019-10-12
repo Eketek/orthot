@@ -391,6 +391,51 @@ wait 1000
 fadein 400
   Best UX design ever.  What could possibly go wrong?
 
+crates
+fadein 234
+  Crates
+fadein 456
+  -----------------------------------------------------------------------------------
+fadein 678
+  Crates have a geometric profile which is very similar to the pushable blocks seen
+  elsewhere, so they must necessarilly behave similary when pushed.  But crates also 
+  look very different, so by like necessity, they must have different properties!
+
+iceblocks
+fadein 300
+  Ice-Blocks
+fadein 300
+  ---------------------------------------------------------------------------------
+fadein 300
+  This exhibit contains a collection of blocks which have been made out of ice.
+  Ice is the superior material, should you have a pressing need to retain momentum.
+  These blocks clearly need the momentum: their construction says as much.
+wait 1500
+.
+fadein 300
+  Unfortunately, it appears that you are not in need these blocks' momentum.
+wait 1000
+.
+fadein 300
+  Eketek would offer to provide a flamethrower, but that would only make your
+  situation worse...  
+wait 2000
+suffix fadein 300
+  even if he were to also give you the fuel.
+
+icefloor
+fadein 300
+  Ice-Floor!
+fadein 300
+  ---------------------------------------------------------------------------------
+fadein 300
+  In order to better ensure your safety and merriment, the entire floor in the area
+  at the upper-end of the stairway has been coated in a layer of ice.
+wait 1200
+.
+fadein 300
+  You also have nothing to worry about:  There is nothing unusual or unique about 
+  any of the blocks on the ice-coated floor.
 
 
 

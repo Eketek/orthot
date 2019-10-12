@@ -307,6 +307,27 @@ var activateTextDisplay = async function(arg, successCB) {
               }
             }
           } break
+          case "suffix": {
+            if (textElem) {
+              let parent = TextDisplay.lastChild
+              if (parent) {
+                let _textElem = document.createElement("span")
+                _textElem.innerText = textElem.innerText
+                textElem = _textElem
+                let brElem = parent.lastChild
+                parent.removeChild(brElem)
+                parent.appendChild(_textElem)
+                parent.appendChild(brElem)
+              }
+              else {
+                TextDisplay.appendChild(textElem)
+              }
+              if (cmdparts[0] == "fadein") {
+                let fadeTime = clamp(Number.parseFloat(cmdparts[1]), 0, 15000)
+                await fade(fadeTime, 0, 1, textElem)
+              }
+            }
+          } break
           case "fadeinwords": {
             if (textElem) {
               let elem

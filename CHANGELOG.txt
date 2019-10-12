@@ -7,10 +7,11 @@
       Lightweight mode reduces graphics rendering to an absolute minimum
       Lightweight mode disables all environmental and indefinite animations
         (lighting does not change slowly over time, and keys & InfoBlocks remain motionless)
-      In lightweight mode, frames are drawn only when at least one of the following three conditions is satisfied:
+      In lightweight mode, frames are drawn only when at least one of the following four conditions is satisfied:
         At the end of a tick in which something requested a signfiicant animation (movement)
         Whenever the SceneViewController alters the camera position and/or orientation (User-interaction only)
         Any terrain geometry was built or rebuilt (presently only occurs for a few frames after initial scene setup)
+        A reticle icon has been moused over or moused out.
       Lightwieght mode is also implicitly a high-response mode (high-response mode is also set and locked while lightweight mode is active)
       Lightweight mode may be toggled by the button in the upper-right hand corner of the interface
     

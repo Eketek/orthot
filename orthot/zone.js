@@ -42,6 +42,8 @@ var Zone = function(ekvx, override_startloc, name) {
   // For now, lighting is simplified to global ambient + global directional light + player-held lantern + maybe one light-bearing object
   //  ANd...  just because there otherwise isn't much interesting about lighting, the global directional light rotates very slowly as time passes
   var amblCol = new THREE.Color("white")
+  let hue = Math.random()
+  amblCol.setHSL ( hue, 1, 0.5 )
   var vambl = new THREE.AmbientLight(amblCol, 0.125)
   var ambl = new THREE.AmbientLight(0xffffff, 0.125)
   this.scene.add(ambl)
@@ -54,6 +56,8 @@ var Zone = function(ekvx, override_startloc, name) {
   dlTarget.position.set(0,0,0)
   this.scene.add(dlTarget)
   let dlrot = Math.random()*T
+  dlight.position.x = Math.cos(dlrot%T)*2000
+  dlight.position.z = Math.sin(dlrot%T)*2000
 
   //clear out any lingering input
 
@@ -97,7 +101,7 @@ var Zone = function(ekvx, override_startloc, name) {
     }
     activeReticle = reticle
 
-    let hue = color.getHSL().h+0.5
+    hue = color.getHSL().h+0.5
     reticlemat.color.setHSL(hue, 1, 0.5)
     reticlemat.emissive.setHSL(hue, 1, 0.5)
 
@@ -201,7 +205,8 @@ var Zone = function(ekvx, override_startloc, name) {
   let cmdSequences_realtime = []
 
 
-  let tHue = 0, hue = 0, hueIncr = 0.001
+  let tHue = 0, hueIncr = 0.001
+  hue = 0
   let setHueTarget = function() {
     tHue = Math.random()
     hueIncr = Math.random() > 0.5 ? 1/6000 : -1/6000

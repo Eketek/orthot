@@ -168,9 +168,13 @@ var busy = false
 var running = false
 var autocancel = false
 var showing = false
-var activateTextDisplay = async function(arg) {
+var activateTextDisplay = async function(arg, successCB) {
   arg = getText(arg)
   if (busy) {
+    if (successCB) {
+      successCB(false)
+      return
+    }
     if (typeof(arg) == "object") {
       arg = toTestText(arg)
     }
@@ -182,7 +186,13 @@ var activateTextDisplay = async function(arg) {
       arg,
       "\n\n\n----------------------------------------------------------------------------------------------------------------------"
     )
+    if (successCB) {
+      successCB(false)
+    }
     return
+  }
+  if (successCB) {
+    successCB(true)
   }
   autocancel = false
   busy = true

@@ -292,10 +292,11 @@ var Zone = function(ekvx, override_startloc, name) {
 
     if (this.ticknum > 0) {
       if (tmp_tickListeners.length > 0) {
-        for (let f of tmp_tickListeners) {
+        let _tmp_tickListeners = tmp_tickListeners
+        tmp_tickListeners = []
+        for (let f of _tmp_tickListeners) {
           f()
         }
-        tmp_tickListeners = []
       }
 
       for (let i = tickListeners.length; i >= 0; i--) {

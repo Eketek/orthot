@@ -1,4 +1,8 @@
 0.3.0:
+  12 Oct 2019:
+    Added logic to retry displaying InfoBlock messages if TextDisplay is preoccupied with the previous message
+    Fixed an error in tick execution process
+    
   10-12 Oct 2019
     Added a simple dialog box animation system for showing tooltips, flavor text, and error messages
       Textbox animation is mostly intended to perform simple opreations based on a list of commands -- appending or replacing text blocks, fading them in and 

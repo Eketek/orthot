@@ -112,11 +112,31 @@ var InfoBlock = function(zone, visible, normMSG, defeatMSG) {
   if (defeatMSG) {
     msg = defeatMSG
   }
-
+  
+  // Message activation process:
+  // If Player enters InfoBlock:
+  //   activateTextDisplay()
+  //   If it passes, reset msg (to clear defeatMSG)
+  //   If it fails (because TextDisplay is [proboably] still busy fading the previous message out), 
+  //      schedule another attempt for next tick (and repeat these attempts until it passes or Player departs or the zone is reset/unloaded)
+  let trySend = false
   this.intruded = function(other) {
     if (other.isPlayer) {
-      activateTextDisplay(msg)
+      trySend = true
+      tryShowMessage()
+    }
+  }
+  let tryShowMessage = function() {
+    if (trySend) {
+      activateTextDisplay(msg, msgSuccessCB)
+    }
+  }
+  let msgSuccessCB = function(pass) {
+    if (pass) {
       msg = normMSG
+    }
+    else {
+      zone.addTickListener_temp(tryShowMessage)
     }
   }
   
@@ -125,6 +145,7 @@ var InfoBlock = function(zone, visible, normMSG, defeatMSG) {
       deactivateTextDisplay()
     }
     msg = normMSG
+    trySend = false
   }
   
   if (visible) {

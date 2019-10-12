@@ -3,6 +3,15 @@
     Added logic to retry displaying InfoBlock messages if TextDisplay is preoccupied with the previous message
     Fixed an error in tick execution process
     Added descriptive texts for everything up to the initial progress-blocking gate (the early tutorial-ish puzzles)
+    Added a lightweight mode
+      Lightweight mode reduces graphics rendering to an absolute minimum
+      Lightweight mode disables all environmental and indefinite animations
+        (lighting does not change slowly over time, and keys & InfoBlocks remain motionless)
+      In lightweight mode, frames are drawn only when at least one of the following two conditions is satisfied:
+        At the end of a tick in which something requested a signfiicant animation (movement)
+        Whenever the SceneViewController alters the camera position and/or orientation (User-interaction only)
+      Lightwieght mode is also implicitly a high-response mode (high-response mode is also set and locked while lightweight mode is active)
+      Lightweight mode may be toggled by the button in the upper-right hand corner of the interface
     
   10-12 Oct 2019
     Added a simple dialog box animation system for showing tooltips, flavor text, and error messages

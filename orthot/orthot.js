@@ -240,6 +240,7 @@ $(async function MAIN() {
   })
   inputCTL.keystate.run()
 
+  let controlActive = false
   sviewCTL = window.sctl = new SceneviewController({
     camtarget:new THREE.Vector3(0,0,0),
     display:renderCTL.display,
@@ -250,6 +251,9 @@ $(async function MAIN() {
     UpdcamUpdatepickplane:true,
     followspeed:1/60,
     campos_maxphi:Math.PI * 0.85,
+    onCamUpdate:function() {
+      controlActive = true
+    },
 
     OrbitTargetMBTN:"rmb",
     ChaseTargetMBTN:"lmb",
@@ -438,16 +442,55 @@ $(async function MAIN() {
     orthotCTL.loadScene("MainArea")
   }
 
-  let highRespModeBTN = $("<div>").addClass("btn_inactive").text("Hi-Resp:OFF")
+  let selected_hrmode = false
 
+  let highRespModeBTN = $("<div>").addClass("btn_inactive").text("Hi-Resp:OFF")
   on(highRespModeBTN, "click", ()=>{
+    if (orthotCTL.lwmode) {
+      return
+    }
     if (orthotCTL.highResponsiveMode) {
-       orthotCTL.highResponsiveMode = false
-       highRespModeBTN.text("Hi-Resp:OFF").removeClass("btn_active").addClass("btn_inactive")
+      selected_hrmode = false
+      orthotCTL.highResponsiveMode = false
+      highRespModeBTN.text("Hi-Resp:OFF").removeClass("btn_active").addClass("btn_inactive")
     }
     else {
-     orthotCTL.highResponsiveMode = true
-     highRespModeBTN.text("Hi-Resp:ON").removeClass("btn_inactive").addClass("btn_active")
+      selected_hrmode = true
+      orthotCTL.highResponsiveMode = true
+      highRespModeBTN.text("Hi-Resp:ON").removeClass("btn_inactive").addClass("btn_active")
+    }
+  })
+  
+  
+  let lwmodeBTN = $("<div>").addClass("btn_inactive").text("LW-Mode:OFF")
+  on(lwmodeBTN, "click", ()=>{
+    if (orthotCTL.lwmode) {
+      orthotCTL.lwmode = false
+      lwmodeBTN.text("LW-Mode:OFF").removeClass("btn_active").addClass("btn_inactive")
+      if (orthotCTL.ActiveZone) {
+        orthotCTL.ActiveZone.setLightweightMode(orthotCTL.lwmode)
+      }
+      if (selected_hrmode) {
+        orthotCTL.highResponsiveMode = true
+        highRespModeBTN.text("Hi-Resp:ON").removeClass("btn_inactive").addClass("btn_active")
+      }
+      else {
+        highRespModeBTN.text("Hi-Resp:OFF")
+      }
+    }
+    else {
+      orthotCTL.lwmode = true
+      lwmodeBTN.text("LW-Mode:ON").removeClass("btn_inactive").addClass("btn_active")
+      if (orthotCTL.ActiveZone) {
+        orthotCTL.ActiveZone.setLightweightMode(orthotCTL.lwmode)
+      }
+      if (orthotCTL.highResponsiveMode) {
+        highRespModeBTN.removeClass("btn_active")
+      }
+      else {
+        orthotCTL.highResponsiveMode = true
+        highRespModeBTN.text("Hi-Resp:ON")
+      }
     }
   })
 
@@ -469,9 +512,11 @@ $(async function MAIN() {
   aboutBTN = $("<div>").addClass("btn_active").text("About").click(toggleAboutBox)[0]
 
   highRespModeBTN[0].title = "High-Responsive Mode"
+  lwmodeBTN[0].title = "Lightweight Mode"
   resetBTN[0].title = "Restart the active puzzle"
 
   $("#controls").append(highRespModeBTN)
+  $("#controls").append(lwmodeBTN)
   $("#controls").append(resetBTN)
   $("#controls").append(aboutBTN)
 
@@ -602,7 +647,7 @@ $(async function MAIN() {
   // visualizarion routines.  These are called as objects or interface-elements are moused-over and moused-out
   let shownItem
   let tiptext = ""
-  orthotCTL.showDescription = function(item) {
+  orthotCTL.showDescription = function(item) {mode
     if (shownItem && shownItem != item) {
       orthotCTL.hideDescription(shownItem)
     }
@@ -841,10 +886,13 @@ $(async function MAIN() {
     requestAnimationFrame( run );
     orthotCTL.event.dispatchEvent(new Event("frame"))
 
-    if (orthotCTL.ActiveZone) {
-      orthotCTL.ActiveZone.onFrame()
+    if (orthotCTL.ActiveZone && orthotCTL.ActiveZone.onFrame()) {
+      renderCTL.display.render()
     }
-    renderCTL.display.render()
+    else if (controlActive) {
+      controlActive = false
+      renderCTL.display.render()
+    }
     //hg.rotate(17/16)
     //console.log(sviewCTL.campos.phi)
     let camTheta = sviewCTL.campos.theta

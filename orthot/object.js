@@ -78,12 +78,17 @@ var OrthotObject = function(zone) {
     delete this.SpatialClass    //A reasonably simple way to disappear the object
     this.state = ObjectState.DEFEATED
     if (this.obj) {
-      VanishAnim(zone, this, {
-        end:(function() {
-          zone.removeGameobject(this)
-        }).bind(this),
-        pos:this.worldpos
-      })
+      if (orthotCTL.lwmode) {
+        zone.removeGameobject(this)
+      }
+      else {
+        VanishAnim(zone, this, {
+          end:(function() {
+            zone.removeGameobject(this)
+          }).bind(this),
+          pos:this.worldpos
+        })
+      }
     }
     this.defeated = true
   }

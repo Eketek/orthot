@@ -1644,9 +1644,10 @@ var Zone = function(ekvx, override_startloc, name) {
             break
           case "info":
             gobj = new InfoBlock(this, true, property("tip", datas))
+            console.log(datas)
             break
           case "cammode":
-            console.log(datas)
+            //console.log(datas)
           break
           case "gate": {
             color = property("color", datas, "white", parseColor)

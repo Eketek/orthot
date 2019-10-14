@@ -437,6 +437,93 @@ fadein 300
   You also have nothing to worry about:  There is nothing unusual or unique about 
   any of the blocks on the ice-coated floor.
 
+portals
+force-nbsp
+fadein 300
+  Portals
+fadein 300
+  -------------------------------------------
+asciimation 1 500 500
+  @      :|                         |:       
+   @     :|                         |:       
+    @    :|                         |:       
+     @   :|                         |:       
+      @  :|                         |:       
+       @ :|                         |:       
+        @:|                         |:       
+replace
+asciimation 1 50 0
+         :|========================>|:@      
+         :|---=====================>|:@      
+         :| -----==================>|:@      
+         :|    -----===============>|:@      
+         :|       -----============>|:@      
+         :|          -----=========>|:@      
+         :|             -----======>|:@      
+         :|                -----===>|:@      
+         :|                   ----->|:@      
+         :|                      -->|:@      
+replace
+asciimation 1 500 0
+         :|                         |: @     
+         :|                         |:  @    
+         :|                         |:   @   
+         :|                         |:    @  
+         :|                         |:     @ 
+         :|                         |:      @
+
+gates
+portals
+fadein 300
+  Buttons and Gates
+fadein 300
+  -------------------------------------------------------------------------------
+fadein 300
+  Fun fact:  Eketek is able to turn gates into a greater hindrance by making them
+  retractable.
+
+cbtnwarn
+portals
+bkgcolor hsl 0 0 0 80
+textcolor red
+bordercolor orange
+fontweight bold
+fadein 300
+  WARNING!
+fontweight normal
+textcolor white
+fadein 300
+  ---------------------------------------------------------------------
+textcolor yellow
+fadein 300
+  If you are not ready to proceed, do not have passed through this way!
+
+moreonportals
+fadein 300
+  Portals:  Full of Surprises!
+fadein 300
+  ---------------------------------------------------------------------
+fadein 300
+  If you push a block through a portal, it will pop out the other side!
+
+lladvice
+fadein 300
+  Advice
+fadein 300
+  ----------------------------------------------------------------------
+fadein 300
+  The usefulness of advice given by way of [?] is inversely proportional
+  to Eketek's estimation of the dependence upon the advice by whoever is
+  extract the advice.
+
+ldrtowerinfo
+fadein 300
+  I was concerned you might otherwise get yourself trapped down here, so I left a ladder.
+wait 500
+fadein 300
+                                                             -- Eketek
+
+
 
 
 

@@ -91,6 +91,25 @@ var setText = function(txt) {
   reposition()
 }
 
+// charset restrictor for css property handling
+var ALPHA_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+var restrictAlpha= function(txt) {
+  let r = ""
+  for (let char of txt) {
+    if (ALPHA_CHARS.indexOf(char) != -1) {
+      r = r + char
+    }
+  }
+  return r
+}
+
+var allowed_css = {
+  bkgcolor:"background-color",
+  textcolor:"color",
+  bordercolor:"border-color",
+  fontweight:"font-weight"
+}
+
 // Properties to apply to the text
 var resetStyle = function() {
   TextDisplay.style["background-color"] = "hsla(0,0%,100%,75%)"
@@ -164,6 +183,16 @@ var autosize = function(block) {
   TextDisplay.innerText = ""
 }
 
+var append = function(elem, cssProps, target) {
+  if (!target) {
+    target = TextDisplay
+  }
+  target.appendChild(elem)
+  if (cssProps) {
+    Object.assign(elem.style, cssProps)
+  }
+}
+
 var busy = false
 var running = false
 var autocancel = false
@@ -210,6 +239,7 @@ var activateTextDisplay = async function(arg, successCB) {
   }
   else if (typeof(arg) == "object") {
     if (arg.isAnimText) {
+      let cssProps
       let block = arg
       autosize(block)
       processSegments:
@@ -261,7 +291,7 @@ var activateTextDisplay = async function(arg, successCB) {
             if (textElem) {
               setText(toHtmlText(seg))
               if (block.segments.length == 1) {
-                TextDisplay.appendChild(textElem)
+                append(textElem, cssProps)
                 await fade(100, 0, 1, textElem)
               }
             }
@@ -269,28 +299,28 @@ var activateTextDisplay = async function(arg, successCB) {
           case '.':
             TextDisplay.appendChild(document.createElement("br"))
             if (textElem) {
-              TextDisplay.appendChild(textElem)
+              append(textElem, cssProps)
             }
             break
           case "wait": {
             let waitTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
             await delay(waitTime)
             if (textElem) {
-              TextDisplay.appendChild(textElem)
+              append(textElem, cssProps)
             }
           } break
           case "fade": {
             if (textElem) {
               let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
               let fadeTo = clamp(Number.parseFloat(cmdparts[0]), 0, 1)
-              TextDisplay.appendChild(textElem)
+              append(textElem, cssProps)
               await fade(fadeTime, fadeTo, textElem)
             }
           } break
           case "fadein": {
             if (textElem) {
               let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
-              TextDisplay.appendChild(textElem)
+              append(textElem, cssProps)
               await fade(fadeTime, 0, 1, textElem)
             }
           } break
@@ -316,11 +346,12 @@ var activateTextDisplay = async function(arg, successCB) {
                 textElem = _textElem
                 let brElem = parent.lastChild
                 parent.removeChild(brElem)
-                parent.appendChild(_textElem)
+                //parent.appendChild(_textElem)
+                append(textElem, cssProps, parent)
                 parent.appendChild(brElem)
               }
               else {
-                TextDisplay.appendChild(textElem)
+                append(textElem, cssProps)
               }
               if (cmdparts[0] == "fadein") {
                 let fadeTime = clamp(Number.parseFloat(cmdparts[1]), 0, 15000)
@@ -333,7 +364,7 @@ var activateTextDisplay = async function(arg, successCB) {
               let elem
               let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 1000)
               textElem.innerText = ""
-              TextDisplay.appendChild(textElem)
+              append(textElem, cssProps)
               for (let i = 0; i < seg.texts.length; i++) {
                 let line = seg.texts[i]
                 line = line.substring(2)
@@ -350,7 +381,8 @@ var activateTextDisplay = async function(arg, successCB) {
                       if (word.trim() != "") {
                         elem = document.createElement("span")
                         elem.innerText = word
-                        textElem.appendChild(elem)
+                        append(elem, cssProps, textElem)
+                        //textElem.appendChild(elem)
                         await fade(fadeTime, 0, 1, elem)
                         word = ""
                       }
@@ -361,13 +393,15 @@ var activateTextDisplay = async function(arg, successCB) {
                 if (word.trim() != "") {
                   elem = document.createElement("span")
                   elem.innerText = word
-                  textElem.appendChild(elem)
+                  //textElem.appendChild(elem)
+                  append(elem, cssProps, textElem)
                   await fade(fadeTime, 0, 1, elem)
                   word = ""
                 }
                 if (i != seg.texts.length-1) {
                   elem = document.createElement("br")
-                  textElem.appendChild(elem)
+                  //textElem.appendChild(elem)
+                  append(elem, cssProps, textElem)
                 }
               }
             }
@@ -395,11 +429,13 @@ var activateTextDisplay = async function(arg, successCB) {
               //console.log(dir, wordElem)
               if (dir.toLowerCase() == "up") {
                 //console.log("prepend?")
+                append(wordElem, cssProps, textElem)
                 textElem.insertBefore(wordElem, textElem.firstChild)
               }
               else {
                 //console.log("append?")
-                textElem.appendChild(wordElem)
+                //textElem.appendChild(wordElem)
+                append(wordElem, cssProps, textElem)
               }
             }
             for (let i = 0; i < words.length; i++) {
@@ -409,6 +445,69 @@ var activateTextDisplay = async function(arg, successCB) {
               }
             }
           } break
+          case "asciimation": {
+            let numLines = clamp(Number.parseInt(cmdparts[0]), 1, 50)
+            let frameLen = clamp(Number.parseInt(cmdparts[1]), 1, 10000)
+            let fadeTime = clamp(Number.parseInt(cmdparts[2]), 0, 1500)
+            textElem.innerText = ""
+            append(textElem, cssProps)
+            if (fadeTime != 0) {
+              fade(fadeTime, 0, 1, textElem)
+            }
+            let numFrames = Math.ceil(seg.texts.length / numLines)
+            for (let i = 0; i < numFrames; i++) {
+              let frameText = ""
+              for (let j = 0; j < numLines; j++) {
+                let line = seg.texts[i*numLines+j]
+                if (!line) {
+                  line = ""
+                }
+                if (j != 0) {
+                  frameText = frameText + "\n"
+                }
+                frameText = frameText + line.substring(2)
+              }
+              textElem.innerText = frameText
+              await delay(frameLen)
+              if (autocancel) {
+                break processSegments
+              }
+            }
+            break
+          }
+          case "replace": {
+            TextDisplay.removeChild(TextDisplay.lastChild)
+          } break
+          case "bkgcolor": {
+            let val = restrictAlpha(cmdparts[0])
+            if (val == "hsl") {
+              val = `hsla(${Number.parseFloat(cmdparts[1])|0}, ${Number.parseFloat(cmdparts[2])|0}%,`+
+                `${Number.parseFloat(cmdparts[3])|0}%, ${cmdparts[4]!=undefined ? Number.parseFloat(cmdparts[4]):100}%)`
+            }
+            TextDisplay.style["background-color"] = val
+          } break
+          case "bordercolor": {
+            TextDisplay.style["border-color"] = restrictAlpha(cmdparts[0])
+          } break
+          case "borderwidth": {
+            TextDisplay.style["border-width"] = restrictAlpha(cmdparts[0])
+          } break
+          default: {
+            let cssPropname = allowed_css[cmd]
+            if (cssPropname) {
+              let val = restrictAlpha(cmdparts[0])
+              if (val == "hsl") {
+                val = `hsla(${Number.parseFloat(cmdparts[1])|0}, ${Number.parseFloat(cmdparts[2])|0}%,` +
+                  `${Number.parseFloat(cmdparts[3])|0}%, ${cmdparts[4]!=undefined ? Number.parseFloat(cmdparts[4]):100}%)`
+              }
+              if (!cssProps) {
+                cssProps = {[cssPropname]:val}
+              }
+              else {
+                cssProps[cssPropname] = val
+              }
+            }
+          }
         }
       }
     }

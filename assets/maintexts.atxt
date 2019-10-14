@@ -523,9 +523,79 @@ wait 500
 fadein 300
                                                              -- Eketek
 
+creatures
+fadein 300
+  Creatures
+fadein 300
+  ----------------------------------------------------------------------------------------
+fadein 300
+  You are not the only creature around and you are not the most ferocious creature adound.
 
+mouse
+fadein 300
+  Mouse
+fadein 300
+  --------------------------------------------------------------------
+fadein 300
+  Mousen are universally renowned for the puzzle-solving capabilities.
+  
+moose
+fadein 300
+  Moose
+fadein 300
+  -------------------------------------------------------------------------------------
+fadein 300
+  Moosen differ from mousen only by a single letter, so in addition to having identical
+  properties and behaviors, they must necessesarilly think alike.
 
+friend
+fadein 300
+  You will need a friend.
+  
+friend2
+fadein 300
+  You still need a friend.
 
+mouseavoider
+force-nbsp
+fadein 300
+  Mouse Avoider II
+fadein 300
+  -----------------------------------------------------------------------------------
+fadein 300
+  The goal of this game is to collect all of the required items, then reach the exit.
+  You must complete your objective as quickly as possible.  You must also avoid all 
+  obstacles while so doing.  
+wait 4000
+.
+fadein 300
+  Failure to proceed with reckless haste will dissapoint Eketek.
+wait 4000
+fadein 300
+  Failure to avoid obstacles will be punished: 
+wait 2000
+suffix fadein 300 
+  instantly, 
+wait 2000
+suffix fadein 300
+  severely, 
+wait 2000
+suffix fadein 300
+  and vindictively.
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
 
 

@@ -23,7 +23,7 @@ var QueryTriggeredButtonControl = function(params={}) {
   let state = { }
   let inpCallback = params.onInputAvailable
   let hld_mask = []
-
+  let released = { }
 
   if (held) {
     let nbtnlist = []
@@ -57,7 +57,7 @@ var QueryTriggeredButtonControl = function(params={}) {
           inpCallback()
           break
         case "keyup":
-          state[evt.code] = false
+          released[evt.code] = true
           break
       }
     }
@@ -65,14 +65,20 @@ var QueryTriggeredButtonControl = function(params={}) {
 
   // Return the list of recently pressed buttons (+bttons held down if the readheldbuttons option is set)
   this.query = function() {
+    let r = state
     if (held) {
-      return state
+      let _state = {}
+      Object.assign(_state, state)
+      state = _state
+      for (let k in released) {
+        delete state[k]
+        delete released[k]
+      }
     }
     else {
-      let r = state
       state = {}
-      return r
     }
+    return r
   }
 }
 

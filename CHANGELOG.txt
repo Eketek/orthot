@@ -1,13 +1,16 @@
 0.3.0:
   14 Oct 2019:
     Descriptive texts all the way through Zone 2.
+    A few descriptive texts from zone 3
     More Animated dialog features:
       Literal animations
       Text color
       background color
       border color
       font weight
-      
+    Disabled keyboard controller "hold" mode due to incompatibility with the execution structure (fixed it, then decided that it was too easy to move two spaces
+      when only one is intended).
+    
   12 Oct 2019:
     Added logic to retry displaying InfoBlock messages if TextDisplay is preoccupied with the previous message
     Fixed an error in tick execution process

@@ -231,7 +231,6 @@ $(async function MAIN() {
 
   inputCTL.keystate = new QueryTriggeredButtonControl({
     buttons:".wasd arrows space",
-    readheldbuttons:true,
     onInputAvailable:function() {
       if (orthotCTL.ActiveZone) {
         orthotCTL.ActiveZone.inputAvailable()

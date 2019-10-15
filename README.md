@@ -13,5 +13,11 @@ http://orthot.eketech.com/___release.html
 #0.3.0 (to be left-shifted to 3.0 after the project is ready for release)
 
 # Project status:
-Most of the game has successfully been implemented, though adding new puzzles requires the use of the level editor from previous version.
+All puzzle mechanics are implemented.  Adding new puzzles still requires the use of the level editor from previous version.  Sound has not been implemneted (also have not decided whether or not to do anything interesting with sound).
 
+# Roadmap (for version 3.0): 
+1.  Puzzle editor
+Would like to find some existing editor and just write configuration for it and an import function for the game, but since Orthot prefers data in which can encode objects which are positioned & oriented relationally (but does not accept general-purpose scenegraph data), as well as custom properties on anything, it may be necessesary to design a new one.
+
+2.  Sound / music 
+TBD.  

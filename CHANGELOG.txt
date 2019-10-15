@@ -16,6 +16,7 @@
     Made keys a bit more fragile
       If struck with crushing force, keys will be destroyed
       If struck by a lesser force, the moving object will pass through the key.
+    Adjust gates to carry crates
     
   12 Oct 2019:
     Added logic to retry displaying InfoBlock messages if TextDisplay is preoccupied with the previous message

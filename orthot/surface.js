@@ -55,9 +55,6 @@ var Surface = {
 
   var getSurfaceInteraction = function(sfc, other_sfc) {
     return interact_tbl[sfc][other_sfc]
-    //if (interaction == undefined) {
-    //  return orthot.surface.Interaction.SLIDE
-    //}
   }
 }
 

@@ -497,8 +497,6 @@ var MovableObject = function(zone) {
               pforce.priority = 200
               pforce.action = "ride"
               zone.addForce(pforce)
-              
-              //console.log("RIDE", this, originatingForce, originatingForce.action)
             }
           }
           zone.addTickListener(this.update)

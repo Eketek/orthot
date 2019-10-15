@@ -263,7 +263,7 @@ var Gate = function(zone, ctn, color, align, data) {
   this.code = data.code
 
   this.hasSides = true
-  this.setBaseSurface(Surface.type.SMOOTH)
+  this.setBaseSurface(Surface.type.ROUGH)
 
   this.SpatialClass = "solid"
 

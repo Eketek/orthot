@@ -306,7 +306,6 @@ var Key = function(zone, color, code) {
   this.fallStrength = Strength.LIGHT
   this.setBaseSurface(Surface.type.COARSE)
   this.crushingForce = Strength.CRUSHING
-  //this.propforceMin = Strength.LIGHT
   
   this.struck = function(force, otherOBJ, collision, crash=false) { 
     //console.log("key-struck", force, otherOBJ, collision, crash)

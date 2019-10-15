@@ -582,20 +582,35 @@ suffix fadein 300
 wait 2000
 suffix fadein 300
   and vindictively.
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
+usefultip
+fadein 300
+  ...
+wait 500
+fadein 300
+  ---------------------------------------------------------------------------------------
+fadein 600
+  If this seems like trying to do real work while keeping a box perched on your head, why
+  not try cheating?  Just open up your JavaScript console and add the progress code,
+wait 1200
+asciimation 1 250
+  ""
+  "g"
+  "ga"
+  "gat"
+  "gate"
+  "gater"
+  "gateru"
+  "gaterus"
+  "gaterush"
+wait 750
+replace
+fadein 0
+  "gaterush" to your record, then reset.
+wait 750
+replace
+fadein 0
+  "gaterush" to your record, then reset.  It's so easy!
 
 
 

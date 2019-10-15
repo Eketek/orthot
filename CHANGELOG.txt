@@ -12,6 +12,10 @@
       when only one is intended).
     Fixed lightweight mode button [mis]behavior
     Fixed property leak from reticle color to environment tint
+    Added check to ensure Objects can only be dragged by actual shearing forces
+    Made keys a bit more fragile
+      If struck with crushing force, keys will be destroyed
+      If struck by a lesser force, the moving object will pass through the key.
     
   12 Oct 2019:
     Added logic to retry displaying InfoBlock messages if TextDisplay is preoccupied with the previous message

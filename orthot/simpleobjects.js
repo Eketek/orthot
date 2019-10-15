@@ -306,6 +306,19 @@ var Key = function(zone, color, code) {
   this.fallStrength = Strength.LIGHT
   this.setBaseSurface(Surface.type.COARSE)
   this.crushingForce = Strength.CRUSHING
+  //this.propforceMin = Strength.LIGHT
+  
+  this.struck = function(force, otherOBJ, collision, crash=false) { 
+    //console.log("key-struck", force, otherOBJ, collision, crash)
+    if ((force.strength >= Strength.CRUSHING) && (!force.OBJ.isPlayer)) {
+      this.defeat()
+      zone.removeTickListener(this.update)
+      if (force.pusher) {
+        force.pusher.notify_ForcePropagationClearedObstruction(force, this)
+      }
+    }
+    return false
+  }
 
   if (!color) {
     color = "white"

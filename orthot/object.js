@@ -465,6 +465,16 @@ var MovableObject = function(zone) {
   }
 
   this.applyOutboundIndirectForce = function(heading, normal, from_normal, originatingForce) {
+    switch(originatingForce.action) {
+      case "walk":
+      case "fall":
+      case "pushed":
+      case "retract":
+      case "extend":
+        break
+      default:
+        return
+    }
     let sfc_interaction = getSurfaceInteraction(this.surfaces[normal], originatingForce.OBJ.surfaces[from_normal])
     switch(this.state) {
       case ObjectState.DEFEATED:
@@ -487,6 +497,8 @@ var MovableObject = function(zone) {
               pforce.priority = 200
               pforce.action = "ride"
               zone.addForce(pforce)
+              
+              //console.log("RIDE", this, originatingForce, originatingForce.action)
             }
           }
           zone.addTickListener(this.update)

@@ -42,8 +42,8 @@ var Zone = function(ekvx, override_startloc, name) {
   // For now, lighting is simplified to global ambient + global directional light + player-held lantern + maybe one light-bearing object
   //  ANd...  just because there otherwise isn't much interesting about lighting, the global directional light rotates very slowly as time passes
   var amblCol = new THREE.Color("white")
-  let hue = Math.random()
-  amblCol.setHSL ( hue, 1, 0.5 )
+  let ambHue = Math.random()
+  amblCol.setHSL ( ambHue, 1, 0.5 )
   var vambl = new THREE.AmbientLight(amblCol, 0.125)
   var ambl = new THREE.AmbientLight(0xffffff, 0.125)
   this.scene.add(ambl)
@@ -101,9 +101,9 @@ var Zone = function(ekvx, override_startloc, name) {
     }
     activeReticle = reticle
 
-    hue = color.getHSL().h+0.5
-    reticlemat.color.setHSL(hue, 1, 0.5)
-    reticlemat.emissive.setHSL(hue, 1, 0.5)
+    let reticleHue = color.getHSL().h+0.5
+    reticlemat.color.setHSL(reticleHue, 1, 0.5)
+    reticlemat.emissive.setHSL(reticleHue, 1, 0.5)
 
     for (let obj of objs) {
       if (obj.code == code) {
@@ -206,13 +206,13 @@ var Zone = function(ekvx, override_startloc, name) {
 
 
   let tHue = 0, hueIncr = 0.001
-  hue = 0
+  ambHue = 0
   let setHueTarget = function() {
     tHue = Math.random()
     hueIncr = Math.random() > 0.5 ? 1/6000 : -1/6000
   }
-  hue = Math.random()
-  amblCol.setHSL ( hue, 1, 0.5 )
+  ambHue = Math.random()
+  amblCol.setHSL ( ambHue, 1, 0.5 )
   vambl.color = amblCol
   setHueTarget()
  // col = new THREE.Color()
@@ -280,16 +280,16 @@ var Zone = function(ekvx, override_startloc, name) {
     dlight.position.x = Math.cos(dlrot%T)*2000
     dlight.position.z = Math.sin(dlrot%T)*2000
 
-    hue += hueIncr
-    amblCol.setHSL ( hue, 1, 0.5 )
+    ambHue += hueIncr
+    amblCol.setHSL ( ambHue, 1, 0.5 )
     vambl.color = amblCol
     if (hueIncr > 0) {
-      if (hue >= tHue) {
+      if (ambHue >= tHue) {
         setHueTarget()
       }
     }
     else {
-      if (hue <= tHue) {
+      if (ambHue <= tHue) {
         setHueTarget()
       }
     }

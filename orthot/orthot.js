@@ -471,10 +471,11 @@ $(async function MAIN() {
       }
       if (selected_hrmode) {
         orthotCTL.highResponsiveMode = true
-        highRespModeBTN.text("Hi-Resp:ON").removeClass("btn_inactive").addClass("btn_active")
+        highRespModeBTN.text("Hi-Resp:ON").addClass("btn_active")
       }
       else {
-        highRespModeBTN.text("Hi-Resp:OFF")
+        orthotCTL.highResponsiveMode = false
+        highRespModeBTN.text("Hi-Resp:OFF").addClass("btn_inactive")
       }
     }
     else {
@@ -489,6 +490,7 @@ $(async function MAIN() {
       else {
         orthotCTL.highResponsiveMode = true
         highRespModeBTN.text("Hi-Resp:ON")
+        highRespModeBTN.removeClass("btn_inactive")
       }
     }
   })

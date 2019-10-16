@@ -302,28 +302,28 @@ $(async function MAIN() {
     }
   }
   
-  let cc = {
+  let cursor3d = {
     x:0,y:0,z:0,
     isDecorative:true,
-    mdl:getAsset(edCTL.assets, "CubeCursor")
+    mdl:new THREE.Object3D()
   }
-  console.log(cc)
-  put(cc,0,0,0)
+  let cubeCursor = getAsset(edCTL.assets, "CubeCursor")
+  cursor3d.mdl.add(cubeCursor)
+  put(cursor3d,0,0,0)
   
-  {(async function SimpleCursorMover () {
+  {(async function Cursor3DControl () {
     let evtman = new NextEventManager()
     
     while (true) {
       let evt = await evtman.next("mousemove")
       let mp3d = sviewCTL.mpos3d
-      console.log(mp3d)
       
       let x = Math.round(mp3d.x)
       let y = Math.round(mp3d.y)
       let z = Math.round(mp3d.z)
       
-      if ( (x != cc.x) | (x != cc.x) | (x != cc.x)) {
-        put(cc, x,y,z)
+      if ( (x != cursor3d.x) | (x != cursor3d.x) | (x != cursor3d.x)) {
+        put(cursor3d, x,y,z)
         controlActive = true
       }
     }

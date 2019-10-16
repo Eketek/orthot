@@ -4,16 +4,20 @@ import { load_to_ArrayBuffer } from './libek.js'
 import { DataReader } from './datareader.js'
 
 /*  Parser for the Eketech Voxel Format (presently only used for puzzles for Orthot)
- *
- *  The Eketech Voxel format uses packed voxels (integer 3d bit x,y,z coordinate triplets compressed to a 16 bit int) and templates (propery lists bound to an
-    integer identifier) to compress data data.  Space is divided into a set of regions, each 32x16x32 units in extent.  Each region specifies an offset and two
-    data blcoks.  The first data block is list of objects which are defined solely by coordinate and a template identifier.  The second data block is a list of
-    objects defined by coordinate, a template identifer, and an arbitrary collection of parameters (custom configuration for that object).  All template
-    identifiers are used to index the templates.  Templates and per-object configuration do the same thing (templates only reduce the data storage requirement)
-
-    The Eketech Voxel Format also contain additional data which was used for vertex-lighting by Orthot II (but which for now is just parsed over and ignored)
+  
+    The Eketech Voxel format uses packed voxels (truncated integer x,y,z coordinates) and templates (property lists bound to an integer identifier) to compress
+    data.  Space is divided into a set of regions, each 32x64x32 units in extent (the truncated x,y,z coordinate per object is ppacked into a 16 bit int).  
+    Each region is represented as a data structure consisting of an offset and two data blocks.  The offset is x,y,z coordinates (each a 32 bit signed integer).
+    The first data block is list of objects which are defined solely by position and a template identifier.  The second data block is a list of objects defined
+    by position, a template identifer, and an arbitrary collection of parameters (custom configuration for that object).
+    
+    For all objects, the position is the packed coordinate + region block offset.  
+    Objects built from the first data block for each region, the template defines every property other than the position.
+    For objects built from the second data block, object properties are a combionation of the data in the template and the arbitrary/per-object data.
+    
+    The Eketech Voxel Format also contains additional data which was used to store vertex-lighting information for by Orthot II
+      For now, this is just parsed over and ignored.
 */
-
 var EkvxLoaderLoader = {
   isLibekLoader:true,
   load:async function(arg, cb, fetchOPTS) {

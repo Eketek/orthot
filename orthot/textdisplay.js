@@ -14,17 +14,16 @@ var configureTextDisplay = function(textdisp, beneath) {
   BeneathElement = beneath
 }
 
+let NBSP = "\u00A0"
 var LOCALE = "EN"
 var setTextDisplayLocale = function(locale) {
   LOCALE = locale
 }
 
+
 var reposition = function() {
   centerElementOverElement(TextDisplay, BeneathElement)
 }
-
-// speed factor -- used by the deactivator to speed up a running text program so it can be closed sooner.
-var speed = 1
 
 // Ease the text-display opacity from its current value to a target value
 //let opa = 0
@@ -60,7 +59,7 @@ var fade = async function(len, opa, targetOPA, elem) {
   while (time < end) {
     await next(orthotCTL.event, "frame")
     let ntime = Date.now()
-    opa += (ntime-time)*incr*speed
+    opa += (ntime-time)*incr
     time = ntime
     if (pos) {
       if (opa > targetOPA) {
@@ -92,15 +91,34 @@ var setText = function(txt) {
   reposition()
 }
 
+// charset restrictor for css property handling
+var ALPHA_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+var restrictAlpha= function(txt) {
+  let r = ""
+  for (let char of txt) {
+    if (ALPHA_CHARS.indexOf(char) != -1) {
+      r = r + char
+    }
+  }
+  return r
+}
+
+var allowed_css = {
+  bkgcolor:"background-color",
+  textcolor:"color",
+  bordercolor:"border-color",
+  fontweight:"font-weight"
+}
+
 // Properties to apply to the text
 var resetStyle = function() {
   TextDisplay.style["background-color"] = "hsla(0,0%,100%,75%)"
   TextDisplay.style["border-color"] = "black"
   TextDisplay.style["border-width"] = 2
   TextDisplay.style["border-style"] = "solid"
+  TextDisplay.style["min-width"] = "0px"
   TextDisplay.style["max-width"] = "75%"
-  TextDisplay.style["min-width"] = "10%"
-  TextDisplay.style["min-height"] = ""
+  TextDisplay.style["min-height"] = "0px"
   TextDisplay.style["max-height"] = ""
   TextDisplay.style["padding"] = "4px"
   TextDisplay.style["font-family"] = "monospace"
@@ -132,7 +150,7 @@ var toHtmlText = function(segment) {
     let i = 2
     for (;i < line.length; i++) {
       if (line[i] != ' ') break
-      r = r + '\u00A0'
+      r = r + NBSP
     }
     r = r + line.substring(i) + "\n"
   }
@@ -142,11 +160,14 @@ var toHtmlText = function(segment) {
 var toTestText = function(block) {
   let testTXT = ""
   for (let seg of block.segments) {
+    if (seg.command == ".") {
+      testTXT = testTXT + "\n"
+    }
     for (let line of seg.texts) {
-      for (let i = 0;i < line.length; i++) {
-        if (line[i] != ' ') break
-        testTXT = testTXT + '\u00A0'
-      }
+      //for (let i = 0;i < line.length; i++) {
+      //  if (line[i] != ' ') break
+      //  testTXT = testTXT + '\u00A0'
+      //}
       testTXT = testTXT + line.substring(2) + "\n"
     }
   }
@@ -157,11 +178,19 @@ var autosize = function(block) {
   TextDisplay.innerText = toTestText(block)
   reposition()
   let bounds = TextDisplay.getBoundingClientRect()
-  TextDisplay.style["min-width"] = bounds.width
   TextDisplay.style["max-width"] = bounds.width
-  TextDisplay.style["min-height"] = bounds.height
   TextDisplay.style["max-height"] = bounds.height
   TextDisplay.innerText = ""
+}
+
+var append = function(elem, cssProps, target) {
+  if (!target) {
+    target = TextDisplay
+  }
+  target.appendChild(elem)
+  if (cssProps) {
+    Object.assign(elem.style, cssProps)
+  }
 }
 
 var busy = false
@@ -198,7 +227,6 @@ var activateTextDisplay = async function(arg, successCB) {
   busy = true
   running = true
   showing = true
-  speed = 1
   resetStyle()
   
   let numLines = 0
@@ -211,11 +239,15 @@ var activateTextDisplay = async function(arg, successCB) {
   }
   else if (typeof(arg) == "object") {
     if (arg.isAnimText) {
-      //console.log(`DISPLAYING ANIM-TEXT`, arg)
-      //console.log(arg)
-      autosize(arg)
-      processBlock:
-      for (let seg of arg.segments) {
+      let cssProps
+      let block = arg
+      autosize(block)
+      processSegments:
+      for (let seg of block.segments) {
+        if (autocancel) {
+          break
+        }
+        let space = block.space
         let cmdparts, cmd
         if (seg.command) {
           cmdparts = seg.command.split(' ')
@@ -226,41 +258,256 @@ var activateTextDisplay = async function(arg, successCB) {
           cmdparts = []
         }
         cmdparts = cmdparts.slice(1)
-        let textElem = document.createElement("div")
-        textElem.innerText = toHtmlText(seg)
-        
+        let textElem
+        if (seg.texts.length > 0) {
+          textElem = document.createElement("div")
+          textElem.innerText = toHtmlText(seg)
+        }
         switch(cmd) {
+          case "force-nbsp": {
+            if (block.space == NBSP) {
+              continue processSegments
+            }
+            block.space = NBSP
+            space = NBSP
+            for (let _seg of block.segments) {
+              for (let i = 0; i < _seg.texts.length; i++) {
+                let line = "";
+                for (let char of _seg.texts[i]) {
+                  if (char == ' ') {
+                    line = line + NBSP
+                  }
+                  else {
+                    line = line + char
+                  }
+                }
+                _seg.texts[i] = line
+              }
+            }
+          } break
           case "":
             if (seg.texts.length == 0) break
-          case "text":
-            setText(toHtmlText(seg))
-            if (arg.segments.length == 1) {
-              TextDisplay.appendChild(textElem)
-              await fade(100, 0, 1, textElem)
+          case "text": {
+            if (textElem) {
+              setText(toHtmlText(seg))
+              if (block.segments.length == 1) {
+                append(textElem, cssProps)
+                await fade(100, 0, 1, textElem)
+              }
+            }
+          } break
+          case '.':
+            TextDisplay.appendChild(document.createElement("br"))
+            if (textElem) {
+              append(textElem, cssProps)
             }
             break
+          case "wait": {
+            let waitTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
+            await delay(waitTime)
+            if (textElem) {
+              append(textElem, cssProps)
+            }
+          } break
           case "fade": {
-            let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
-            let fadeTo = clamp(Number.parseFloat(cmdparts[0]), 0, 1)
-            TextDisplay.appendChild(textElem)
-            await fade(fadeTime, fadeTo, textElem)
+            if (textElem) {
+              let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
+              let fadeTo = clamp(Number.parseFloat(cmdparts[0]), 0, 1)
+              append(textElem, cssProps)
+              await fade(fadeTime, fadeTo, textElem)
+            }
           } break
           case "fadein": {
-            let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
-            TextDisplay.appendChild(textElem)
-            await fade(fadeTime, 0, 1, textElem)
+            if (textElem) {
+              let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
+              append(textElem, cssProps)
+              await fade(fadeTime, 0, 1, textElem)
+            }
           } break
           case "fadeout": {
-            let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
-            textElem = TextDisplay.lastChild
             if (textElem) {
-              await fade(fadeTime, 1, 0, textElem)
-              TextDisplay.removeChild(textElem)
-            }
-            else {
-              console.log("TextDisplay ERROR:  Nothing left to fade out!")
+              let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 15000)
+              textElem = TextDisplay.lastChild
+              if (textElem) {
+                await fade(fadeTime, 1, 0, textElem)
+                TextDisplay.removeChild(textElem)
+              }
+              else {
+                console.log("TextDisplay ERROR:  Nothing left to fade out!")
+              }
             }
           } break
+          case "suffix": {
+            if (textElem) {
+              let parent = TextDisplay.lastChild
+              if (parent) {
+                let _textElem = document.createElement("span")
+                _textElem.innerText = textElem.innerText
+                textElem = _textElem
+                let brElem = parent.lastChild
+                parent.removeChild(brElem)
+                //parent.appendChild(_textElem)
+                append(textElem, cssProps, parent)
+                parent.appendChild(brElem)
+              }
+              else {
+                append(textElem, cssProps)
+              }
+              if (cmdparts[0] == "fadein") {
+                let fadeTime = clamp(Number.parseFloat(cmdparts[1]), 0, 15000)
+                await fade(fadeTime, 0, 1, textElem)
+              }
+            }
+          } break
+          case "fadeinwords": {
+            if (textElem) {
+              let elem
+              let fadeTime = clamp(Number.parseFloat(cmdparts[0]), 0, 1000)
+              textElem.innerText = ""
+              append(textElem, cssProps)
+              for (let i = 0; i < seg.texts.length; i++) {
+                let line = seg.texts[i]
+                line = line.substring(2)
+                let word = ""
+                for (let c of line) {
+                  if (autocancel) {
+                    break processSegments
+                  }
+                  switch(c) {
+                    default:
+                      word = word + c
+                      break
+                    case space:
+                      if (word.trim() != "") {
+                        elem = document.createElement("span")
+                        elem.innerText = word
+                        append(elem, cssProps, textElem)
+                        //textElem.appendChild(elem)
+                        await fade(fadeTime, 0, 1, elem)
+                        word = ""
+                      }
+                      word = word + space
+                      break
+                  }
+                }
+                if (word.trim() != "") {
+                  elem = document.createElement("span")
+                  elem.innerText = word
+                  //textElem.appendChild(elem)
+                  append(elem, cssProps, textElem)
+                  await fade(fadeTime, 0, 1, elem)
+                  word = ""
+                }
+                if (i != seg.texts.length-1) {
+                  elem = document.createElement("br")
+                  //textElem.appendChild(elem)
+                  append(elem, cssProps, textElem)
+                }
+              }
+            }
+          } break
+          case "stairwords": {
+            let dir = cmdparts[0]
+            let fadeTime = clamp(Number.parseFloat(cmdparts[1]), 0, 1000)
+            textElem.innerText = ""
+            TextDisplay.appendChild(textElem)
+            let words = seg.texts[0]
+            //console.log(seg)
+            if (!words) break
+            words = words.substring(2)
+            words = words.split(space)
+            //console.log(words)
+            let spaces = ""
+            let elems = []
+            for (let i = 0; i < words.length; i++) {
+              let wordElem = document.createElement("div")
+              elems.push(wordElem)
+              wordElem.style.opacity = 0
+              wordElem.innerText = spaces + words[i]
+              spaces = spaces + NBSP.repeat(words[i].length+1)
+              //console.log(space+words[i], '|' + space + nbsp.repeat(words[i].length+1) + '|')
+              //console.log(dir, wordElem)
+              if (dir.toLowerCase() == "up") {
+                //console.log("prepend?")
+                append(wordElem, cssProps, textElem)
+                textElem.insertBefore(wordElem, textElem.firstChild)
+              }
+              else {
+                //console.log("append?")
+                //textElem.appendChild(wordElem)
+                append(wordElem, cssProps, textElem)
+              }
+            }
+            for (let i = 0; i < words.length; i++) {
+              await fade(fadeTime, 0, 1, elems[i])
+              if (autocancel) {
+                break processSegments
+              }
+            }
+          } break
+          case "asciimation": {
+            let numLines = clamp(Number.parseInt(cmdparts[0]), 1, 50)
+            let frameLen = clamp(Number.parseInt(cmdparts[1]), 1, 10000)
+            let fadeTime = clamp(Number.parseInt(cmdparts[2]), 0, 1500)
+            textElem.innerText = ""
+            append(textElem, cssProps)
+            if (fadeTime != 0) {
+              fade(fadeTime, 0, 1, textElem)
+            }
+            let numFrames = Math.ceil(seg.texts.length / numLines)
+            for (let i = 0; i < numFrames; i++) {
+              let frameText = ""
+              for (let j = 0; j < numLines; j++) {
+                let line = seg.texts[i*numLines+j]
+                if (!line) {
+                  line = ""
+                }
+                if (j != 0) {
+                  frameText = frameText + "\n"
+                }
+                frameText = frameText + line.substring(2)
+              }
+              textElem.innerText = frameText
+              await delay(frameLen)
+              if (autocancel) {
+                break processSegments
+              }
+            }
+            break
+          }
+          case "replace": {
+            TextDisplay.removeChild(TextDisplay.lastChild)
+          } break
+          case "bkgcolor": {
+            let val = restrictAlpha(cmdparts[0])
+            if (val == "hsl") {
+              val = `hsla(${Number.parseFloat(cmdparts[1])|0}, ${Number.parseFloat(cmdparts[2])|0}%,`+
+                `${Number.parseFloat(cmdparts[3])|0}%, ${cmdparts[4]!=undefined ? Number.parseFloat(cmdparts[4]):100}%)`
+            }
+            TextDisplay.style["background-color"] = val
+          } break
+          case "bordercolor": {
+            TextDisplay.style["border-color"] = restrictAlpha(cmdparts[0])
+          } break
+          case "borderwidth": {
+            TextDisplay.style["border-width"] = restrictAlpha(cmdparts[0])
+          } break
+          default: {
+            let cssPropname = allowed_css[cmd]
+            if (cssPropname) {
+              let val = restrictAlpha(cmdparts[0])
+              if (val == "hsl") {
+                val = `hsla(${Number.parseFloat(cmdparts[1])|0}, ${Number.parseFloat(cmdparts[2])|0}%,` +
+                  `${Number.parseFloat(cmdparts[3])|0}%, ${cmdparts[4]!=undefined ? Number.parseFloat(cmdparts[4]):100}%)`
+              }
+              if (!cssProps) {
+                cssProps = {[cssPropname]:val}
+              }
+              else {
+                cssProps[cssPropname] = val
+              }
+            }
+          }
         }
       }
     }
@@ -273,12 +520,13 @@ var activateTextDisplay = async function(arg, successCB) {
 }
 
 var fadeoutTextDisplay = async function() {
-  let fadeoutPromise = fade(750*speed, 1, 0)
+  let fadeoutPromise = fade(750, 1, 0)
+  let wantAmt = 750/TextDisplay.childNodes.length
   while (true) {
     let textElem = TextDisplay.lastChild
     if (!textElem) break
     if (!textElem.tagName) break
-    await fade(60*speed, 1, 0, textElem)
+    await fade(30, 1, 0, textElem)
     TextDisplay.removeChild(textElem)
   }
   await fadeoutPromise  
@@ -292,7 +540,6 @@ var deactivateTextDisplay = async function() {
     return
   }
   if (running) {
-    speed = 4
     autocancel = true
   }
   else {

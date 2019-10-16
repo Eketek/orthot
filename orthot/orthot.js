@@ -133,8 +133,22 @@ $(async function MAIN() {
     return
   }
   
-  for (let block of orthotCTL.assets.maintexts) {
-    orthotCTL.texts[block.name] = block
+  let setupMainTexts = function(src) {
+    orthotCTL.texts = {}
+    for (let block of src) {
+      orthotCTL.texts[block.name] = block
+    }
+  }
+  setupMainTexts(orthotCTL.assets.maintexts)
+  
+  orthotCTL.forceReloadMaintexts = async function() {
+    let txts = {}
+    await loadMuch(
+      txts,
+      {cache:"reload"},
+      {url:"assets/maintexts.atxt"},
+    )
+    setupMainTexts(txts.maintexts)
   }
 
   //console.log("TEST-TXTLOADER---------")
@@ -217,7 +231,6 @@ $(async function MAIN() {
 
   inputCTL.keystate = new QueryTriggeredButtonControl({
     buttons:".wasd arrows space",
-    readheldbuttons:true,
     onInputAvailable:function() {
       if (orthotCTL.ActiveZone) {
         orthotCTL.ActiveZone.inputAvailable()
@@ -226,6 +239,7 @@ $(async function MAIN() {
   })
   inputCTL.keystate.run()
 
+  let controlActive = false
   sviewCTL = window.sctl = new SceneviewController({
     camtarget:new THREE.Vector3(0,0,0),
     display:renderCTL.display,
@@ -236,6 +250,9 @@ $(async function MAIN() {
     UpdcamUpdatepickplane:true,
     followspeed:1/60,
     campos_maxphi:Math.PI * 0.85,
+    onCamUpdate:function() {
+      controlActive = true
+    },
 
     OrbitTargetMBTN:"rmb",
     ChaseTargetMBTN:"lmb",
@@ -424,16 +441,57 @@ $(async function MAIN() {
     orthotCTL.loadScene("MainArea")
   }
 
-  let highRespModeBTN = $("<div>").addClass("btn_inactive").text("Hi-Resp:OFF")
+  let selected_hrmode = false
 
+  let highRespModeBTN = $("<div>").addClass("btn_inactive").text("Hi-Resp:OFF")
   on(highRespModeBTN, "click", ()=>{
+    if (orthotCTL.lwmode) {
+      return
+    }
     if (orthotCTL.highResponsiveMode) {
-       orthotCTL.highResponsiveMode = false
-       highRespModeBTN.text("Hi-Resp:OFF").removeClass("btn_active").addClass("btn_inactive")
+      selected_hrmode = false
+      orthotCTL.highResponsiveMode = false
+      highRespModeBTN.text("Hi-Resp:OFF").removeClass("btn_active").addClass("btn_inactive")
     }
     else {
-     orthotCTL.highResponsiveMode = true
-     highRespModeBTN.text("Hi-Resp:ON").removeClass("btn_inactive").addClass("btn_active")
+      selected_hrmode = true
+      orthotCTL.highResponsiveMode = true
+      highRespModeBTN.text("Hi-Resp:ON").removeClass("btn_inactive").addClass("btn_active")
+    }
+  })
+  
+  
+  let lwmodeBTN = $("<div>").addClass("btn_inactive").text("LW-Mode:OFF")
+  on(lwmodeBTN, "click", ()=>{
+    if (orthotCTL.lwmode) {
+      orthotCTL.lwmode = false
+      lwmodeBTN.text("LW-Mode:OFF").removeClass("btn_active").addClass("btn_inactive")
+      if (orthotCTL.ActiveZone) {
+        orthotCTL.ActiveZone.setLightweightMode(orthotCTL.lwmode)
+      }
+      if (selected_hrmode) {
+        orthotCTL.highResponsiveMode = true
+        highRespModeBTN.text("Hi-Resp:ON").addClass("btn_active")
+      }
+      else {
+        orthotCTL.highResponsiveMode = false
+        highRespModeBTN.text("Hi-Resp:OFF").addClass("btn_inactive")
+      }
+    }
+    else {
+      orthotCTL.lwmode = true
+      lwmodeBTN.text("LW-Mode:ON").removeClass("btn_inactive").addClass("btn_active")
+      if (orthotCTL.ActiveZone) {
+        orthotCTL.ActiveZone.setLightweightMode(orthotCTL.lwmode)
+      }
+      if (orthotCTL.highResponsiveMode) {
+        highRespModeBTN.removeClass("btn_active")
+      }
+      else {
+        orthotCTL.highResponsiveMode = true
+        highRespModeBTN.text("Hi-Resp:ON")
+        highRespModeBTN.removeClass("btn_inactive")
+      }
     }
   })
 
@@ -455,9 +513,11 @@ $(async function MAIN() {
   aboutBTN = $("<div>").addClass("btn_active").text("About").click(toggleAboutBox)[0]
 
   highRespModeBTN[0].title = "High-Responsive Mode"
+  lwmodeBTN[0].title = "Lightweight Mode"
   resetBTN[0].title = "Restart the active puzzle"
 
   $("#controls").append(highRespModeBTN)
+  $("#controls").append(lwmodeBTN)
   $("#controls").append(resetBTN)
   $("#controls").append(aboutBTN)
 
@@ -596,6 +656,7 @@ $(async function MAIN() {
     tiptext = item.description ? item.description : ""
     if (item.visualizer) {
       item.visualizer(true)
+      controlActive = true
     }
   }
   orthotCTL.updateDescription = function(item) {
@@ -605,6 +666,7 @@ $(async function MAIN() {
     tiptext = item.description ? item.description : ""
     if (item.visualizer) {
       item.visualizer(true)
+      controlActive = true
     }
   }
 
@@ -616,6 +678,7 @@ $(async function MAIN() {
     tiptext = ""
     if (item.visualizer) {
       item.visualizer(false)
+      controlActive = true
     }
   }
 
@@ -827,10 +890,13 @@ $(async function MAIN() {
     requestAnimationFrame( run );
     orthotCTL.event.dispatchEvent(new Event("frame"))
 
-    if (orthotCTL.ActiveZone) {
-      orthotCTL.ActiveZone.onFrame()
+    if (orthotCTL.ActiveZone && orthotCTL.ActiveZone.onFrame()) {
+      renderCTL.display.render()
     }
-    renderCTL.display.render()
+    else if (controlActive) {
+      controlActive = false
+      renderCTL.display.render()
+    }
     //hg.rotate(17/16)
     //console.log(sviewCTL.campos.phi)
     let camTheta = sviewCTL.campos.theta

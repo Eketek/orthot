@@ -365,9 +365,14 @@ var Player = function(zone, align, init_fpmode) {
   this.defeat = async function(reason) {
     if (this.state != ObjectState.DEFEATED) {
       this.state = ObjectState.DEFEATED
-      this.animCTL.defeat()
       if (reason) {
         console.log(reason)
+      }
+      if (orthotCTL.lwmode) {
+        zone.removeGameobject(this)
+      }
+      else {
+        this.animCTL.defeat()
       }
       await delay(4000)
       zone.reset("defeated")

@@ -78,12 +78,17 @@ var OrthotObject = function(zone) {
     delete this.SpatialClass    //A reasonably simple way to disappear the object
     this.state = ObjectState.DEFEATED
     if (this.obj) {
-      VanishAnim(zone, this, {
-        end:(function() {
-          zone.removeGameobject(this)
-        }).bind(this),
-        pos:this.worldpos
-      })
+      if (orthotCTL.lwmode) {
+        zone.removeGameobject(this)
+      }
+      else {
+        VanishAnim(zone, this, {
+          end:(function() {
+            zone.removeGameobject(this)
+          }).bind(this),
+          pos:this.worldpos
+        })
+      }
     }
     this.defeated = true
   }
@@ -460,6 +465,16 @@ var MovableObject = function(zone) {
   }
 
   this.applyOutboundIndirectForce = function(heading, normal, from_normal, originatingForce) {
+    switch(originatingForce.action) {
+      case "walk":
+      case "fall":
+      case "pushed":
+      case "retract":
+      case "extend":
+        break
+      default:
+        return
+    }
     let sfc_interaction = getSurfaceInteraction(this.surfaces[normal], originatingForce.OBJ.surfaces[from_normal])
     switch(this.state) {
       case ObjectState.DEFEATED:

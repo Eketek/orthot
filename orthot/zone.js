@@ -42,6 +42,8 @@ var Zone = function(ekvx, override_startloc, name) {
   // For now, lighting is simplified to global ambient + global directional light + player-held lantern + maybe one light-bearing object
   //  ANd...  just because there otherwise isn't much interesting about lighting, the global directional light rotates very slowly as time passes
   var amblCol = new THREE.Color("white")
+  let ambHue = Math.random()
+  amblCol.setHSL ( ambHue, 1, 0.5 )
   var vambl = new THREE.AmbientLight(amblCol, 0.125)
   var ambl = new THREE.AmbientLight(0xffffff, 0.125)
   this.scene.add(ambl)
@@ -54,6 +56,8 @@ var Zone = function(ekvx, override_startloc, name) {
   dlTarget.position.set(0,0,0)
   this.scene.add(dlTarget)
   let dlrot = Math.random()*T
+  dlight.position.x = Math.cos(dlrot%T)*2000
+  dlight.position.z = Math.sin(dlrot%T)*2000
 
   //clear out any lingering input
 
@@ -97,9 +101,9 @@ var Zone = function(ekvx, override_startloc, name) {
     }
     activeReticle = reticle
 
-    let hue = color.getHSL().h+0.5
-    reticlemat.color.setHSL(hue, 1, 0.5)
-    reticlemat.emissive.setHSL(hue, 1, 0.5)
+    let reticleHue = color.getHSL().h+0.5
+    reticlemat.color.setHSL(reticleHue, 1, 0.5)
+    reticlemat.emissive.setHSL(reticleHue, 1, 0.5)
 
     for (let obj of objs) {
       if (obj.code == code) {
@@ -201,22 +205,72 @@ var Zone = function(ekvx, override_startloc, name) {
   let cmdSequences_realtime = []
 
 
-  let tHue = 0, hue = 0, hueIncr = 0.001
+  let tHue = 0, hueIncr = 0.001
+  ambHue = 0
   let setHueTarget = function() {
     tHue = Math.random()
     hueIncr = Math.random() > 0.5 ? 1/6000 : -1/6000
   }
-  hue = Math.random()
-  amblCol.setHSL ( hue, 1, 0.5 )
+  ambHue = Math.random()
+  amblCol.setHSL ( ambHue, 1, 0.5 )
   vambl.color = amblCol
   setHueTarget()
  // col = new THREE.Color()
 
   let HALTED = false
+  
 
-  this.onFrame = function() {
+  let cheap_onFrame = function() {
     if (HALTED) {
-      return
+      return false
+    }
+    //update geometry
+    let chk_built = vxc.buildChunks()
+
+    //timekeeping
+    let t = Date.now()
+    let dt = t-prevtime
+    prevtime = t
+
+    let reltime = (t-prevtick) / this.ticklen
+    let d = reltime-prevreltime
+    prevreltime = reltime
+    
+    if (reltime < 1) {
+      return false|chk_built
+    }
+    
+    if ( (cmdSequences_long.length == 0) && (cmdSequences_short.length == 0) ) {
+      prevreltime -= 1
+      prevtick = t
+      tick()
+      return false|chk_built
+    }
+
+    for (let i = 0; i < cmdSequences_long.length; i++) {
+      let seq = cmdSequences_long[i]
+      if (!seq.advance(1)) {
+        cmdSequences_long.splice(i,1)
+        i--
+      }
+    }
+
+    // Complete all short animations.  "Now" here is immediately before the next tick.
+    if (cmdSequences_short.length != 0) {
+      for (let seq of cmdSequences_short) {
+        seq.stop()
+      }
+      cmdSequences_short = []
+    }
+    prevreltime -= 1
+    prevtick = t
+    tick()
+    return true
+  }
+  
+  let expensive_onFrame =  this.onFrame = function() {
+    if (HALTED) {
+      return false
     }
     //update geometry
     vxc.buildChunks()
@@ -226,16 +280,16 @@ var Zone = function(ekvx, override_startloc, name) {
     dlight.position.x = Math.cos(dlrot%T)*2000
     dlight.position.z = Math.sin(dlrot%T)*2000
 
-    hue += hueIncr
-    amblCol.setHSL ( hue, 1, 0.5 )
+    ambHue += hueIncr
+    amblCol.setHSL ( ambHue, 1, 0.5 )
     vambl.color = amblCol
     if (hueIncr > 0) {
-      if (hue >= tHue) {
+      if (ambHue >= tHue) {
         setHueTarget()
       }
     }
     else {
-      if (hue <= tHue) {
+      if (ambHue <= tHue) {
         setHueTarget()
       }
     }
@@ -284,7 +338,13 @@ var Zone = function(ekvx, override_startloc, name) {
       prevtick = t
       tick()
     }
+    return true
   }
+  
+  this.setLightweightMode = function(lwmode) {
+    this.onFrame = lwmode ? cheap_onFrame : expensive_onFrame
+  }
+  this.setLightweightMode(orthotCTL.lwmode)
 
   let tick = (function() {
     this.ticknum++
@@ -1584,9 +1644,10 @@ var Zone = function(ekvx, override_startloc, name) {
             break
           case "info":
             gobj = new InfoBlock(this, true, property("tip", datas))
+            console.log(datas)
             break
           case "cammode":
-            console.log(datas)
+            //console.log(datas)
           break
           case "gate": {
             color = property("color", datas, "white", parseColor)

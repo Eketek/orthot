@@ -1,7 +1,38 @@
 0.3.0:
+  14 Oct 2019:
+    Descriptive texts for regular puzzles all the way through Zone 3.
+      (regular puzzles being anything that sticks to the ordinary objects [not scripted or runtime-generated content])
+    More Animated dialog features:
+      Literal animations
+      Text color
+      background color
+      border color
+      font weight
+    Disabled keyboard controller "hold" mode due to incompatibility with the execution structure (fixed it, then decided that it was too easy to move two spaces
+      when only one is intended).
+    Fixed lightweight mode button [mis]behavior
+    Fixed property leak from reticle color to environment tint
+    Added check to ensure Objects can only be dragged by actual shearing forces
+    Made keys a bit more fragile
+      If struck with crushing force, keys will be destroyed
+      If struck by a lesser force, the moving object will pass through the key.
+    Adjust gates to carry crates
+    
   12 Oct 2019:
     Added logic to retry displaying InfoBlock messages if TextDisplay is preoccupied with the previous message
     Fixed an error in tick execution process
+    Added descriptive texts for everything up to the initial progress-blocking gate (the early tutorial-ish puzzles)
+    Added a lightweight mode
+      Lightweight mode reduces graphics rendering to an absolute minimum
+      Lightweight mode disables all environmental and indefinite animations
+        (lighting does not change slowly over time, and keys & InfoBlocks remain motionless)
+      In lightweight mode, frames are drawn only when at least one of the following four conditions is satisfied:
+        At the end of a tick in which something requested a signfiicant animation (movement)
+        Whenever the SceneViewController alters the camera position and/or orientation (User-interaction only)
+        Any terrain geometry was built or rebuilt (presently only occurs for a few frames after initial scene setup)
+        A reticle icon has been moused over or moused out.
+      Lightwieght mode is also implicitly a high-response mode (high-response mode is also set and locked while lightweight mode is active)
+      Lightweight mode may be toggled by the button in the upper-right hand corner of the interface
     
   10-12 Oct 2019
     Added a simple dialog box animation system for showing tooltips, flavor text, and error messages

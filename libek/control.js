@@ -135,17 +135,17 @@ var SceneviewController = function(params = {}) {
 
   let updcam_adjust_pickplane = params.UpdcamUpdatepickplane
 
-  let mpos
+  this.mpos = undefined
 
   {(async function trackMouse() {
     while (true) {
       let evt = await next(dom_evttarget, "mousemove")
-      mpos = {
+      this.mpos = {
         x: ((evt.pageX - evt.target.offsetLeft) / evt.target.clientWidth) * 2 - 1,
         y:-((evt.pageY - evt.target.offsetTop)  / evt.target.clientHeight) * 2 + 1
       }
     }
-  })()}
+  }).bind(this)()}
 
 
   // First-person mode:
@@ -365,7 +365,7 @@ var SceneviewController = function(params = {}) {
         let btnup = params.OrbitTargetMBTN + "_up"
         let main_evt, orbit_evt
 
-        let prev_mpos//, mpos
+        let prev_mpos
         let evtman = new NextEventManager()
         main:
         while (true) {
@@ -395,7 +395,7 @@ var SceneviewController = function(params = {}) {
               this.updateCamera(false)
             break
             case btndown:
-              prev_mpos = mpos
+              prev_mpos = this.mpos
               //prev_mpos = {
               //  x:((evt.pageX - evt.target.offsetLeft) / evt.target.clientWidth) * 2 - 1,
               //  y:-((evt.pageY - evt.target.offsetTop)  / evt.target.clientHeight) * 2 + 1
@@ -414,9 +414,9 @@ var SceneviewController = function(params = {}) {
                     //  y:-((evt.pageY - evt.target.offsetTop)  / evt.target.clientHeight) * 2 + 1
                     //}
 
-                    let dx = -(mpos.x - prev_mpos.x)*this.rotspeed
-                    let dy = (mpos.y - prev_mpos.y)*this.rotspeed
-                    prev_mpos = mpos
+                    let dx = -(this.mpos.x - prev_mpos.x)*this.rotspeed
+                    let dy = (this.mpos.y - prev_mpos.y)*this.rotspeed
+                    prev_mpos = this.mpos
 
                     this.campos.theta += dx
                     this.campos.phi += dy
@@ -511,7 +511,7 @@ var SceneviewController = function(params = {}) {
         let btnup = params.ChaseTargetMBTN + "_up"
 
         let chase = (function() {
-          let mpos3d = pickPlanepos(this.disp, mpos, this.pickplane)
+          let mpos3d = pickPlanepos(this.disp, this.mpos, this.pickplane)
           let pos = mpos3d.clone()
           pos.sub(this.camtarget)
           pos.normalize()

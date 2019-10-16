@@ -24,10 +24,11 @@ var inputCTL = window.ictl = {}
 // Screen-view controller:  Camera controller which performs orbitting, following, and a bit of flying.
 var sviewCTL
 
-var edCTL = {
+var edCTL = window.ectl = {
   tiles:{},
   version:"0.1.0",
   event:new EventTarget(),
+  assets:{}
 }
 
 $(async function MAIN() {
@@ -38,10 +39,60 @@ $(async function MAIN() {
   disp_elem.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )
   disp_elem.focus()
   renderCTL.display = Display(disp_elem, true)
+  renderCTL.display.renderer.setClearAlpha(1)
+  renderCTL.display.renderer.setClearColor("black")
+  
 
   let TextureProps = {
     magFilter:THREE.NearestFilter,
     anisotropy:4,
+  }
+  try {
+    // Asset management - check assets/verison.txt, compare everything with stored version numbers
+    //  If the version is old, use fetch option {cache:"reload"} to force a reload of any old data
+    //  Otherwise, use default fetch options
+    // While so doing, setup an asynchronous download of everything (and wait for everything to be completed)
+    //  Should probably run some sort of display hack and show a progress bar while waiting.
+    let dver_file = await fetchText("assets/edversion.txt", {cache:"no-store"})
+    let lines = dver_file.split('\n')
+    let current_versions = {}
+    let prev_versions = {}
+    for (let line of lines) {
+      line = line.trim()
+      if (line != '') {
+        let parts = line.split(' ')
+        current_versions[parts[0]] = 0|parseInt(parts[1])
+      }
+    }  
+    let reloadOPT = { cache:"reload" }
+    
+    // accepts a property name and loader function, checks the previous known version against the reported current version,
+    //  and if the file is indicated to be old, calls the loader function with a forced reload fetch option
+    //  (if not old, the call is made with fetch defaults, so as to accept whatever is cached)
+    let update = async function(propname, loadit) {
+      let curr_ver = current_versions[propname]
+      let prev_ver = 0|parseInt(window.localStorage[propname+"VER"])
+      let result = await loadit((curr_ver > prev_ver) ? reloadOPT : undefined)
+      return result
+    }
+    
+    // call each update, but aggregate all the promises
+    let promises = [
+      update("model", (fetchOPTS)=>{
+        return loadZIP(edCTL.assets, 'assets/ekvxed2models.zip', fetchOPTS)
+      }),
+    ]
+    
+    // Whene everything is loaded, update local storage with the versions of the cached files
+    await Promise.all(promises)
+    console.log("Loaded Ekvxed2 data")
+    for (let name in current_versions) {
+      window.localStorage[name+"VER"] = current_versions[name]
+    }
+  }
+  catch(err) {
+    console.log("FAILED to load Ekvxed2 data because:", err)
+    return
   }
   /*
   edCTL.tiles.key = {
@@ -75,6 +126,14 @@ $(async function MAIN() {
     `
   })
   */
+  let markmats = [{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
+  let cursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
+
+  assignMaterials(edCTL.assets.CubeMark, markmats)
+  assignMaterials(edCTL.assets.FaceMark, markmats)
+  assignMaterials(edCTL.assets.CubeCursor, cursormats)
+  assignMaterials(edCTL.assets.FaceCursor, cursormats)
+  
 
   let controlActive = false
   sviewCTL = window.sctl = new SceneviewController({

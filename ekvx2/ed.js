@@ -89,7 +89,7 @@ $(async function MAIN() {
       }),
       update("model", (fetchOPTS)=>{
         return loadZIP(edCTL.assets, 'assets/ekvxed2models.zip', fetchOPTS)
-      }),
+      })
     ]
     
     // Whene everything is loaded, update local storage with the versions of the cached files
@@ -109,7 +109,7 @@ $(async function MAIN() {
     x:0, y:0, w:64, h:64
   }
   */
-
+  
   let UI_TILEGRAPHIC_SIZE = [32,32]
   let UI_TILEGRAPHIC_OFFSET = [0, 0]
   let UI_TILESHADOW_SIZE = 8
@@ -278,7 +278,16 @@ $(async function MAIN() {
   
   renderCTL.display.scene.add(vxc.scene)
   
-  let put = function(obj, x,y,z) {
+  let put = function(obj, x,y,z, ld=false) {
+    if (obj.terrain) {
+      if (ld) {
+        vxc.loadTerrain(x,y,z, obj.terrain)
+      }
+      else {
+        vxc.setTerrain(x,y,z, obj.terrain)
+      }
+      return
+    }
     let ctn = vxc.get(obj.x,obj.y,obj.z)
     if (ctn.contents) {
       let idx = ctn.contents.indexOf(obj)
@@ -302,6 +311,25 @@ $(async function MAIN() {
     }
   }
   
+  let remove = function(obj) {
+    if (obj.terrain) {
+      vxc.setTerrain(x,y,z, 0)
+      return
+    }
+    let ctn = vxc.get(obj.x,obj.y,obj.z)
+    if (ctn.contents) {
+      let idx = ctn.contents.indexOf(obj)
+      if (idx != -1) {
+        ctn.contents.splice(idx,1)
+      }
+    }
+    if (obj.mdl) {
+      if (obj.mdl.parent) {
+        obj.mdl.parent.remove(obj)
+      }
+    }
+  }
+  
   let cursor3d = {
     x:0,y:0,z:0,
     isDecorative:true,
@@ -318,20 +346,105 @@ $(async function MAIN() {
       let evt = await evtman.next("mousemove")
       let mp3d = sviewCTL.mpos3d
       
+      //point
+      edCTL.event.dispatchEvent( new Event("mousemove_point"))
+        
       let x = Math.round(mp3d.x)
       let y = Math.round(mp3d.y)
       let z = Math.round(mp3d.z)
       
+      //cube
       if ( (x != cursor3d.x) | (x != cursor3d.x) | (x != cursor3d.x)) {
         put(cursor3d, x,y,z)
         controlActive = true
-        let out_evt = new Event("mousemove3d")
-        out_evt.pos = cursor3d
-        edCTL.event.dispatchEvent(out_evt)
+        edCTL.event.dispatchEvent(new Event("mousemove_cube"))
       }
+      
+      //face + alignment
     }
   })()}
-
+  
+  let build = function() {
+    console.log(cursor3d)
+  }
+  
+  let opSpecs = {
+    buildcube: { click:build, drag:build, drag_evttype:"mousemove_cube" }
+  }
+  
+  let handleInput = async function(opspec) {
+    let evtman = new NextEventManager()
+    outer:
+    while (true) {
+      let evt = await evtman.next(disp_elem, "mousedown", edCTL.event, "cancel")
+      if (evt.type == "cancel") {
+        return
+      }
+      if (opspec.click) { opspec.click() }
+      if (opspec.drag_evttype) {
+        inner:
+        while (true) {
+          evt = await evtman.next(disp_elem, "mouseup", edCTL.event, opspec.drag_evttype, "cancel")
+          switch(evt.type) {
+            case "cancel":
+              if (opspec.cancel) { opspec.cancel() }
+              return
+            case "mouseup":
+              if (opspec.release) { opspec.release() }
+              break inner
+            case opspec.drag_evttype:
+              if (opspec.drag) { opspec.drag() }
+              break
+          }
+        }
+      }
+    }
+  }
+  
+  let tools = {}
+  let defineTool = function(spec) {
+    tools[spec.name] = {
+      spec:spec
+    }
+  }
+  
+  let activeTool
+  let setTool = function(name) {
+    edCTL.event.dispatchEvent(new Event("cancel"))
+    activeTool = tools[name]
+    let opspec = opSpecs[activeTool.spec.routine]
+    
+    handleInput(opspec)
+  }
+  
+  defineTool({
+    type:"wall",                            // object type indicator
+    name:"Wall",                            // Name for reference and display in-editor
+    pickMode:"cube",                        // Pick unaligned unit cubes with integer coordinates
+    spatialClass:"solid",                   // Tag used in-editor for picking and coexistance checks (not intended to be data)
+    spclassPick:["solid"],                  // allow picking against objects of these classes
+    spclassCoexist:[],                      // Objects that the defined object may coexist with
+    planarPick:true,                        // allow picking against XY, XZ, and YZ planes
+    terrain:true,                           // terrain declaration
+    routine:"buildcube",                    // Input handler to run while tool is active
+    template:["type", "color", "uvscpec"],  // Put these properties in the template
+    color:{                                 // Colorable object declaration
+      amount:1,                             // Number of [defined] colors 
+      default:["white"],                    // default for each defined color
+      mutable:[true],                       // indicate which defined colors may be selected by User
+      mainIndex:0,                          // "shorthand" color picking assigns to this entry in the color table
+    },  
+    uvspec:{                                // set of UVs to use for rendering terain (blocks of entries in a texture atlas)
+      amount:1,                             // Number of [defined] uvspecs  
+      default:[0],                          // default for each defined uvspecs
+      mutable:[true],                       // indicate which defined uvspecs may be selected by User
+      range:{min:0, max:0},                 // range of allowable values for uvspecs selection
+    },
+    params:{},                              // arbitrary properties to add to all templates
+    lockedParams:{}                         // immutable arbitrary properties to add to all templates
+  })
+  setTool("Wall")
+  
   // Item description display
   // These functions (orthot.showDescription and orthot.updateDescription and orthot.hideDescription) are used to allow items to show tooltips and run graphical
   // visualizarion routines.  These are called as objects or interface-elements are moused-over and moused-out

@@ -325,6 +325,9 @@ $(async function MAIN() {
       if ( (x != cursor3d.x) | (x != cursor3d.x) | (x != cursor3d.x)) {
         put(cursor3d, x,y,z)
         controlActive = true
+        let out_evt = new Event("mousemove3d")
+        out_evt.pos = cursor3d
+        edCTL.event.dispatchEvent(out_evt)
       }
     }
   })()}

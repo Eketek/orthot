@@ -135,7 +135,14 @@ var SceneviewController = function(params = {}) {
 
   let updcam_adjust_pickplane = params.UpdcamUpdatepickplane
 
+  // Screen-space Mouse position 
   this.mpos = undefined
+  
+  // World-space Mouse position
+  //  Defined as the point of intersection between a "mouse ray" and the picking plane plane (this.pickplane)
+  //  Mouse ray is defined as a line originating at the camera which intersects the point in camera-backpane-space which is equal to the normalized mouse cursor
+  //    position (mpos/screensize)
+  this.mpos3d = undefined
 
   {(async function trackMouse() {
     while (true) {
@@ -143,7 +150,8 @@ var SceneviewController = function(params = {}) {
       this.mpos = {
         x: ((evt.pageX - evt.target.offsetLeft) / evt.target.clientWidth) * 2 - 1,
         y:-((evt.pageY - evt.target.offsetTop)  / evt.target.clientHeight) * 2 + 1
-      }
+      }      
+      this.mpos3d = pickPlanepos(this.disp, this.mpos, this.pickplane)
     }
   }).bind(this)()}
 
@@ -511,8 +519,7 @@ var SceneviewController = function(params = {}) {
         let btnup = params.ChaseTargetMBTN + "_up"
 
         let chase = (function() {
-          let mpos3d = pickPlanepos(this.disp, this.mpos, this.pickplane)
-          let pos = mpos3d.clone()
+          let pos = this.mpos3d.clone()
           pos.sub(this.camtarget)
           pos.normalize()
           pos.multiplyScalar(this.followspeed*this.campos.radius)

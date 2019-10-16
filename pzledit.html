@@ -1,0 +1,78 @@
+<html>
+  <head>
+    <title>  Orthot III Puzzle Editor </title>
+    <link rel="stylesheet" type="text/css" href="DefaultTheme.css">
+
+    <script src="lib/three.min.js"></script>
+    <script src="lib/OBJLoader.js"></script>
+    <script src="lib/jquery-3.3.1.min.js"></script>
+    <script src="lib/jszip.min.js"></script>
+
+    <script type="module" src="ekvx2/ed.js"></script>
+  <body>
+    <div class="mainblock section">
+     <span class="name" id="NameDisp"> Orthot III Puzzle Editor </span>
+   </div>
+
+    <div class="mainblock">
+      <div class="section" id="leftside" style="min-width:126px">
+        TOOLS
+        <div id="tools"></div>
+        Options
+        <div id="toolOpts"></div>
+        Preset Colors
+        <div id="colorPresets"></div>
+        Recent Colors
+        <div id="colorRecent"></div>
+        Color Picker
+        <div id="colorPicker"></div>
+      </div>
+      <div class="section" style="flex:1;height:800px;">
+        <div id="editor" style="width:100%;height:100%"></div>
+      </div>
+      <div class="section" id="rightside">
+        CONTROLS
+        <div id="controls"></div>
+        <div>
+          Loaded Puzzle:<br>
+          <select name="loadPuzzle" id="loadPuzzle" size=20 style="width:100%"></select>
+        </div>
+      </div>
+    </div>
+    Debug-Output
+    <div id="debug">
+      <div id="debugtip"></div>
+      <div id="debuglog"></div>
+    </div>
+    <div id="about" class="info" style="min-width:400px;width:33%;padding:10px">
+      Ekvx2-ed with configuration for Orthot III<br>
+      Version: 0.1.0<br>
+      Author:  Jonathan Hart (AKA "Eketek")
+      <hr>
+      <p>Ekvx2-ed is intended to be a general-purpose WYSIWYG 3D editor.</p>
+      <p>
+        It's direct inclusion in the Orthot III project is partly a desire to keep everything very simple, and partly due to an assumption that the editor will
+        only ever be used for Orthot III (if that assumption ever changes, aside form the launching HTML documnet, the editor sub-project is also to refrain 
+        from any dependency on anything specific to Orthot III, so a spin-off should be straightforward)
+      </p>
+      <p>
+      </p>
+      <p>
+        Project page:
+        <a href="https://github.com/Eketek/orthot">
+          https://github.com/Eketek/orthot
+        </a>
+      </p>
+      <p>
+        If you would like to contribute, be be warned that the project is still somewhat more like a hastilly assembled mess of JavaScript than an elegantly
+        coded and well-documented software project.  Eketek at least knows what to do about it.
+      </p>
+      <span class="btn_active" id="hideabout">Click -&gt<b>Here</b>&lt- or --&gt<b>there</b> to hide this message.</span>
+    </div>
+    <div id="textdisplay" style="position:absolute;margin:auto;pointer-events:none;opacity:0"></div>
+  </body>
+</html>
+
+
+
+

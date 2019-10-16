@@ -168,7 +168,7 @@ var SceneviewController = function(params = {}) {
   let tpmode_fov = (params.tpmode_fov != undefined) ? params.tpmode_fov : this.disp.camera.fov
   let fpmode_z_offset = (params.fpmode_z_offset != undefined) ? params.fpmode_z_offset : 0
   let fpmode_abs_offset = params.fpmode_abs_offset ? params.fpmode_abs_offset : new THREE.Vector3()
-  let fpmode_notify = params.fpmode_notify ? params.fpmode_notify : doNothing
+  let fpmode_notify = params.fpmode_notify ? params.fpmode_notify : ()=>{}
   let fpmode_defaultturnlen = params.fpmode_turnlen ? params.fpmode_turnlen : 200
   let fp_turn_start, fp_turn_end, fpmode_turnlen
   let fpmode = false

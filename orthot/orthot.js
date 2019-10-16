@@ -245,7 +245,6 @@ $(async function MAIN() {
     display:renderCTL.display,
     dom_evttarget:disp_elem,
     app_evttarget:orthotCTL.event,
-    evttarget:orthotCTL.event,
     pickplane:new THREE.Plane(direction.vector.UP, 0),
     UpdcamUpdatepickplane:true,
     followspeed:1/60,

@@ -12,7 +12,8 @@ import { QueryTriggeredButtonControl, SceneviewController } from '../libek/contr
 import { clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { direction } from '../libek/direction.js'
-
+import { BoxTerrain } from '../libek/gen.js'
+import { VxScene } from '../libek/scene.js'
 // Global rendering properties & controls (Mainly, materials and managed shader properties)
 var renderCTL = window.rctl = {
   uv2:new UVspec()
@@ -71,13 +72,21 @@ $(async function MAIN() {
     //  (if not old, the call is made with fetch defaults, so as to accept whatever is cached)
     let update = async function(propname, loadit) {
       let curr_ver = current_versions[propname]
-      let prev_ver = 0|parseInt(window.localStorage[propname+"VER"])
+      let prev_ver = 0|parseInt(window.localStorage[propname+"EDVER"])
       let result = await loadit((curr_ver > prev_ver) ? reloadOPT : undefined)
       return result
     }
     
     // call each update, but aggregate all the promises
     let promises = [
+      update("texture", (fetchOPTS)=>{
+        return loadMuch(
+          edCTL.assets,
+          fetchOPTS,
+          {url:"assets/textures/patterns.png", properties:TextureProps},
+          {url:"assets/textures/wall_8bit_fg.png", properties:TextureProps},
+        )
+      }),
       update("model", (fetchOPTS)=>{
         return loadZIP(edCTL.assets, 'assets/ekvxed2models.zip', fetchOPTS)
       }),
@@ -87,7 +96,7 @@ $(async function MAIN() {
     await Promise.all(promises)
     console.log("Loaded Ekvxed2 data")
     for (let name in current_versions) {
-      window.localStorage[name+"VER"] = current_versions[name]
+      window.localStorage[name+"EDVER"] = current_versions[name]
     }
   }
   catch(err) {
@@ -106,7 +115,7 @@ $(async function MAIN() {
   let UI_TILESHADOW_SIZE = 8
   let UI_TILESHADOW_OFFSET = [5,3]
   let UI_TILE_SIZE = [37,35]
-  /*
+  
   renderCTL.fg = new ManagedColor("yellow")
   renderCTL.bg1 = new ManagedColor("orange")
   renderCTL.bg2 = new ManagedColor("green")
@@ -125,7 +134,7 @@ $(async function MAIN() {
       sample = vec4(fgColor * mc.a + bgColor*(1.0-mc.a), 1.0);
     `
   })
-  */
+
   let markmats = [{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
   let cursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
 
@@ -250,6 +259,55 @@ $(async function MAIN() {
 
     return elem
   }
+
+  
+  let bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
+  let vxc = new VxScene({
+    boxterrain:bxtbldr,
+    chunks_per_tick:4
+  })
+  var amblCol = new THREE.Color("white")
+  amblCol.setHSL ( 0.125, 1, 0.5 )
+  var vambl = new THREE.AmbientLight(amblCol, 0.125)
+  var ambl = new THREE.AmbientLight(0xffffff, 0.125)
+  vxc.scene.add(ambl)
+  vxc.scene.add(vambl)
+  let dlight = new THREE.DirectionalLight( 0xffffff, 1 )
+  dlight.position.set(300,1000,700)
+  vxc.scene.add(dlight)
+  
+  renderCTL.display.scene.add(vxc.scene)
+  
+  let put = function(obj, x,y,z) {
+    let ctn = vxc.get(obj.x,obj.y,obj.z)
+    if (ctn.contents) {
+      let idx = ctn.contents.indexOf(obj)
+      if (idx != -1) {
+        ctn.contents.splice(idx,1)
+      }
+    }
+    ctn = vxc.get(x,y,z)
+    if (!ctn.contents) {
+      ctn.contents = []
+      ctn.contents.push(obj)
+    }
+    if (obj.mdl) {
+      if (!obj.mdl.parent) {
+        vxc.scene.add(obj.mdl)
+      }
+      obj.mdl.position.set(x,y,z)
+    }
+  }
+  
+  let cc = {
+    x:0,y:0,z:0,
+    isDecorative:true,
+    mdl:getAsset(edCTL.assets, "CubeCursor")
+  }
+  console.log(cc)
+  put(cc,0,0,0)
+  
+  //this.scene = vxc.scene
 
   // Item description display
   // These functions (orthot.showDescription and orthot.updateDescription and orthot.hideDescription) are used to allow items to show tooltips and run graphical

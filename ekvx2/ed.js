@@ -286,6 +286,9 @@ $(async function MAIN() {
         ctn.contents.splice(idx,1)
       }
     }
+    obj.x = x
+    obj.y = y
+    obj.z = z
     ctn = vxc.get(x,y,z)
     if (!ctn.contents) {
       ctn.contents = []
@@ -307,7 +310,24 @@ $(async function MAIN() {
   console.log(cc)
   put(cc,0,0,0)
   
-  //this.scene = vxc.scene
+  {(async function SimpleCursorMover () {
+    let evtman = new NextEventManager()
+    
+    while (true) {
+      let evt = await evtman.next("mousemove")
+      let mp3d = sviewCTL.mpos3d
+      console.log(mp3d)
+      
+      let x = Math.round(mp3d.x)
+      let y = Math.round(mp3d.y)
+      let z = Math.round(mp3d.z)
+      
+      if ( (x != cc.x) | (x != cc.x) | (x != cc.x)) {
+        put(cc, x,y,z)
+        controlActive = true
+      }
+    }
+  })()}
 
   // Item description display
   // These functions (orthot.showDescription and orthot.updateDescription and orthot.hideDescription) are used to allow items to show tooltips and run graphical

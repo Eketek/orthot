@@ -417,6 +417,25 @@ $(async function MAIN() {
     handleInput(opspec)
   }
   
+  let templateID = 1
+  let templateIDs = {}
+  let templateData = {}
+  let getTemplateID = function(data) {
+    let str_data = JSON.stringify(data)
+    let id = templateIDs[str_data]
+    if (id == undefined) {
+      id = templateID
+      templateID++
+      templateIDs[str_data] = id
+      templateData[id] = data
+    }
+    return id
+  }
+  
+  let getTemplate = function(id) {
+    return templateData[id]
+  }
+  
   defineTool({
     type:"wall",                            // object type indicator
     name:"Wall",                            // Name for reference and display in-editor

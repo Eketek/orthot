@@ -1,0 +1,13 @@
+ekvx2 format overview
+"Eketech Voxel format, v2"
+
+ekvx2 is a data format which is intended to support Orthot III and to do a better job exposing its features (both planned and current) than ekvx.  To that end, ekvx2 is a more generic format -- Just a JSON-serialized simple Object with two reserved properties and an inheritence-based compression scheme.
+
+Ekvx2 data is a set of simple tables (each consisting solely of sets of key-value pairs) which can inherit from each othe (singular and non-circular).  Each table is called a "template".  If a template inherits from another template, the properties of the parent template are copied to the child template (or something functionally equivalent)
+
+Templates and objects are stored separately (so they can be cleanly distinguished).
+
+
+For Orthot version 3.0, the "base" template is presumed (determined by a type indicator).  At some future revision, it will require the inclusion of a base template (plan is to have all Orthot objects be of the same Type and to have all object behaviors specified through simple attributes.
+
+Aside from the use of inheritence, there is no plan to incorporate data compression into ekvx2.  Instead, that will be deferred to the container (which is to be a file archive with a common format).

@@ -21,7 +21,6 @@
   margin-right:1px;
   background-color:hsl(60, 80%, 70%);
 
-  /* Just to irritate USER: */
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -40,7 +39,6 @@
   margin-right:1px;
   background-color:hsl(45, 60%, 60%);
 
-  /* Just to irritate USER: */
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -60,7 +58,6 @@
   margin-right:1px;
   background-color:hsl(30, 10%, 70%);
 
-  /* Just to irritate USER: */
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -68,6 +65,16 @@
   -ms-user-select: none;
   user-select: none;
 }
+
+.noselect {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 .btn_inactive:hover {
   background-color:hsl(30, 0%, 60%)
 }
@@ -84,6 +91,13 @@
 .mainblock {
   display:flex;
   /*flex-wrap:wrap;*/
+}
+
+.narrowblock {
+  display:flex;
+  align-items:center;
+  flex-wrap: wrap;
+  max-width:200px;
 }
 
 .thickline {

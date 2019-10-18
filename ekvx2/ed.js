@@ -173,99 +173,248 @@ $(async function MAIN() {
   on($("#hideabout"), "click", toggleAboutBox)
   aboutBTN = $("<div>").addClass("btn_active").text("About").click(toggleAboutBox)[0]
   $("#controls").append(aboutBTN)
-
-  renderCTL.build_domOBJ = function(tile, color, location, css_class, event_handlers) {
-    if (typeof(tile) == "string") {
-     tile = edCTL.tiles[tile]
-    }
-    if (!tile) {
-      return
-    }
-    if (!color) {
-      color = new THREE.Color("white")
-    }
-    else if (!color.isColor) {
-      color = new THREE.Color(color)
-    }
-    if (!location) {
-      location = "#tools"
-    }
-
-    let cnv = document.createElement("canvas")
-    let elem = $(cnv)
-    if (css_class) {
-      elem.addClass(css_class)
-    }
-    if (event_handlers) {
-      for (let k in event_handlers) {
-        elem.on(k, event_handlers[k])
-      }
-    }
-
-    $(location).append(elem)
-
-    cnv.width = UI_TILE_SIZE[0]
-    cnv.height = UI_TILE_SIZE[1]
-
-    let hilight = false
-
-    //console.log(sz)
-    let ctx = cnv.getContext('2d');
-    let draw = function() {
-      ctx.clearRect(0,0, UI_TILE_SIZE[0], UI_TILE_SIZE[1])
-
-      if (hilight) {
-        ctx.shadowOffsetX = 0
-        ctx.shadowOffsetY = 0
-
-        ctx.strokeStyle = "black"
-        ctx.lineWidth = 4
-        ctx.strokeRect(1,1, UI_TILE_SIZE[0]-2, UI_TILE_SIZE[1]-2)
-
-        ctx.strokeStyle = color.getStyle()
-        ctx.lineWidth = 2
-        ctx.strokeRect(1,1, UI_TILE_SIZE[0]-2, UI_TILE_SIZE[1]-2)
-      }
-
-      ctx.shadowColor = 'rgba(0, 0, 0, .33333)';
-      ctx.shadowOffsetX = UI_TILESHADOW_OFFSET[0]
-      ctx.shadowOffsetY = UI_TILESHADOW_OFFSET[1]
-      ctx.drawImage(tile.source, tile.x, tile.y, tile.w, tile.h, UI_TILEGRAPHIC_OFFSET[0], UI_TILEGRAPHIC_OFFSET[1], UI_TILEGRAPHIC_SIZE[0], UI_TILEGRAPHIC_SIZE[1]);
-
-      let imgd = ctx.getImageData(0,0, UI_TILE_SIZE[0], UI_TILE_SIZE[1])
-      let buf = imgd.data
-
-      let r = color.r
-      let g = color.g
-      let b = color.b
-
-      for (let i = 0; i < buf.length; i+= 4) {
-        buf[i] =   buf[i]   * r
-        buf[i+1] = buf[i+1] * g
-        buf[i+2] = buf[i+2] * b
-      }
-      ctx.putImageData(imgd, 0, 0);
-    }
-    draw()
-
-    elem.mouseover(function() {
-      hilight = true
-      draw()
+  
+  
+  //-------------------------------------------
+  //  Yet another ad-hoc color picker
+  //-------------------------------------------
+  //  This one can be used to pick an entire pallete (multiple colors to define an object)
+  //  This one offers a decent gamut, yet does not ever require more than a single click.
+  //  This one provides easilly repeatable selections
+  //  This one also works directly on ekvx Tools.
+  //  This one is also very short and simple (under 200 lines of code)
+  //  And if that's not enough, this one [arguably unnecessarilly] also allows User to configure the palette generator
+  let primaryBTN
+  let mainBTNS = []  
+  let colorBTN = function(params) {
+    let $elem = $('<div class="noselect">')
+    let $loc = $("#" + params.loc)
+    this.color = params.color
+    $elem.appendTo($loc)
+    
+    let elem = $elem[0]
+    elem.style["background-color"] = params.color
+    elem.style["border-color"] = "lightgray"
+    elem.style["border-style"] = "solid"
+    
+    on(elem, "mouseover", ()=>{
+      elem.style["border-color"] = "black"
     })
-    elem.mouseout(function() {
-      hilight = false
-      draw()
-    });
-
-    return elem
+    on(elem, "mouseout", ()=>{
+      elem.style["border-color"] = "lightgray"
+    })
+    
+    let resize = function(w,h) {
+      if (h == undefined) {
+        h = w
+      }
+      elem.style["min-width"] = w
+      elem.style["max-width"] = w
+      elem.style["min-height"] = h
+      elem.style["max-height"] = h
+    }
+    
+    let sz
+    if (params.small) {
+      if (params.emphasize) {
+        resize(9,18)
+      }
+      else {
+        resize(9,9)
+      }
+      elem.style["border-width"] = 1
+      elem.style["margin"] = 0
+    }
+    else {
+      resize(18)
+      elem.style["border-width"] = 2
+      elem.style["margin"] = 2
+    }
+    
+    this.remove = function() {
+      $(elem).remove()
+    }
+      
+    // If a "main" button, this button controller is used to transfer picked colors to the active Tool color table.
+    if (params.main) {
+      this.unsetPrimary = function() {
+        resize(18)
+      }
+      this.setPrimary = (function() {
+        if (primaryBTN) {
+          primaryBTN.unsetPrimary()
+        }    
+        resize(24)
+        primaryBTN = this
+      }).bind(this)
+      this.unsetPrimary()
+      
+      let idx = mainBTNS.length
+      mainBTNS.push(this)
+      on(elem, "click", this.setPrimary)
+      
+      
+      this.setColor = function(col) {
+        elem.style["background-color"] = col
+        activeTool.colors[idx] = col      // activeTool.colors and mainBTNS are parallel
+        this.color = col
+        onColorsSelected()
+      }
+    }
+    //If not a "main" button, the button is used to pick the color of the primary button
+    else {
+      let _color
+      Object.defineProperty(this, 'color', {
+        set:function(col) { 
+          _color = col
+          elem.style["background-color"] = col
+        },
+        get:function() {
+          return _color
+        }
+      })
+      this.color = params.color
+      if (params.setRecent) {
+        on(elem, "click", ()=>{
+          if (primaryBTN) {
+            primaryBTN.setColor(this.color)
+            nextRecentColor(this.color)
+          }
+        })
+      }
+      else {
+        on(elem, "click", ()=>{
+          if (primaryBTN) {
+            primaryBTN.setColor(this.color)
+          }
+        })
+      }
+    }
   }
-
+  
+  let recentColorBTNS = []
+  for (let i = 0; i < 21; i++) {
+    let btn = new colorBTN({ loc:"recentColors", color:"white" })
+    recentColorBTNS.push(btn)
+  }
+  
+  let nextRecentColor = function(col) {
+    for (let i = recentColorBTNS.length-1; i >= 1; i--) {
+      let j = i - 1
+      recentColorBTNS[i].color = recentColorBTNS[j].color
+    }
+    recentColorBTNS[0].color = col
+  }
+  
+  let _col = new THREE.Color()
+  let numHues = 18
+  
+  let paletteBTNS = []
+  
+  let loadPalette = function() {
+    for (let btn of paletteBTNS) {
+      btn.remove()
+    }
+    paletteBTNS = []
+    let sats, lights, numHues
+    try {
+      sats = extractNums($("#satsTA")[0].value)
+    }
+    catch {}
+    if (!sats || (sats.length == 0)) {
+      sats = [1, 0.6, 0.3, 0.1]
+    }
+    try {
+      lights = extractNums($("#lightsTA")[0].value)
+    }
+    catch {}
+    if (!lights || (lights.length == 0)) {
+      lights = [0.85, 0.7, 0.5, 0.25, 0.1]
+    }
+    
+    //build buttons for each color, but [for sanity] do not exceed 1800 buttons generated
+    let count = 0
+    
+    numHues = clamp(Number.parseFloat($("#numHuesTA")[0].value), 0, 360)
+    for (let l = 0; l < numHues; l++) {      
+      _col.setHSL(0, 0, l/(numHues-1))
+      paletteBTNS.push(new colorBTN({ loc:"palleteColors", color:_col.getStyle(), small:true }))
+      count++
+      if (count > 1800) {
+        return
+      }
+    }
+    // Why go through the trouble of inserting a big color picker, when I can just do this?:
+    for (let s of sats) {
+      for (let l of lights) {
+        for (let h = 0; h < numHues; h ++) {
+          _col.setHSL(h/numHues, s, l)
+          paletteBTNS.push(new colorBTN({ loc:"palleteColors", color:_col.getStyle(), small:true, setRecent:true, emphasize:(l==0.5) }))
+          count++
+          if (count > 1800) {
+            return
+          }
+        }
+      }
+    }
+  }
+  loadPalette()
+  
+  on($("#numHuesTA"), "input", loadPalette)
+  on($("#satsTA"), "input", loadPalette)
+  on($("#lightsTA"), "input", loadPalette)
+  
+  on($("#resetHSLcfgBTN"), "click", ()=>{
+    $("#numHuesTA")[0].value = "18"
+    $("#satsTA")[0].value = "100 60 30 10"
+    $("#lightsTA")[0].value = "85 70 50 25 10"
+    loadPalette()
+  })
+  
+  
+  let extractNums = function(val) {
+    let parts = val.split(' ')
+    let r = []
+    for (let part of parts) {
+      r.push(clamp(Number.parseFloat(part)/100, 0,1))
+    }
+    return r
+  }
+  
+  
+  let onColorsSelected = function() {
+  // Color the border of the color selector with all of the colors selected.
+    let cssStr = "repeating-linear-gradient(45deg"
+    for (let i = 0; i < mainBTNS.length; i++) {
+      cssStr += ","
+      cssStr += mainBTNS[i].color
+      cssStr += ","
+      cssStr += mainBTNS[i].color
+      cssStr += ","
+      cssStr += mainBTNS[i].color
+      cssStr += ","
+      cssStr += mainBTNS[i].color
+    }
+    cssStr += " " + mainBTNS.length*5 + "px) 1 / 1 / 0"
+    $("#colorOutline")[0].style["border-image"] = cssStr
+  }
+  
+  let btnA = new colorBTN({ loc:"objColors", color:"black", main:true })
+  let btnB = new colorBTN({ loc:"objColors", color:"red", main:true })
+  let btnC = new colorBTN({ loc:"objColors", color:"green", main:true })
+  let btnD = new colorBTN({ loc:"objColors", color:"blue", main:true })
+  
+  btnB.setPrimary()
+  onColorsSelected()
+  
+  
   
   let bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
   let vxc = new VxScene({
     boxterrain:bxtbldr,
     chunks_per_tick:4
   })
+  
   var amblCol = new THREE.Color("white")
   amblCol.setHSL ( 0.125, 1, 0.5 )
   var vambl = new THREE.AmbientLight(amblCol, 0.125)
@@ -403,9 +552,35 @@ $(async function MAIN() {
   
   let tools = {}
   let defineTool = function(spec) {
-    tools[spec.name] = {
-      spec:spec
+    //wrap the spec
+    let tool = {
+      spec:spec,
+      colors:[]
     }
+    
+    // build the default preset for the tool
+    if (spec.color) {
+      if (spec.color.default) {
+        if (Array.isArray(spec.color.default)) {
+          for ( let i = 0; i < spec.color.amount; i++ ) {
+            tool.colors.push(spec.color.default[i])
+          }
+        }
+        else {
+          for ( let i = 0; i < spec.color.amount; i++ ) {
+            tool.colors.push(spec.color.default)
+          }
+        }
+      }
+      else {
+        for ( let i = 0; i < spec.color.amount; i++ ) {
+          tool.colors.push("white")
+        }
+      }
+    }
+    
+    //store the tool
+    tools[spec.name] = tool
   }
   
   let activeTool
@@ -413,8 +588,21 @@ $(async function MAIN() {
     edCTL.event.dispatchEvent(new Event("cancel"))
     activeTool = tools[name]
     let opspec = opSpecs[activeTool.spec.routine]
-    
     handleInput(opspec)
+    primaryBTN = undefined
+    for (let mbtn of mainBTNS) {
+      mbtn.remove()
+    }
+    mainBTNS = []
+    if (activeTool.spec.color) {
+      for (let col of activeTool.colors) {
+        let mbtn = new colorBTN({ loc:"objColors", color:col, main:true })
+      }
+      if (activeTool.spec.color.mainIndex != undefined) {
+        mainBTNS[activeTool.spec.color.mainIndex].setPrimary()
+      }
+    }
+    onColorsSelected()
   }
   
   let templateID = 1

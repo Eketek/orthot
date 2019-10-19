@@ -161,7 +161,9 @@ $(async function MAIN() {
     OrbitTargetMBTN:"rmb",
     ChaseTargetMBTN:"mmb",
 
-    tpmode_fov:60
+    tpmode_fov:60,
+    PickPlane_ArrowkeyController:true,
+    subunit:1,
   })
   sviewCTL.run()
 

@@ -308,21 +308,22 @@ var SceneviewController = function(params = {}) {
 
         let main_event
         let d
-
+        let evt
+        
         // manage arrow keys.  This is a little complex due to logic to match arrow keys with the current 3d perspective
         let processArrow = (function(k) {
           d = this.subunit
-          //console.log("shift-amt:" + d)
+          //console.log("shift-amt:" + d, evt)
           //console.log(_this.evtman.DownKeys)
           //if (this.evtman.DownKeys.Shift) {
           //  d *= this.high_subunit_scale
           //}
           if (this.pickplane.normal.equals(direction.vector.UP)) {
-            if (evt.code == "ArrowUp_down") {
+            if (evt.code == "ArrowUp") {
               //pickplane.constant -= d
               this.camtarget.y += d
             }
-            else if (evt.code == "ArrowDown_down") {
+            else if (evt.code == "ArrowDown") {
               //pickplane.constant += d
               this.camtarget.y -= d
             }

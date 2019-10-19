@@ -175,6 +175,8 @@ $(async function MAIN() {
   $("#controls").append(aboutBTN)
   
   
+  let activeTool
+  
   //-------------------------------------------
   //  Yet another ad-hoc color picker
   //-------------------------------------------
@@ -258,7 +260,7 @@ $(async function MAIN() {
         elem.style["background-color"] = col
         activeTool.colors[idx] = col      // activeTool.colors and mainBTNS are parallel
         this.color = col
-        onColorsSelected()
+        updateColors()
       }
     }
     //If not a "main" button, the button is used to pick the color of the primary button
@@ -381,9 +383,17 @@ $(async function MAIN() {
     return r
   }
   
-  
-  let onColorsSelected = function() {
-  // Color the border of the color selector with all of the colors selected.
+  let updateColors = function() {
+    if (activeTool) {
+      if (activeTool.spec.terrain) {
+        activeTool.terrainID = bxtsfcdefiners[activeTool.spec.terrain.name](activeTool.colors)
+      }
+      else if (activeTool.mesh) {
+        // use a soon-to-be material generator to update mesh materials
+      }
+    }
+    
+    // Color the border of the color selector with all of the colors selected.
     let cssStr = "repeating-linear-gradient(45deg"
     for (let i = 0; i < mainBTNS.length; i++) {
       cssStr += ","
@@ -405,7 +415,7 @@ $(async function MAIN() {
   let btnD = new colorBTN({ loc:"objColors", color:"blue", main:true })
   
   btnB.setPrimary()
-  onColorsSelected()
+  updateColors()
   
   
   
@@ -435,6 +445,9 @@ $(async function MAIN() {
       else {
         vxc.setTerrain(x,y,z, obj.terrain)
       }
+      obj.x = x
+      obj.y = y
+      obj.z = z
       return
     }
     let ctn = vxc.get(obj.x,obj.y,obj.z)
@@ -503,7 +516,7 @@ $(async function MAIN() {
       let z = Math.round(mp3d.z)
       
       //cube
-      if ( (x != cursor3d.x) | (x != cursor3d.x) | (x != cursor3d.x)) {
+      if ( (x != cursor3d.x) | (y != cursor3d.y) | (z != cursor3d.z)) {
         put(cursor3d, x,y,z)
         controlActive = true
         edCTL.event.dispatchEvent(new Event("mousemove_cube"))
@@ -514,7 +527,12 @@ $(async function MAIN() {
   })()}
   
   let build = function() {
-    console.log(cursor3d)
+    
+    let obj = { }
+    if (activeTool.terrainID) {
+      obj.terrain = activeTool.terrainID
+    }
+    put(obj, cursor3d.x, cursor3d.y, cursor3d.z)
   }
   
   let opSpecs = {
@@ -525,20 +543,20 @@ $(async function MAIN() {
     let evtman = new NextEventManager()
     outer:
     while (true) {
-      let evt = await evtman.next(disp_elem, "mousedown", edCTL.event, "cancel")
-      if (evt.type == "cancel") {
+      let evt = await evtman.next(disp_elem, "lmb_down", edCTL.event, "cancel")
+      if (evt.vname == "cancel") {
         return
       }
       if (opspec.click) { opspec.click() }
       if (opspec.drag_evttype) {
         inner:
         while (true) {
-          evt = await evtman.next(disp_elem, "mouseup", edCTL.event, opspec.drag_evttype, "cancel")
-          switch(evt.type) {
+          evt = await evtman.next(disp_elem, "lmb_up", edCTL.event, opspec.drag_evttype, "cancel")
+          switch(evt.vname) {
             case "cancel":
               if (opspec.cancel) { opspec.cancel() }
               return
-            case "mouseup":
+            case "lmb_up":
               if (opspec.release) { opspec.release() }
               break inner
             case opspec.drag_evttype:
@@ -579,11 +597,17 @@ $(async function MAIN() {
       }
     }
     
+    if (spec.terrain) {
+      if (!spec.terrain.name) {
+        spec.terrain.name = spec.type
+      }
+      defineTerrain(spec.terrain)
+    }
+    
     //store the tool
     tools[spec.name] = tool
   }
   
-  let activeTool
   let setTool = function(name) {
     edCTL.event.dispatchEvent(new Event("cancel"))
     activeTool = tools[name]
@@ -598,11 +622,16 @@ $(async function MAIN() {
       for (let col of activeTool.colors) {
         let mbtn = new colorBTN({ loc:"objColors", color:col, main:true })
       }
+      
+      //if a default primary color is specified, use it.  Otherwise, use the first.
       if (activeTool.spec.color.mainIndex != undefined) {
         mainBTNS[activeTool.spec.color.mainIndex].setPrimary()
       }
+      else if (mainBTNS.length > 0) {
+        mainBTNS[0].setPrimary()
+      }
     }
-    onColorsSelected()
+    updateColors()
   }
   
   let templateID = 1
@@ -624,48 +653,6 @@ $(async function MAIN() {
     return templateData[id]
   }
   
-  defineTool({
-    type:"wall",                            // object type indicator
-    name:"Wall",                            // Name for reference and display in-editor
-    pickMode:"cube",                        // Pick unaligned unit cubes with integer coordinates
-    spatialClass:"solid",                   // Tag used in-editor for picking and coexistance checks (not intended to be data)
-    spclassPick:["solid"],                  // allow picking against objects of these classes
-    spclassCoexist:[],                      // Objects that the defined object may coexist with
-    planarPick:true,                        // allow picking against XY, XZ, and YZ planes
-    routine:"buildcube",                    // Input handler to run while tool is active
-    template:["type", "color", "uvscpec"],  // Put these properties in the template
-    color:{                                 // Colorable object declaration
-      amount:1,                             // Number of [defined] colors 
-      default:["white"],                    // default for each defined color
-      mutable:[true],                       // indicate which defined colors may be selected by User
-      mainIndex:0,                          // "shorthand" color picking assigns to this entry in the color table
-    },  
-    terrain:{                               // defines the UVs to use for rendering terain (blocks of entries in a texture atlas)
-      primary:{                             // Primary texture coordinate definition
-        all:{                               // all -- use the same component for all sides
-          eightbit:true,                    // use the "8 bit" texture coordinate generator (use contiguity with 8 neighboring tiles to select tile UVs)
-          layout:"grid",                    // declare a standard "grid" layout for texture coordinates
-          gridWidth:1,                      // Clarify aforementioned grid layout as being 1x1
-          gridHeight:1,                     //    ''
-          block:0,                          // Use the first block [from the grid layout]
-        }
-      },
-      decal:{                               // Secondary texture coordinate definition
-        all:{                               // all -- use the same component for all sides
-          tile:true,                        // single-tile decal
-          layout:"tiles",                   // A grid of tiles with no assumed relationships
-          width:8,                          // Clarify the tile-grid as being 8x8 
-          height:8,                         //    ''
-          pickrand_init:true,               // Pick a random tile during initilization and use it for all surfaces of the same class
-          randmin:0,                        //  random selection minimum
-          randmax:6,                        //  random selection maximum
-        }
-      }
-    },
-    params:{},                              // arbitrary properties to add to all templates
-    lockedParams:{}                         // immutable arbitrary properties to add to all templates
-  })
-  setTool("Wall")
   
   
   // BoxTerrain configuration section
@@ -709,42 +696,43 @@ $(async function MAIN() {
   }
   
   //let surfaceDefs = {}
-  let bxtsfcdefiners = {}
+  let bxtsfcdefiners = {}   //box terrain surface definers
   let next_terrainid = 1
   let next_sfcid = 1
-  let terrainIDs = {}
-  let defineTerrain = function(name, sfcdef) {
+  let terrainIDs = {}       // terrain IDs (to avoid inserting duplicate terrain definitions into BoxTerrain)
+  let sfcIDs = {}           // surface IDs (to avoid inserting duplicate surface definitions into BoxTerrain)
+  let defineTerrain = function(terrspec) {
     //surfaceDefs[name] = sfcdef
     
     // Set up the "decal" specifications for all directions
     //  (the decal specifciation is the secondary texture coordinates for 
     let nd, ed, sd, wd, ud, dd
-    if (sfcdef.decal.all) {
-      nd = ed = sd = wd = ud = dd = toDecalParams(sfcdef.decal.all)
+    if (terrspec.decal.all) {
+      nd = ed = sd = wd = ud = dd = toDecalParams(terrspec.decal.all)
     }
-    if (sfcdef.decal.h) {
-      ud = dd = toDecalParams(sfcdef.decal.h)
+    if (terrspec.decal.h) {
+      ud = dd = toDecalParams(terrspec.decal.h)
     }
-    if (sfcdef.decal.v) {
-      nd = ed = sd = wd = toDecalParams(sfcdef.decal.v)
+    if (terrspec.decal.v) {
+      nd = ed = sd = wd = toDecalParams(terrspec.decal.v)
     }
-    if (sfcdef.decal.n) {
-      nd = toDecalParams(sfcdef.decal.n)
+    if (terrspec.decal.n) {
+      nd = toDecalParams(terrspec.decal.n)
     }
-    if (sfcdef.decal.e) {
-      ed = toDecalParams(sfcdef.decal.e)
+    if (terrspec.decal.e) {
+      ed = toDecalParams(terrspec.decal.e)
     }
-    if (sfcdef.decal.s) {
-      sd = toDecalParams(sfcdef.decal.s)
+    if (terrspec.decal.s) {
+      sd = toDecalParams(terrspec.decal.s)
     }
-    if (sfcdef.decal.w) {
-      wd = toDecalParams(sfcdef.decal.w)
+    if (terrspec.decal.w) {
+      wd = toDecalParams(terrspec.decal.w)
     }
-    if (sfcdef.decal.u) {
-      ud = toDecalParams(sfcdef.decal.u)
+    if (terrspec.decal.u) {
+      ud = toDecalParams(terrspec.decal.u)
     }
-    if (sfcdef.decal.d) {
-      dd = toDecalParams(sfcdef.decal.d)
+    if (terrspec.decal.d) {
+      dd = toDecalParams(terrspec.decal.d)
     }
     
     let ddefs = [nd, ed, sd, wd, ud, dd]
@@ -755,66 +743,120 @@ $(async function MAIN() {
       Object.assign(facedefs[i], ddefs[i])
     }
     
-    if (sfcdef.primary.all) {
-      apply8bitTerrspec(facedefs[0], sfcdef.primary.all)
-      apply8bitTerrspec(facedefs[1], sfcdef.primary.all)
-      apply8bitTerrspec(facedefs[2], sfcdef.primary.all)
-      apply8bitTerrspec(facedefs[3], sfcdef.primary.all)
-      apply8bitTerrspec(facedefs[4], sfcdef.primary.all)
-      apply8bitTerrspec(facedefs[5], sfcdef.primary.all)
+    if (terrspec.primary.all) {
+      apply8bitTerrspec(facedefs[0], terrspec.primary.all)
+      apply8bitTerrspec(facedefs[1], terrspec.primary.all)
+      apply8bitTerrspec(facedefs[2], terrspec.primary.all)
+      apply8bitTerrspec(facedefs[3], terrspec.primary.all)
+      apply8bitTerrspec(facedefs[4], terrspec.primary.all)
+      apply8bitTerrspec(facedefs[5], terrspec.primary.all)
     }
-    if (sfcdef.primary.v) {
-      apply8bitTerrspec(facedefs[0], sfcdef.primary.v)
-      apply8bitTerrspec(facedefs[1], sfcdef.primary.v)
-      apply8bitTerrspec(sfcdefs[2], sfcdef.primary.v)
-      apply8bitTerrspec(facedefs[3], sfcdef.primary.v)
+    if (terrspec.primary.v) {
+      apply8bitTerrspec(facedefs[0], terrspec.primary.v)
+      apply8bitTerrspec(facedefs[1], terrspec.primary.v)
+      apply8bitTerrspec(sfcdefs[2], terrspec.primary.v)
+      apply8bitTerrspec(facedefs[3], terrspec.primary.v)
     }
-    if (sfcdef.primary.h) {
-      apply8bitTerrspec(facedefs[4], sfcdef.primary.h)
-      apply8bitTerrspec(facedefs[5], sfcdef.primary.h)
+    if (terrspec.primary.h) {
+      apply8bitTerrspec(facedefs[4], terrspec.primary.h)
+      apply8bitTerrspec(facedefs[5], terrspec.primary.h)
     }
-    if (sfcdef.primary.n) {
-      apply8bitTerrspec(facedefs[0], sfcdef.primary.n)
+    if (terrspec.primary.n) {
+      apply8bitTerrspec(facedefs[0], terrspec.primary.n)
     }
-    if (sfcdef.primary.e) {
-      apply8bitTerrspec(facedefs[1], sfcdef.primary.e)
+    if (terrspec.primary.e) {
+      apply8bitTerrspec(facedefs[1], terrspec.primary.e)
     }
-    if (sfcdef.primary.s) {
-      apply8bitTerrspec(facedefs[2], sfcdef.primary.s)
+    if (terrspec.primary.s) {
+      apply8bitTerrspec(facedefs[2], terrspec.primary.s)
     }
-    if (sfcdef.primary.w) {
-      apply8bitTerrspec(facedefs[3], sfcdef.primary.w)
+    if (terrspec.primary.w) {
+      apply8bitTerrspec(facedefs[3], terrspec.primary.w)
     }
-    if (sfcdef.primary.u) {
-      apply8bitTerrspec(facedefs[4], sfcdef.primary.u)
+    if (terrspec.primary.u) {
+      apply8bitTerrspec(facedefs[4], terrspec.primary.u)
     }
-    if (sfcdef.primary.d) {
-      apply8bitTerrspec(facedefs[5], sfcdef.primary.d)
+    if (terrspec.primary.d) {
+      apply8bitTerrspec(facedefs[5], terrspec.primary.d)
     }
     
-    let baseK = JSON.stringify(sfcdef)+"|"
+    let baseK = JSON.stringify(terrspec)+"|"
     
-    console.log(facedefs)
+    //console.log(facedefs)
     
-    bxtsfcdefiners[name] = function config_bxt(colors) {
+    bxtsfcdefiners[terrspec.name] = function config_bxt(colors) {
       let k = baseK + colors.join(" ")
       if (terrainIDs[k]) {
         return terrainIDs[k]
       }
+      
+      // If a map is specified, use it to expand/rearrange the color array
+      if (terrspec.map) {
+        colors = [
+          colors[terrspec.map[0]],
+          colors[terrspec.map[1]],
+          colors[terrspec.map[2]],
+          colors[terrspec.map[3]],
+          colors[terrspec.map[4]],
+          colors[terrspec.map[5]]
+        ]
+      }
+      else {
+        //If no map is specified, but the input color array is short, use a builtin mapping to expand it to 6 colors
+        //  Builtin mapping generally colors a cube from top to bottom
+        switch(colors.length) {
+          case 1:
+            colors = [colors[0], colors[0], colors[0], colors[0], colors[0], colors[0]]
+            break
+          case 2:
+            colors = [colors[1], colors[1], colors[1], colors[1], colors[0], colors[0]]
+            break
+          case 3:
+            colors = [colors[1], colors[1], colors[1], colors[1], colors[0], colors[2]]
+            break
+          case 4:
+            colors = [colors[1], colors[2], colors[1], colors[2], colors[0], colors[3]]
+            break
+          case 5:
+            colors = [colors[1], colors[2], colors[3], colors[4], colors[0], colors[0]]
+            break
+          case 6:
+            colors = [colors[1], colors[2], colors[3], colors[4], colors[0], colors[5]]
+            break
+        }
+      }
+      
       //Configure the box terrain for each surface [with the corresponding  input color]
       //    (maybe think about preparing only one surface for each unique color-decaldef pair - present approach is just to not care about that...)
-      let sfcdefids = []
+      let tid = next_terrainid
+      terrainIDs[k] = tid
+      let sfcdefids = [tid]
+      next_terrainid++
       for (let i = 0; i < 6; i++) {
         let fdef = facedefs[i]
-        bxtbldr.defineSurface_8bit(next_sfcid, {
+        let sfcparams = {
           color:colors[i],
           uv2info:fdef
-        })
-        sfcdefids[i] = next_sfcid
-        next_sfcid++
+        }
+        let k = JSON.stringify(sfcparams)
+        let sfcid = sfcIDs[k]
+        if (sfcid) {
+          sfcdefids[i+1] = sfcid
+          continue
+        }
+        else {
+          bxtbldr.defineSurface_8bit(next_sfcid, {
+            color:colors[i],
+            uv2info:fdef
+          })
+          sfcIDs[k] = next_sfcid
+          sfcdefids[i+1] = next_sfcid
+          next_sfcid++
+        }
       }
-      let tid = bxtbldr.defineTerrain.apply(bxtbldr, sfcdefids)
-      terrainIDs[k] = tid
+      bxtbldr.defineTerrain.apply(bxtbldr, sfcdefids)
+      
+      //console.log(facedefs, colors, sfcdefids)
       return tid
       //bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
     }
@@ -834,6 +876,49 @@ $(async function MAIN() {
     */
   }
   
+  defineTool({
+    type:"wall",                            // object type indicator
+    name:"Wall",                            // Name for reference and display in-editor
+    pickMode:"cube",                        // Pick unaligned unit cubes with integer coordinates
+    spatialClass:"solid",                   // Tag used in-editor for picking and coexistance checks (not intended to be data)
+    spclassPick:["solid"],                  // allow picking against objects of these classes
+    spclassCoexist:[],                      // Objects that the defined object may coexist with
+    planarPick:true,                        // allow picking against XY, XZ, and YZ planes
+    routine:"buildcube",                    // Input handler to run while tool is active
+    template:["type", "color", "uvscpec"],  // Put these properties in the template
+    color:{                                 // Colorable object declaration
+      amount:3,                             // Number of [defined] colors 
+      default:["white", "green", "blue"],                    // default for each defined color
+      mutable:[true],                       // indicate which defined colors may be selected by User
+      mainIndex:0,                          // "shorthand" color picking assigns to this entry in the color table
+    },  
+    terrain:{                               // defines the UVs to use for rendering terain (blocks of entries in a texture atlas)
+      primary:{                             // Primary texture coordinate definition
+        all:{                               // all -- use the same component for all sides
+          eightbit:true,                    // use the "8 bit" texture coordinate generator (use contiguity with 8 neighboring tiles to select tile UVs)
+          layout:"grid",                    // declare a standard "grid" layout for texture coordinates
+          gridWidth:1,                      // Clarify aforementioned grid layout as being 1x1
+          gridHeight:1,                     //    ''
+          block:0,                          // Use the first block [from the grid layout]
+        }
+      },
+      decal:{                               // Secondary texture coordinate definition
+        all:{                               // all -- use the same component for all sides
+          tile:true,                        // single-tile decal
+          layout:"tiles",                   // A grid of tiles with no assumed relationships
+          width:8,                          // Clarify the tile-grid as being 8x8 
+          height:8,                         //    ''
+          pickrand_init:true,               // Pick a random tile during initilization and use it for all surfaces of the same class
+          randmin:0,                        //  random selection minimum
+          randmax:6,                        //  random selection maximum
+        }
+      }
+    },
+    params:{},                              // arbitrary properties to add to all templates
+    lockedParams:{}                         // immutable arbitrary properties to add to all templates
+  })
+  setTool("Wall")
+  /*
   defineTerrain("asdf", {
     primary:{
       all:{                               // Primary texture coordinate definition:
@@ -856,6 +941,7 @@ $(async function MAIN() {
       }
     }
   })
+  */
   
   // Item description display
   // These functions (orthot.showDescription and orthot.updateDescription and orthot.hideDescription) are used to allow items to show tooltips and run graphical
@@ -902,6 +988,10 @@ $(async function MAIN() {
   var run = function run () {
     requestAnimationFrame( run );
     edCTL.event.dispatchEvent(new Event("frame"))
+    
+    if (vxc) {
+      controlActive |= vxc.buildChunks()
+    }
     
     if (controlActive) {
       controlActive = false

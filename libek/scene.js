@@ -61,7 +61,7 @@ let VxScene = function(params={}) {
           obj.geometry.dispose()
           this.scene.remove(obj)
         }
-        obj = boxterrain.build(space, {min:chk, max:{x:chk.x+chunksize,y:chk.y+chunksize,z:chk.z+chunksize}})
+        obj = boxterrain.build(space, {min:chk, max:{x:chk.x+chunksize-1,y:chk.y+chunksize-1,z:chk.z+chunksize-1}})
         this.scene.add(obj)
         chk.obj = obj
         buildChunks_amt--
@@ -171,66 +171,98 @@ let VxScene = function(params={}) {
     if (nx<0) nx+= chunksize
     if (ny<0) ny+= chunksize
     if (nz<0) nz+= chunksize
-    nx--
-    ny--
-    nz--
+    
+    let updEast = nx==0
+    let updWest = nx==(chunksize-1)
+    let updSouth = nz==0
+    let updNorth = nz==(chunksize-1)
+    let updDown = ny==0
+    let updUp = ny==(chunksize-1)
+    
+    updateChunk(chkx, chky, chkz)
 
-    if (nx>0) {
-      nx = (nx!=chunksize) ? 0 : 1
+    if (updEast) {
+      updateChunk(chkx-1, chky, chkz)
     }
-    if (ny>0) {
-      ny = (ny!=chunksize) ? 0 : 1
+    if (updWest) {
+      updateChunk(chkx+1, chky, chkz)
     }
-    if (nz>0) {
-      nz = (nz!=chunksize) ? 0 : 1
+    if (updSouth) {
+      updateChunk(chkx, chky, chkz-1)
     }
-
-    switch(((nx!=0)) | ((ny!=0)<<1) | ((nz!=0)<<2)) {
-      case 0:      //
-        updateChunk(chkx,    chky,    chkz)
-      break
-      case 1:      // EW
-        updateChunk(chkx,    chky,    chkz)
-        updateChunk(chkx+nx, chky,    chkz)
-      break
-      case 2:      // UD
-        updateChunk(chkx,    chky,    chkz)
-        updateChunk(chkx,    chky+ny, chkz)
-      break
-      case 3:      // EW UD
-        updateChunk(chkx,    chky,    chkz)
-        updateChunk(chkx+nx, chky,    chkz)
-        updateChunk(chkx,    chky+ny, chkz)
-        updateChunk(chkx+nx, chky+ny, chkz)
-      break
-      case 4:      // NS
-        updateChunk(chkx,    chky,    chkz)
-        updateChunk(chkx,    chky,    chkz+nz)
-      break
-      case 5:      // EW NS
-        updateChunk(chkx,    chky,    chkz)
-        updateChunk(chkx+nx, chky,    chkz)
-        updateChunk(chkx,    chky,    chkz+nz)
-        updateChunk(chkx+nx, chky,    chkz+nz)
-      break
-      case 6:      // UD NS
-        updateChunk(chkx,    chky,    chkz)
-        updateChunk(chkx,    chky+ny, chkz)
-        updateChunk(chkx,    chky,    chkz+nz)
-        updateChunk(chkx,    chky+ny, chkz+nz)
-      break
-      case 7:      // EW UD NS
-        updateChunk(chkx,    chky,    chkz)
-        updateChunk(chkx+nx, chky,    chkz)
-        updateChunk(chkx,    chky+ny, chkz)
-        updateChunk(chkx+nx, chky+ny, chkz)
-        updateChunk(chkx,    chky,    chkz+nz)
-        updateChunk(chkx+nx, chky,    chkz+nz)
-        updateChunk(chkx,    chky+ny, chkz+nz)
-        updateChunk(chkx+nx, chky+ny, chkz+nz)
-      break
+    if (updNorth) {
+      updateChunk(chkx, chky, chkz+1)
     }
-
+    if (updDown) {
+      updateChunk(chkx, chky-1, chkz)
+    }
+    if (updUp) {
+      updateChunk(chkx, chky+1, chkz)
+    }
+    if (updEast && updSouth) {
+      updateChunk(chkx-1, chky, chkz-1)
+    }
+    if (updEast && updNorth) {
+      updateChunk(chkx-1, chky, chkz+1)
+    }
+    if (updWest && updSouth) {
+      updateChunk(chkx+1, chky, chkz-1)
+    }
+    if (updWest && updNorth) {
+      updateChunk(chkx+1, chky, chkz+1)
+    }
+    
+    if (updEast && updDown) {
+      updateChunk(chkx-1, chky-1, chkz)
+    }
+    if (updEast && updUp) {
+      updateChunk(chkx-1, chky+1, chkz)
+    }
+    if (updWest && updDown) {
+      updateChunk(chkx+1, chky-1, chkz)
+    }
+    if (updWest && updUp) {
+      updateChunk(chkx+1, chky+1, chkz)
+    }
+    
+    if (updSouth && updDown) {
+      updateChunk(chkx, chky-1, chkz-1)
+    }
+    if (updSouth && updUp) {
+      updateChunk(chkx, chky+1, chkz-1)
+    }
+    if (updNorth && updDown) {
+      updateChunk(chkx, chky-1, chkz+1)
+    }
+    if (updNorth && updUp) {
+      updateChunk(chkx, chky+1, chkz+1)
+    }
+    
+    if (updEast && updSouth && updDown) {
+      updateChunk(chkx-1, chky-1, chkz-1)
+    }
+    if (updEast && updNorth && updDown) {
+      updateChunk(chkx-1, chky-1, chkz+1)
+    }
+    if (updWest && updSouth && updDown) {
+      updateChunk(chkx+1, chky-1, chkz-1)
+    }
+    if (updWest && updNorth && updDown) {
+      updateChunk(chkx+1, chky-1, chkz+1)
+    }
+    
+    if (updEast && updSouth && updUp) {
+      updateChunk(chkx-1, chky+1, chkz-1)
+    }
+    if (updEast && updNorth && updUp) {
+      updateChunk(chkx-1, chky+1, chkz+1)
+    }
+    if (updWest && updSouth && updUp) {
+      updateChunk(chkx+1, chky+1, chkz-1)
+    }
+    if (updWest && updNorth && updUp) {
+      updateChunk(chkx+1, chky+1, chkz+1)
+    }
   }
 }
 

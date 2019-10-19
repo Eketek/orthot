@@ -176,6 +176,19 @@ $(async function MAIN() {
   aboutBTN = $("<div>").addClass("btn_active").text("About").click(toggleAboutBox)[0]
   $("#controls").append(aboutBTN)
   
+  let pixCNV = $("<canvas>")[0]
+  pixCNV.width = 1
+  pixCNV.height = 1
+  let pixCTX = pixCNV.getContext('2d')
+  
+  // Convery a color string to a standardized format ...
+  //  by drawing it onto a hidden canvas, then reading the resulting pixel value...
+  let toRGBstring = function(col) {
+    pixCTX.fillStyle = col
+    pixCTX.fillRect(0,0,1,1)
+    let imgd = pixCTX.getImageData(0,0,1,1)
+    return `rgb(${imgd.data[0]},${imgd.data[1]},${imgd.data[2]})`
+  }
   
   let activeTool
   
@@ -790,6 +803,10 @@ $(async function MAIN() {
       let k = baseK + colors.join(" ")
       if (terrainIDs[k]) {
         return terrainIDs[k]
+      }
+      
+      for (let i = 0; i < colors.length; i++) {
+        colors[i] = toRGBstring(colors[i])
       }
       
       // If a map is specified, use it to expand/rearrange the color array

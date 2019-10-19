@@ -176,6 +176,10 @@ $(async function MAIN() {
   aboutBTN = $("<div>").addClass("btn_active").text("About").click(toggleAboutBox)[0]
   $("#controls").append(aboutBTN)
   
+  on($("#foldrecentBTN"), "click", ()=>{ $("#recentColors").toggle()})
+  on($("#foldpalettecfgBTN"), "click", ()=>{ $("#palettecfg").toggle()})
+  on($("#foldpaletteBTN"), "click", ()=>{ $("#palleteColors").toggle()})
+  
   let pixCNV = $("<canvas>")[0]
   pixCNV.width = 1
   pixCNV.height = 1
@@ -520,7 +524,7 @@ $(async function MAIN() {
     let evtman = new NextEventManager()
     
     while (true) {
-      let evt = await evtman.next("mousemove")
+      let evt = await evtman.next(disp_elem, "mousemove")
       let mp3d = sviewCTL.mpos3d
       
       //point

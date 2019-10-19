@@ -1421,11 +1421,11 @@ var Zone = function(ekvx, override_startloc, name) {
   let defineWallTerrain = function(id, color) {
     bxtbldr.defineSurface_8bit(id, {
       color:color,
-      uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
+      uv2info:{type:DECAL_UVTYPE.TILE, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
     })
     bxtbldr.defineSurface_8bit(id+'H', {
       color:color,
-      uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
+      uv2info:{type:DECAL_UVTYPE.TILE, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
     })
     bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
   }

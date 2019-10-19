@@ -12,7 +12,7 @@ import { QueryTriggeredButtonControl, SceneviewController } from '../libek/contr
 import { clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { direction } from '../libek/direction.js'
-import { BoxTerrain } from '../libek/gen.js'
+import { BoxTerrain, DECAL_UVTYPE } from '../libek/gen.js'
 import { VxScene } from '../libek/scene.js'
 // Global rendering properties & controls (Mainly, materials and managed shader properties)
 var renderCTL = window.rctl = {
@@ -632,7 +632,6 @@ $(async function MAIN() {
     spclassPick:["solid"],                  // allow picking against objects of these classes
     spclassCoexist:[],                      // Objects that the defined object may coexist with
     planarPick:true,                        // allow picking against XY, XZ, and YZ planes
-    terrain:true,                           // terrain declaration
     routine:"buildcube",                    // Input handler to run while tool is active
     template:["type", "color", "uvscpec"],  // Put these properties in the template
     color:{                                 // Colorable object declaration
@@ -641,16 +640,222 @@ $(async function MAIN() {
       mutable:[true],                       // indicate which defined colors may be selected by User
       mainIndex:0,                          // "shorthand" color picking assigns to this entry in the color table
     },  
-    uvspec:{                                // set of UVs to use for rendering terain (blocks of entries in a texture atlas)
-      amount:1,                             // Number of [defined] uvspecs  
-      default:[0],                          // default for each defined uvspecs
-      mutable:[true],                       // indicate which defined uvspecs may be selected by User
-      range:{min:0, max:0},                 // range of allowable values for uvspecs selection
+    terrain:{                               // defines the UVs to use for rendering terain (blocks of entries in a texture atlas)
+      primary:{                             // Primary texture coordinate definition
+        all:{                               // all -- use the same component for all sides
+          eightbit:true,                    // use the "8 bit" texture coordinate generator (use contiguity with 8 neighboring tiles to select tile UVs)
+          layout:"grid",                    // declare a standard "grid" layout for texture coordinates
+          gridWidth:1,                      // Clarify aforementioned grid layout as being 1x1
+          gridHeight:1,                     //    ''
+          block:0,                          // Use the first block [from the grid layout]
+        }
+      },
+      decal:{                               // Secondary texture coordinate definition
+        all:{                               // all -- use the same component for all sides
+          tile:true,                        // single-tile decal
+          layout:"tiles",                   // A grid of tiles with no assumed relationships
+          width:8,                          // Clarify the tile-grid as being 8x8 
+          height:8,                         //    ''
+          pickrand_init:true,               // Pick a random tile during initilization and use it for all surfaces of the same class
+          randmin:0,                        //  random selection minimum
+          randmax:6,                        //  random selection maximum
+        }
+      }
     },
     params:{},                              // arbitrary properties to add to all templates
     lockedParams:{}                         // immutable arbitrary properties to add to all templates
   })
   setTool("Wall")
+  
+  
+  // BoxTerrain configuration section
+  // Purpose of this is to expose the internal features of BoxTerrain (multiple sets of boundary graphics from a texture atlas, arbitrary decals from a second 
+  // texture atlas, and unique configurations for each of the 6 directions)
+  
+  let ddefs = {}
+  let toDecalParams = function(decalSpec) {
+    let k = JSON.stringify(decalSpec)
+    if (ddefs[k]) {
+      return _ddefs[k]
+    }
+    let ddef
+    if (decalSpec.tile) {
+      ddef = {
+        type:DECAL_UVTYPE.TILE, 
+      }
+      if (decalSpec.pickrand_init) {
+        ddef.lut = { entry:Math.floor(Math.random()*(decalSpec.randmax-decalSpec.randmin))+decalSpec.randmin }
+      }
+      else {
+        ddef.lut = {entry:decalSpec.value|0}
+      }
+      ddef.lut.num_rows = decalSpec.width,
+      ddef.lut.num_cols = decalSpec.height
+    }
+    ddefs[k] = ddef
+    return ddef
+  }
+  
+  // attach the specified "block" bounds to a params object (parameters for gen.build_texcoordLUT)
+  let apply8bitTerrspec = function(params, terrspec) {
+    let left = (terrspec.block % terrspec.gridWidth) / terrspec.gridWidth
+    let right = left + 1/terrspec.gridWidth
+    let top = Math.floor(terrspec.block / terrspec.gridWidth) / terrspec.gridHeight
+    let bottom = top + 1/terrspec.gridHeight
+    params.num_rows = 16 * terrspec.gridHeight,
+    params.num_cols = 16 * terrspec.gridWidth,
+    params.texcoord_ul = {x:left, y:top},
+    params.texcoord_br = {x:right, y:bottom}
+  }
+  
+  //let surfaceDefs = {}
+  let bxtsfcdefiners = {}
+  let next_terrainid = 1
+  let next_sfcid = 1
+  let terrainIDs = {}
+  let defineTerrain = function(name, sfcdef) {
+    //surfaceDefs[name] = sfcdef
+    
+    // Set up the "decal" specifications for all directions
+    //  (the decal specifciation is the secondary texture coordinates for 
+    let nd, ed, sd, wd, ud, dd
+    if (sfcdef.decal.all) {
+      nd = ed = sd = wd = ud = dd = toDecalParams(sfcdef.decal.all)
+    }
+    if (sfcdef.decal.h) {
+      ud = dd = toDecalParams(sfcdef.decal.h)
+    }
+    if (sfcdef.decal.v) {
+      nd = ed = sd = wd = toDecalParams(sfcdef.decal.v)
+    }
+    if (sfcdef.decal.n) {
+      nd = toDecalParams(sfcdef.decal.n)
+    }
+    if (sfcdef.decal.e) {
+      ed = toDecalParams(sfcdef.decal.e)
+    }
+    if (sfcdef.decal.s) {
+      sd = toDecalParams(sfcdef.decal.s)
+    }
+    if (sfcdef.decal.w) {
+      wd = toDecalParams(sfcdef.decal.w)
+    }
+    if (sfcdef.decal.u) {
+      ud = toDecalParams(sfcdef.decal.u)
+    }
+    if (sfcdef.decal.d) {
+      dd = toDecalParams(sfcdef.decal.d)
+    }
+    
+    let ddefs = [nd, ed, sd, wd, ud, dd]
+    
+    let facedefs = [{}, {}, {}, {}, {}, {}]
+    
+    for (let i = 0; i < 6; i++) {
+      Object.assign(facedefs[i], ddefs[i])
+    }
+    
+    if (sfcdef.primary.all) {
+      apply8bitTerrspec(facedefs[0], sfcdef.primary.all)
+      apply8bitTerrspec(facedefs[1], sfcdef.primary.all)
+      apply8bitTerrspec(facedefs[2], sfcdef.primary.all)
+      apply8bitTerrspec(facedefs[3], sfcdef.primary.all)
+      apply8bitTerrspec(facedefs[4], sfcdef.primary.all)
+      apply8bitTerrspec(facedefs[5], sfcdef.primary.all)
+    }
+    if (sfcdef.primary.v) {
+      apply8bitTerrspec(facedefs[0], sfcdef.primary.v)
+      apply8bitTerrspec(facedefs[1], sfcdef.primary.v)
+      apply8bitTerrspec(sfcdefs[2], sfcdef.primary.v)
+      apply8bitTerrspec(facedefs[3], sfcdef.primary.v)
+    }
+    if (sfcdef.primary.h) {
+      apply8bitTerrspec(facedefs[4], sfcdef.primary.h)
+      apply8bitTerrspec(facedefs[5], sfcdef.primary.h)
+    }
+    if (sfcdef.primary.n) {
+      apply8bitTerrspec(facedefs[0], sfcdef.primary.n)
+    }
+    if (sfcdef.primary.e) {
+      apply8bitTerrspec(facedefs[1], sfcdef.primary.e)
+    }
+    if (sfcdef.primary.s) {
+      apply8bitTerrspec(facedefs[2], sfcdef.primary.s)
+    }
+    if (sfcdef.primary.w) {
+      apply8bitTerrspec(facedefs[3], sfcdef.primary.w)
+    }
+    if (sfcdef.primary.u) {
+      apply8bitTerrspec(facedefs[4], sfcdef.primary.u)
+    }
+    if (sfcdef.primary.d) {
+      apply8bitTerrspec(facedefs[5], sfcdef.primary.d)
+    }
+    
+    let baseK = JSON.stringify(sfcdef)+"|"
+    
+    console.log(facedefs)
+    
+    bxtsfcdefiners[name] = function config_bxt(colors) {
+      let k = baseK + colors.join(" ")
+      if (terrainIDs[k]) {
+        return terrainIDs[k]
+      }
+      //Configure the box terrain for each surface [with the corresponding  input color]
+      //    (maybe think about preparing only one surface for each unique color-decaldef pair - present approach is just to not care about that...)
+      let sfcdefids = []
+      for (let i = 0; i < 6; i++) {
+        let fdef = facedefs[i]
+        bxtbldr.defineSurface_8bit(next_sfcid, {
+          color:colors[i],
+          uv2info:fdef
+        })
+        sfcdefids[i] = next_sfcid
+        next_sfcid++
+      }
+      let tid = bxtbldr.defineTerrain.apply(bxtbldr, sfcdefids)
+      terrainIDs[k] = tid
+      return tid
+      //bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
+    }
+    
+    /*  
+    let defineWallTerrain = function(id, color) {
+      bxtbldr.defineSurface_8bit(id, {
+        color:color,
+        uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
+      })
+      bxtbldr.defineSurface_8bit(id+'H', {
+        color:color,
+        uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
+      })
+      bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
+    }
+    */
+  }
+  
+  defineTerrain("asdf", {
+    primary:{
+      all:{                               // Primary texture coordinate definition:
+        eightbit:true,                    // use the "8 bit" texture coordinate generator (use contiguity with 8 neighboring tiles to select tile UVs)
+        layout:"grid",                    // declare a standard "grid" layout for texture coordinates
+        gridWidth:1,                      // Clarify aforementioned grid layout as being 1x1
+        gridHeight:1,                     //    ''
+        block:0,                          // Use the first block [from the grid layout]
+      },
+    },
+    decal:{
+      all:{                               // Secondary texture coordinate definition for all cube surfaces (U, D, N, E, S, and W)
+        tile:true,                        // Pick a tile
+        layout:"tiles",                   // A grid of tiles with no assumed relationships
+        width:8,                          // Clarify the tile-grid as being 8x8 
+        height:8,                         //    ''
+        pickrand_init:true,               // Pick a random tile during initilization and use it for all surfaces of the same class
+        randmin:0,                        //  random selection minimum
+        randmax:6,                        //  random selection maximum
+      }
+    }
+  })
   
   // Item description display
   // These functions (orthot.showDescription and orthot.updateDescription and orthot.hideDescription) are used to allow items to show tooltips and run graphical

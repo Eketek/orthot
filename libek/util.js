@@ -52,6 +52,9 @@ var removeItems = function(arr, ... items) {
 }
 
 var anythingIN = function(obj) {
+  if (!obj) {
+    return false
+  }
   for (let k in obj) {
     return true
   }

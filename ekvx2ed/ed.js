@@ -9,7 +9,7 @@ import {
 } from '../libek/libek.js'
 import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
-import { clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
+import { anythingIN, clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { direction } from '../libek/direction.js'
 import { BoxTerrain, DECAL_UVTYPE } from '../libek/gen.js'
@@ -175,6 +175,23 @@ $(async function MAIN() {
   on($("#hideabout"), "click", toggleAboutBox)
   aboutBTN = $("<div>").addClass("btn_active").text("About").click(toggleAboutBox)[0]
   $("#controls").append(aboutBTN)
+  
+  let portuiBTN
+  let portuiVisible = false
+  let togglePortUI = function() {
+    if (portuiVisible) {
+      $("#port").hide()
+      portuiVisible = false
+    }
+    else {
+      $("#port").show()
+      putFloatingElement($("#port")[0], portuiBTN)
+      $("#exportTarget")[0].value = serialize()
+      portuiVisible = true
+    }
+  }
+  portuiBTN = $("<div>").addClass("btn_active").text("Export/Import").click(togglePortUI)[0]
+  $("#controls").append(portuiBTN)
   
   on($("#foldrecentBTN"), "click", ()=>{ $("#recentColors").toggle()})
   on($("#foldpalettecfgBTN"), "click", ()=>{ $("#palettecfg").toggle()})
@@ -457,18 +474,6 @@ $(async function MAIN() {
   renderCTL.display.scene.add(vxc.scene)
   
   let put = function(obj, x,y,z, ld=false) {
-    if (obj.terrain) {
-      if (ld) {
-        vxc.loadTerrain(x,y,z, obj.terrain)
-      }
-      else {
-        vxc.setTerrain(x,y,z, obj.terrain)
-      }
-      obj.x = x
-      obj.y = y
-      obj.z = z
-      return
-    }
     let ctn = vxc.get(obj.x,obj.y,obj.z)
     if (ctn.contents) {
       let idx = ctn.contents.indexOf(obj)
@@ -482,18 +487,29 @@ $(async function MAIN() {
     ctn = vxc.get(x,y,z)
     if (!ctn.contents) {
       ctn.contents = []
-      ctn.contents.push(obj)
     }
-    if (obj.mdl) {
+    ctn.contents.push(obj)
+    if (obj.terrainID) {
+      console.log(obj)
+      if (ld) {
+        vxc.loadTerrain(x,y,z, obj.terrainID)
+      }
+      else {
+        vxc.setTerrain(x,y,z, obj.terrainID)
+      }
+      return
+    }
+    else if (obj.mdl) {
       if (!obj.mdl.parent) {
         vxc.scene.add(obj.mdl)
       }
       obj.mdl.position.set(x,y,z)
     }
+    
   }
   
   let remove = function(obj) {
-    if (obj.terrain) {
+    if (obj.terrainID) {
       vxc.setTerrain(x,y,z, 0)
       return
     }
@@ -508,6 +524,10 @@ $(async function MAIN() {
       if (obj.mdl.parent) {
         obj.mdl.parent.remove(obj)
       }
+    }
+    let idx = data.objects.indexOf(obj)
+    if (idx != -1) {
+      data.objects.splice(idx, 1)
     }
   }
   
@@ -546,11 +566,25 @@ $(async function MAIN() {
   })()}
   
   let build = function() {
-    
-    let obj = { }
-    if (activeTool.terrainID) {
-      obj.terrain = activeTool.terrainID
+    let obj = {}
+    obj.data = {}
+    for (let k in activeTool.spec.params) {
+      if (obj[k] == undefined) {
+        obj[k] = activeTool.spec.params[k]
+      }
     }
+    
+    obj.data.$ = [activeTool.templateID, cursor3d.x, cursor3d.y, cursor3d.z]
+    if (activeTool.terrainID) {
+      obj.terrainID = activeTool.terrainID
+      obj.data.$.push(activeTool.terrainID)
+    }
+    //else if (activeTool.align != undefined) {
+      //obj.data.$.push(align.up)
+      //obj.data.$.push(align.forward)
+    //}
+      // if an aligned object, append the alignment
+    
     put(obj, cursor3d.x, cursor3d.y, cursor3d.z)
   }
   
@@ -586,6 +620,9 @@ $(async function MAIN() {
       }
     }
   }
+  
+  let next_templateID = 1
+  let templates = {}
   
   let tools = {}
   let defineTool = function(spec) {
@@ -623,6 +660,14 @@ $(async function MAIN() {
       defineTerrain(spec.terrain)
     }
     
+    if (!anythingIN(spec.template)) {
+      spec.template = {type:spec.type}
+    }
+    
+    tool.templateID = next_templateID
+    templates[next_templateID] = spec.template
+    next_templateID++
+    
     //store the tool
     tools[spec.name] = tool
   }
@@ -652,27 +697,6 @@ $(async function MAIN() {
     }
     updateColors()
   }
-  
-  let templateID = 1
-  let templateIDs = {}
-  let templateData = {}
-  let getTemplateID = function(data) {
-    let str_data = JSON.stringify(data)
-    let id = templateIDs[str_data]
-    if (id == undefined) {
-      id = templateID
-      templateID++
-      templateIDs[str_data] = id
-      templateData[id] = data
-    }
-    return id
-  }
-  
-  let getTemplate = function(id) {
-    return templateData[id]
-  }
-  
-  
   
   // BoxTerrain configuration section
   // Purpose of this is to expose the internal features of BoxTerrain (multiple sets of boundary graphics from a texture atlas, arbitrary decals from a second 
@@ -714,12 +738,13 @@ $(async function MAIN() {
     params.texcoord_br = {x:right, y:bottom}
   }
   
-  //let surfaceDefs = {}
   let bxtsfcdefiners = {}   //box terrain surface definers
   let next_terrainid = 1
   let next_sfcid = 1
   let terrainIDs = {}       // terrain IDs (to avoid inserting duplicate terrain definitions into BoxTerrain)
   let sfcIDs = {}           // surface IDs (to avoid inserting duplicate surface definitions into BoxTerrain)
+  let surfaceDefs = {}
+  let terrainDefs = {}
   let defineTerrain = function(terrspec) {
     //surfaceDefs[name] = sfcdef
     
@@ -872,13 +897,14 @@ $(async function MAIN() {
             color:colors[i],
             uv2info:fdef
           })
+          surfaceDefs[next_sfcid] = { color:colors[i], uv2info:fdef }
           sfcIDs[k] = next_sfcid
           sfcdefids[i+1] = next_sfcid
           next_sfcid++
         }
       }
       bxtbldr.defineTerrain.apply(bxtbldr, sfcdefids)
-      
+      terrainDefs[tid] = sfcdefids.slice(1)
       //console.log(facedefs, colors, sfcdefids)
       return tid
       //bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
@@ -908,7 +934,7 @@ $(async function MAIN() {
     spclassCoexist:[],                      // Objects that the defined object may coexist with
     planarPick:true,                        // allow picking against XY, XZ, and YZ planes
     routine:"buildcube",                    // Input handler to run while tool is active
-    template:["type", "color", "uvscpec"],  // Put these properties in the template
+    template:{},                            // Put these properties in the template
     color:{                                 // Colorable object declaration
       amount:3,                             // Number of [defined] colors 
       default:["white", "green", "blue"],                    // default for each defined color
@@ -941,6 +967,27 @@ $(async function MAIN() {
     lockedParams:{}                         // immutable arbitrary properties to add to all templates
   })
   setTool("Wall")
+  
+  let serialize = function() {
+    let o = {
+      surfaceDefs:surfaceDefs,
+      terrainDefs:terrainDefs,
+      templates:templates,
+      objects:[],
+    }
+    vxc.forAll((ctn)=>{
+      if (ctn.contents && ctn.contents.length > 0) {
+        for (let obj of (ctn.contents)) {
+          console.log(obj)
+          if (obj.data) {
+        
+            o.objects.push(obj.data)
+          }
+        }
+      }
+    })
+    return JSON.stringify(o)
+  }
   /*
   defineTerrain("asdf", {
     primary:{

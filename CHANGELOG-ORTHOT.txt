@@ -1,4 +1,7 @@
 0.3.0:
+  28 Oct 2019:
+    Added a 3-dimensional linear plotter with various specialized outputs (intended to support the editor, but designed to be useful generally)
+    Specified a null direction
   14 Oct 2019:
     Descriptive texts for regular puzzles all the way through Zone 3.
       (regular puzzles being anything that sticks to the ordinary objects [not scripted or runtime-generated content])

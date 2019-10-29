@@ -241,6 +241,7 @@ import { T, rad_tosector } from './libek.js'
 
 var direction = {
   code:{
+    NODIR:0,
     UP:1,
     DOWN:2,
     NORTH:3,

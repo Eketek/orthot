@@ -225,7 +225,7 @@ $(async function MAIN() {
   let primaryBTN
   let mainBTNS = []  
   let colorBTN = function(params) {
-    let $elem = $('<div class="noselect">')
+    let $elem = $('<span class="noselect">')
     let $loc = $("#" + params.loc)
     this.color = params.color
     $elem.appendTo($loc)
@@ -387,7 +387,7 @@ $(async function MAIN() {
       for (let l of lights) {
         for (let h = 0; h < numHues; h ++) {
           _col.setHSL(h/numHues, s, l)
-          paletteBTNS.push(new colorBTN({ loc:"palleteColors", color:_col.getStyle(), small:true, setRecent:true, emphasize:(l==0.5) }))
+          paletteBTNS.push(new colorBTN({ loc:"palleteColors", color:_col.getStyle(), small:true, setRecent:true, emphasize:((numHues==18) && (l==0.5)) }))
           count++
           if (count > 1800) {
             return

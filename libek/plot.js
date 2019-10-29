@@ -166,7 +166,7 @@ plotLine = function(start, end, plot) {
         }
         break
     }
-    plot(coord)
+    return plot(coord)
   }
   
   // use a complete plotter if the X slope is non-zero (zero
@@ -207,17 +207,23 @@ plotLine = function(start, end, plot) {
       if (accx >= 1) {
         posx += 1
         accx -= 1
-        doplot(dirx)
+        if (!doplot(dirx)) {
+          return
+        }
       }
       if (accy >= 1) {
         posy += 1
         accy -= 1
-        doplot(diry)
+        if (!doplot(diry)) {
+          return
+        }
       }
       if (accz >= 1) {
         posz += 1
         accz -= 1
-        doplot(dirz)
+        if (!doplot(dirz)) {
+          return
+        }
       }
     }
   }
@@ -250,12 +256,16 @@ plotLine = function(start, end, plot) {
       if (accy >= 1) {
         posy += 1
         accy -= 1
-        doplot(diry)
+        if (!doplot(diry)) {
+          return
+        }
       }
       if (accz >= 1) {
         posz += 1
         accz -= 1
-        doplot(dirz)
+        if (!doplot(dirz)) {
+          return
+        }
       }
     }
   }
@@ -266,7 +276,9 @@ plotLine = function(start, end, plot) {
       if (posz > endz) {
         return
       }
-      doplot(dirz)
+      if (!doplot(dirz)) {
+        return
+      }
     }
   }
   

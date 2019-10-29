@@ -763,7 +763,7 @@ var Zone = function(ekvx, override_startloc, name) {
       }
     }).bind(this)
     for (let dir of Object.values(direction.code)) {
-      if (dir != excludeDIR) {
+      if ((dir != excludeDIR) && (dir != direction.code.NODIR)) {
         evaluateSide(dir)
       }
     }

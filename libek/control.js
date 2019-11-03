@@ -1,5 +1,5 @@
 export { QueryTriggeredButtonControl, SceneviewController }
-import { pickPlanepos, rad_tosector } from './libek.js'
+import { pickAgainstPlane, rad_tosector } from './libek.js'
 import { direction } from './direction.js'
 import { NextEventManager, next, on } from './nextevent.js'
 
@@ -150,8 +150,10 @@ var SceneviewController = function(params = {}) {
       this.mpos = {
         x: ((evt.pageX - evt.target.offsetLeft) / evt.target.clientWidth) * 2 - 1,
         y:-((evt.pageY - evt.target.offsetTop)  / evt.target.clientHeight) * 2 + 1
-      }      
-      this.mpos3d = pickPlanepos(this.disp, this.mpos, this.pickplane)
+      }
+      let mpick = pickAgainstPlane(this.disp, this.mpos, this.pickplane)
+      this.mpos3d = mpick.pos
+      this.mray = mpick.ray
     }
   }).bind(this)()}
 
@@ -294,6 +296,21 @@ var SceneviewController = function(params = {}) {
     // A controller which shifts the pick plane around when the arrow keys are pressed.
     //  This has NOT been tested for use with the new Event handlers (but is at least expected to work)
     if (params.PickPlane_ArrowkeyController) {
+      let arrow_evtcode = "arrows"
+      if (typeof(params.PickPlane_ArrowkeyController) == "string") {
+        switch (params.PickPlane_ArrowkeyController) {
+          case "wasd":
+            arrow_evtcode = ".wasd"
+            break
+          case "arrows":
+            arrow_evtcode = "arrows"
+            break
+          default:
+            arrow_evtcode = ".wasd arrows"
+            break
+        }
+      }
+      
       (async function PickPlane_ArrowkeyController() {
         //decision tables to control how the X and Z picking planes are shifted by arrow keys
         // index bits 1 and 2 are derived from the quadrant the camera is located in
@@ -319,24 +336,32 @@ var SceneviewController = function(params = {}) {
           //  d *= this.high_subunit_scale
           //}
           if (this.pickplane.normal.equals(direction.vector.UP)) {
-            if (evt.code == "ArrowUp") {
+            if (k==0) {
               //pickplane.constant -= d
               this.camtarget.y += d
+              this.mpos3d.y += d
+              this.mray.origin.y += d
             }
-            else if (evt.code == "ArrowDown") {
+            else if (k==4) {
               //pickplane.constant += d
               this.camtarget.y -= d
+              this.mpos3d.y -= d
+              this.mray.origin.y -= d
             }
           }
           else {
             let quad = rad_tosector(this.campos.theta, 4)
-            if (this.pickplane.normal.equals(direction.vector.SOUTH)) {
+            if (this.pickplane.normal.equals(direction.vector.NORTH)) {
               //console.log("NORTH  ... quad="+quad + " k="+k)
               this.camtarget.z += nktbl[quad|k]*d
+              this.mpos3d.z += nktbl[quad|k]*d
+              this.mray.origin.z += nktbl[quad|k]*d
             }
             else {
               //console.log("EAST  ... quad="+quad + " k="+k)
               this.camtarget.x += ektbl[quad|k]*d
+              this.mpos3d.x += ektbl[quad|k]*d
+              this.mray.origin.x += ektbl[quad|k]*d
             }
           }
           this.updateCamera(true)
@@ -346,18 +371,22 @@ var SceneviewController = function(params = {}) {
 
         main:
         while (true) {
-          evt = await evtman.next("arrows exit")
+          evt = await evtman.next(arrow_evtcode)
           switch(evt.vname) {
             case "ArrowUp":
+            case "w":
               processArrow(U)
               break
             case "ArrowDown":
+            case "s":
               processArrow(D)
               break
             case "ArrowLeft":
+            case "a":
               processArrow(L)
               break
             case "ArrowRight":
+            case "d":
               //console.log(R)
               processArrow(R)
               break
@@ -529,13 +558,12 @@ var SceneviewController = function(params = {}) {
           if (this.pickplane.normal.equals(direction.vector.UP)) {
             this.camtarget.y = this.pickplane.constant
           }
-          else if (this.pickplane.normal.equals(direction.vector.SOUTH)) {
+          else if (this.pickplane.normal.equals(direction.vector.NORTH)) {
             this.camtarget.z = this.pickplane.constant
           }
-          else if (this.pickplane.normal.equals(direction.vector.EAST)) {
+          else if (this.pickplane.normal.equals(direction.vector.WEST)) {
             this.camtarget.x = this.pickplane.constant
           }
-
           this.updateCamera(true)
         }).bind(this)
 

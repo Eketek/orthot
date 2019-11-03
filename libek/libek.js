@@ -1,6 +1,6 @@
 export {
   initLIBEK, getUID, Display,
-  trit, tt, T, PI, rad_tosector, pickPlanepos, AXIS,
+  trit, tt, T, PI, rad_tosector, pickAgainstPlane, AXIS,
   delay,
   getAsset, storeAsset, releaseAsset,
   Material, assignMaterials,
@@ -95,7 +95,7 @@ var Display = function( elem, background=false, foreground=false ) {
 }
 
   // Compute 3D position by picking against a defined picking plane
-var pickPlanepos = function(disp, pos, plane) {
+var pickAgainstPlane = function(disp, pos, plane) {
   //Display coordinates at mouse position
   //let disp_x =  ((evt.pageX - evt.target.offsetLeft) / evt.target.clientWidth) * 2 - 1
   //let disp_y = -((evt.pageY - evt.target.offsetTop)  / evt.target.clientHeight) * 2 + 1
@@ -118,7 +118,8 @@ var pickPlanepos = function(disp, pos, plane) {
   _plane.constant *= -1
 
   mray.intersectPlane(_plane, mpos3d)
-  return mpos3d
+  //console.log(disp, pos, plane, "->", mray, mpos3d)
+  return { ray:mray, pos:mpos3d }
 }
 
 var AXIS = { X:1, Y:2, Z:3 }

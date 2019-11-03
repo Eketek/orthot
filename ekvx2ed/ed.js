@@ -5,7 +5,7 @@ import {
   Display, 
   load, loadMuch, loadZIP, fetchText,
   assignMaterials, getAsset, storeAsset, 
-  pickPlanepos, debug_tip 
+  pickAgainstPlane, debug_tip 
 } from '../libek/libek.js'
 import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
@@ -14,6 +14,8 @@ import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { direction } from '../libek/direction.js'
 import { BoxTerrain, DECAL_UVTYPE } from '../libek/gen.js'
 import { VxScene } from '../libek/scene.js'
+import { plotLine } from '../libek/plot.js'
+
 // Global rendering properties & controls (Mainly, materials and managed shader properties)
 var renderCTL = window.rctl = {
   uv2:new UVspec()
@@ -85,6 +87,7 @@ $(async function MAIN() {
           fetchOPTS,
           {url:"assets/textures/patterns.png", properties:TextureProps},
           {url:"assets/textures/wall_8bit_fg.png", properties:TextureProps},
+          {url:"assets/textures/editoricons.png", properties:TextureProps},
         )
       }),
       update("model", (fetchOPTS)=>{
@@ -143,14 +146,15 @@ $(async function MAIN() {
   assignMaterials(edCTL.assets.CubeCursor, cursormats)
   assignMaterials(edCTL.assets.FaceCursor, cursormats)
   
-
+  let pickplane = new THREE.Plane(direction.vector.UP.clone(), 0)
+  
   let controlActive = false
   sviewCTL = window.sctl = new SceneviewController({
     camtarget:new THREE.Vector3(0,0,0),
     display:renderCTL.display,
     dom_evttarget:disp_elem,
     app_evttarget:edCTL.event,
-    pickplane:new THREE.Plane(direction.vector.UP, 0),
+    pickplane:pickplane,
     UpdcamUpdatepickplane:true,
     followspeed:1/60,
     campos_maxphi:Math.PI * 0.85,
@@ -162,11 +166,160 @@ $(async function MAIN() {
     ChaseTargetMBTN:"mmb",
 
     tpmode_fov:60,
-    PickPlane_ArrowkeyController:true,
+    PickPlane_ArrowkeyController:"wasd arrows",
     subunit:1,
   })
   sviewCTL.run()
+  
+  
+  let PICKRAY_LENGTH = 10
+  let recentPos = new THREE.Vector3(0,0,0)
+  let pickmode = "xz"
+  
+  
+  //Editor-icon PNG:  ectl.assets.editoricons.image 
+  //  (loaded through the THREE.js texture loader.  For this purpose, this is equivalent to linking to it with an <img> element)
+  
+  //  Editor icons are tilesheets.  
+  //  There is a general-purpose tilesheet for tools & options which are intended as common (pick mode, copy, paste, move, delete, edit-properties, etc.)
+  //  There is a second application-specific tilesheet for the data to operate on (to be provided through a configurer).
+  //  Each tile is 48x22 pixels in size.
+  //  Each icon has a specific row & column position (in addition to something that indicates whether it is from the general sheet or the application sheet).
+  //  These icons are [intended as] a graphics-only representation of the tool.
+  
+  //  These icons are also to be supplemented with a short/acyonym text representation of the tool to be drawn underneath the icon
+  //  The short text should be augmented with a descriptive tooltip 
+  //  At some point, these texts should also become localized texts
 
+  //  Background highlighting is to indicate the following UI statuses:
+  //    Inactive  (tool not in use)
+  //    Active    (tool currently in use)
+  //    Inactive + Mouseover
+  //    Active + Mouseover
+  //    Activating (Active + Mousedown)
+
+  let deactivators = {}
+
+  let addEditorBTN = edCTL.addEditorBTN = function(name, desc, value, init_active, position, activeClass, sheet, row, col, hue, hdev) {
+    let $btn = $("<canvas>")
+    let cnv = $btn[0]
+    cnv.title = desc
+    $("#"+position).append($btn)
+    cnv.width = 52
+    cnv.height = 52
+    let ctx = cnv.getContext('2d')
+    let active = false
+    let hover = false
+    let activating = false
+    
+    ctx.font = "18px serif"
+    ctx.textAlign = "center"
+    ctx.textBaseline = "top"
+    
+    ctx.fillStyle = "white"
+    ctx.strokeStyle = "black"
+    ctx.lineWidth = 2
+    ctx.fillRect(0,0,52,52)
+    ctx.strokeRect(2,2,49,49)
+    
+    let src
+    if (sheet == "general") {
+      src = ectl.assets.editoricons.image
+    }
+    else {
+      //src = ectl.assets.appicons.image
+    }
+    
+    let draw = function() {
+      if (activating) {
+        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`
+      }
+      else if (active && hover) {
+        ctx.fillStyle = `hsl(${hue+hdev}, 100%, 50%)`
+      }
+      else if (active && !hover) {
+        ctx.fillStyle = `hsl(${hue+hdev*2}, 100%, 50%)`
+      }
+      else if (!active && hover) {
+        ctx.fillStyle = `hsl(${hue+hdev*3}, 100%, 50%)`
+      }
+      else if (!active && !hover) {
+        ctx.fillStyle = "white"
+      }
+      ctx.fillRect(6,10,40,16)
+      ctx.drawImage(src, col*48, row*22, 48, 22, 2,6,48,22)
+      ctx.fillStyle = "black"
+      ctx.fillText(name, 26, 34, 48)
+    }
+    
+    let deactivate = function() {
+      active = false
+      draw()
+    }
+    
+    if (init_active) {
+      active = true
+      deactivators[activeClass] = deactivate
+    }
+    draw()
+    
+    on($btn, "mousedown", ()=> {
+      if (deactivators[activeClass]) {
+        deactivators[activeClass]()
+      }
+      activating = true
+      active = true
+      deactivators[activeClass] = deactivate
+      draw()
+      if (typeof(value) == "function") {
+        value()
+      }
+      else {
+        // set active tool
+      }
+    })
+    on($btn, "mouseup", ()=> {
+      activating = false
+      draw()
+    })
+    on($btn, "mouseenter", ()=> {
+      hover = true
+      draw()
+    })
+    on($btn, "mouseleave", ()=> {
+      hover = false
+      draw()
+    })
+    return $btn
+  }
+  let setMraypickmode = function() {
+    pickmode = "mray"
+  }
+  let setXZpickmode = function() {
+    pickmode = "xz"
+    pickplane.setFromNormalAndCoplanarPoint(direction.vector.UP, recentPos)
+    pickplane.constant *= -1
+  }
+  let setXYpickmode = function() {
+    pickmode = "xy"
+    pickplane.setFromNormalAndCoplanarPoint(direction.vector.NORTH, recentPos)
+    pickplane.constant *= -1
+  }
+  let setYZpickmode = function() {
+    pickmode = "yz"
+    pickplane.setFromNormalAndCoplanarPoint(direction.vector.WEST, recentPos)
+    pickplane.constant *= -1
+  }
+  
+  addEditorBTN("MRAY", "Pick against object under mouse cursor", setMraypickmode, false, "options", "pickmode", "general", 0, 0, 40, 5)
+  addEditorBTN("XZ", "Pick against an XZ plane", setXZpickmode, true, "options", "pickmode", "general", 0, 1, 40, 5)
+  addEditorBTN("XY", "Pick against an XY plane", setXYpickmode, false, "options", "pickmode", "general", 0, 2, 40, 5)
+  addEditorBTN("YZ", "Pick against an YZ plane", setYZpickmode, false, "options", "pickmode", "general", 0, 3, 40, 5)
+
+  on($("#foldcommandsBTN"), "click", ()=>{ $("#commands").toggle()})
+  on($("#foldtoolsBTN"), "click", ()=>{ $("#tools").toggle()})
+  on($("#foldoptionsBTN"), "click", ()=>{ $("#options").toggle()})
+  
   let aboutBTN
   let toggleAboutBox = function() {
     $("#about").toggle()
@@ -212,7 +365,7 @@ $(async function MAIN() {
   }
   
   let activeTool
-  
+   
   //-------------------------------------------
   //  Yet another ad-hoc color picker
   //-------------------------------------------
@@ -453,8 +606,6 @@ $(async function MAIN() {
   btnB.setPrimary()
   updateColors()
   
-  
-  
   let bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
   let vxc = new VxScene({
     boxterrain:bxtbldr,
@@ -544,24 +695,89 @@ $(async function MAIN() {
     let evtman = new NextEventManager()
     
     while (true) {
-      let evt = await evtman.next(disp_elem, "mousemove")
-      let mp3d = sviewCTL.mpos3d
+      let evt = await evtman.next(disp_elem, "mousemove", document, ".wasd arrows")
+      //console.log(evt)
+      let mp3d, up, forward
       
-      //point
-      edCTL.event.dispatchEvent( new Event("mousemove_point"))
+      switch(pickmode) {
+        case "xz":
+        case "xy":
+        case "yz":
+          mp3d = sviewCTL.mpos3d
+          break
+        case "mray": {
+          let mray = sviewCTL.mray
+          let origin = mray.origin.clone()
+          origin.y += 1
+          let ray_end = mray.direction.clone()
+          ray_end.multiplyScalar(PICKRAY_LENGTH)
+          ray_end.add(origin)
+          
+          // Plot a line from the mouse position, outward from the camera
+          // (mouse position is the screen-space mouse coordinates, projected onto the camera's backplane)
+          plotLine(mray.origin, ray_end, (coord)=>{
+                    
+            //check the spatial class of each object at each plotted position against the ActiveTool spatial-class-pick list.
+            //  If a match is found, then pick either the position of the object or the immediately adjacent position [along the picked face up vector]
+            //  and cancel the plotting operation.
+            let ctn = vxc.get(coord.x, coord.y, coord.z)
+            let spclasses = activeTool.spec.spclassPick
+            if (ctn.contents) {
+              for (let obj of ctn.contents) {
+                if (obj.spec && spclasses.indexOf(obj.spec.spatialClass) != -1) {
+                  console.log("picked", obj)
+                  up = coord.up
+                  forward = coord.forward
+                  mp3d = coord
+                  if (activeTool.spec.pickOut) {
+                    switch(up) {
+                      case direction.code.UP:
+                        coord.y++
+                        break
+                      case direction.code.DOWN:
+                        coord.y--
+                        break
+                      case direction.code.NORTH:
+                        coord.z++
+                        break
+                      case direction.code.EAST:
+                        coord.x--
+                        break
+                      case direction.code.SOUTH:
+                        coord.z--
+                        break
+                      case direction.code.WEST:
+                        coord.x++
+                        break
+                    }
+                  }
+                  // cancel the plotting operation
+                  return false
+                }
+              }
+            }
+            //continue the plotting operation
+            return true
+          })
+        } break
+      } 
+      
+      if (mp3d) {
+        //point
+        edCTL.event.dispatchEvent( new Event("mousemove_point"))
+          
+        let x = Math.round(mp3d.x)
+        let y = Math.round(mp3d.y)
+        let z = Math.round(mp3d.z)
         
-      let x = Math.round(mp3d.x)
-      let y = Math.round(mp3d.y)
-      let z = Math.round(mp3d.z)
-      
-      //cube
-      if ( (x != cursor3d.x) | (y != cursor3d.y) | (z != cursor3d.z)) {
-        put(cursor3d, x,y,z)
-        controlActive = true
-        edCTL.event.dispatchEvent(new Event("mousemove_cube"))
+        //cube
+        if ( (x != cursor3d.x) | (y != cursor3d.y) | (z != cursor3d.z)) {
+          put(cursor3d, x,y,z)
+          controlActive = true
+          edCTL.event.dispatchEvent(new Event("mousemove_cube"))
+        }
+        //face + alignment
       }
-      
-      //face + alignment
     }
   })()}
   
@@ -573,7 +789,7 @@ $(async function MAIN() {
         obj[k] = activeTool.spec.params[k]
       }
     }
-    
+    obj.spec = activeTool.spec
     obj.data.$ = [activeTool.templateID, cursor3d.x, cursor3d.y, cursor3d.z]
     if (activeTool.terrainID) {
       obj.terrainID = activeTool.terrainID
@@ -600,6 +816,11 @@ $(async function MAIN() {
       if (evt.vname == "cancel") {
         return
       }
+      if (pickmode != "mray") {
+        recentPos.x = cursor3d.x
+        recentPos.y = cursor3d.y
+        recentPos.z = cursor3d.z
+      }
       if (opspec.click) { opspec.click() }
       if (opspec.drag_evttype) {
         inner:
@@ -616,6 +837,11 @@ $(async function MAIN() {
               if (opspec.drag) { opspec.drag() }
               break
           }
+          if (pickmode != "mray") {
+            recentPos.x = cursor3d.x
+            recentPos.y = cursor3d.y
+            recentPos.z = cursor3d.z
+          }
         }
       }
     }
@@ -630,6 +856,29 @@ $(async function MAIN() {
     let tool = {
       spec:spec,
       colors:[]
+    }
+    
+    // If pickModes is specified as a string, expand it to an array.
+    if (typeof(spec.pickModes) == "string") {
+      switch(spec.pickModes) {
+        case "any":
+          spec.pickModes = ["xz", "xy", "yz", "pick"]
+          break
+        case "planar":
+          spec.pickModes = ["xz", "xy", "yz"]
+          break
+        default:
+          spec.pickModes = [spec.pickModes.split(" ")]
+          break
+      }
+    }
+
+    if (typeof(spec.spclassPick) == "string") {
+      spec.spclassPick = spec.spclassPick.split(" ")
+    }
+    
+    if (typeof(spec.spclassCoexist) == "string") {
+      spec.spclassCoexist = spec.spclassCoexist.split(" ")
     }
     
     // build the default preset for the tool
@@ -928,7 +1177,9 @@ $(async function MAIN() {
   defineTool({
     type:"wall",                            // object type indicator
     name:"Wall",                            // Name for reference and display in-editor
-    pickMode:"cube",                        // Pick unaligned unit cubes with integer coordinates
+    pickModes:["xz", "xy", "yz", "pick"],   // use all pickmodes, default to "xz"
+    alignMode:"none",                       // no alignment
+    pickOut:true,                           // If in mouse-ray pick mode, pick the space "on top" of the picked object
     spatialClass:"solid",                   // Tag used in-editor for picking and coexistance checks (not intended to be data)
     spclassPick:["solid"],                  // allow picking against objects of these classes
     spclassCoexist:[],                      // Objects that the defined object may coexist with
@@ -937,7 +1188,7 @@ $(async function MAIN() {
     template:{},                            // Put these properties in the template
     color:{                                 // Colorable object declaration
       amount:3,                             // Number of [defined] colors 
-      default:["white", "green", "blue"],                    // default for each defined color
+      default:["white", "green", "blue"],   // default for each defined color
       mutable:[true],                       // indicate which defined colors may be selected by User
       mainIndex:0,                          // "shorthand" color picking assigns to this entry in the color table
     },  
@@ -1067,10 +1318,6 @@ $(async function MAIN() {
       controlActive = false
       renderCTL.display.render()
     }
-    
-    //let mpos3d = pickPlanepos(renderCTL.display, evtman.mpos, sviewCTL.pickplane)
-    //debug_tip(`${tiptext}<br>
-    //Mouse position:  x=${mpos3d.x}, y=${mpos3d.y}, z=${mpos3d.z}`)
   }
   run()
 })

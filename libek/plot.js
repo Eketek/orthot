@@ -17,7 +17,7 @@ import { direction } from './direction.js'
 //    The normal vector of the intercepted face [of a unit-cube] at that position
 //    Closes orthogonal forward vector of the point of intersection (vector pointing from the center of the face to the point of intersection)
 // The computations involved are a simplified equivalent to raycasting against a set of collider cubes [arranged in a 3d matrix] in a physics engine
-plotLine = function(start, end, plot) {
+var plotLine = function(start, end, plot) {
   
   //unpack the arguments
   let startx = start.x
@@ -38,6 +38,12 @@ plotLine = function(start, end, plot) {
   diffx = Math.abs(diffx)
   diffy = Math.abs(diffy)
   diffz = Math.abs(diffz)
+  startx = Math.abs(startx)
+  starty = Math.abs(starty)
+  startz = Math.abs(startz)
+  endx = startx + diffx
+  endy = starty + diffy
+  endz = startz + diffz
   
   // prepare position and accumulator fields
   let intstartx = Math.floor(startx)
@@ -67,7 +73,7 @@ plotLine = function(start, end, plot) {
   // utility function to construct and submit a single output
   let doplot = function(up, fwd) {
   
-    coord = {
+    let coord = {
       // transform x,y,z from the simplified domain the plotter operates on back to the domain of the requested line
       x:intstartx + (posx-intstartx) * signx,
       y:intstarty + (posy-intstarty) * signy,

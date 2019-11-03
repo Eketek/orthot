@@ -5,7 +5,7 @@ import {
   Display, 
   load, loadMuch, loadZIP, fetchText,
   assignMaterials, getAsset, storeAsset, 
-  pickPlanepos, debug_tip 
+  debug_tip 
 } from '../libek/libek.js'
 import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
@@ -913,10 +913,6 @@ $(async function MAIN() {
       hg.yOFS = (prevCamPhi/Math.PI-0.4) * hgyscale
       hg.update()
     }
-
-    //let mpos3d = pickPlanepos(renderCTL.display, evtman.mpos, sviewCTL.pickplane)
-    //debug_tip(`${tiptext}<br>
-    //Mouse position:  x=${mpos3d.x}, y=${mpos3d.y}, z=${mpos3d.z}`)
   }
   run()
 

@@ -171,6 +171,10 @@ $(async function MAIN() {
   })
   sviewCTL.run()
   
+  // mrayDragOBJs is used by mouse-ray pickmode controller to avoid picking against objects placed during the current click & drag operation
+  //  (This makes click & drag useful for building things more interesting than a chain of blocks pointing directly at the camera)
+  let mrayDragOBJs
+  
   let PICKRAY_LENGTH = 50
   let recentPos = new THREE.Vector3(0,0,0)
   let pickmode = "xz"
@@ -634,6 +638,7 @@ $(async function MAIN() {
     obj.x = x
     obj.y = y
     obj.z = z
+    
     ctn = vxc.get(x,y,z)
     if (!ctn.contents) {
       ctn.contents = []
@@ -725,6 +730,9 @@ $(async function MAIN() {
             let spclasses = activeTool.spec.spclassPick
             if (ctn.contents) {
               for (let obj of ctn.contents) {
+                if (mrayDragOBJs && (mrayDragOBJs.indexOf(obj) != -1)) {
+                  continue
+                }
                 if (obj.spec && spclasses.indexOf(obj.spec.spatialClass) != -1) {
                   up = coord.up
                   forward = coord.forward
@@ -824,7 +832,9 @@ $(async function MAIN() {
       //obj.data.$.push(align.forward)
     //}
       // if an aligned object, append the alignment
-    
+    if (mrayDragOBJs) {
+      mrayDragOBJs.push(obj)
+    }
     put(obj, cursor3d.x, cursor3d.y, cursor3d.z)
   }
   
@@ -840,14 +850,18 @@ $(async function MAIN() {
       if (evt.vname == "cancel") {
         return
       }
-      if (pickmode != "mray") {
+      if (pickmode == "mray") {
+        //draw_debugline = true
+        if (!mrayDragOBJs || mrayDragOBJs.length != 0) {
+          mrayDragOBJs = []
+        }
+      }
+      else {
         recentPos.x = cursor3d.x
         recentPos.y = cursor3d.y
         recentPos.z = cursor3d.z
+        mrayDragOBJs = undefined
       }
-      //else {
-      //  draw_debugline = true
-      //}
       if (opspec.click) { opspec.click() }
       if (opspec.drag_evttype) {
         inner:

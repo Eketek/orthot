@@ -710,7 +710,6 @@ $(async function MAIN() {
         case "mray": {
           let mray = sviewCTL.mray
           let origin = mray.origin.clone()
-          origin.y += 1
           let ray_end = mray.direction.clone()
           ray_end.multiplyScalar(PICKRAY_LENGTH)
           ray_end.add(origin)

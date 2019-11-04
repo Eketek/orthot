@@ -49,9 +49,9 @@ var plotLine = function(start, end, plot) {
   let intstartx = Math.floor(startx)
   let intstarty = Math.floor(starty)
   let intstartz = Math.floor(startz)
-  let posx = intstartx
-  let posy = intstarty
-  let posz = intstartz
+  let posx = 0
+  let posy = 0
+  let posz = 0
   let accx = startx-intstartx
   let accy = starty-intstarty
   let accz = startz-intstartz
@@ -75,9 +75,9 @@ var plotLine = function(start, end, plot) {
   
     let coord = {
       // transform x,y,z from the simplified domain the plotter operates on back to the domain of the requested line
-      x:intstartx + (posx-intstartx) * signx,
-      y:intstarty + (posy-intstarty) * signy,
-      z:intstartz + (posz-intstartz) * signz,
+      x:Math.floor(start.x) + posx * signx,
+      y:Math.floor(start.y) + posy * signy,
+      z:Math.floor(start.z) + posz * signz,
       
       //attach the up vector (normal of the intercepted face)
       up:up,
@@ -205,7 +205,7 @@ var plotLine = function(start, end, plot) {
       }
       
       //If the best candidate position is out of the domain of the line, plotting is done
-      if ((posx+accx) > endx) {
+      if ((posx+accx) > diffx) {
         return
       }
       
@@ -254,7 +254,7 @@ var plotLine = function(start, end, plot) {
       }
       
       //If the best candidate position is out of the domain of the line, plotting is done
-      if ((posy+accy) > endy) {
+      if ((posy+accy) > diffy) {
         return
       }
       
@@ -279,7 +279,7 @@ var plotLine = function(start, end, plot) {
   else if (diffz != 0) {
     while (true) {
       posz += 1
-      if (posz > endz) {
+      if (posz > diffz) {
         return
       }
       if (!doplot(dirz)) {

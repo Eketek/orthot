@@ -1,4 +1,4 @@
-export { plotLine }
+export { plotLine, debugLine }
 import { direction } from './direction.js'
 
 // A 3-dimensional line plotter.
@@ -293,5 +293,86 @@ var plotLine = function(start, end, plot) {
     console.log("WARNING:  zero-length line plotted", start, end)
   }
 }
+
+let debugLine = function(start, end, plot) {
+  let obj = new THREE.Object3D()
+  let main_mat = new THREE.LineBasicMaterial( {color:"green", linewidth:3} )
+  let seg_mat = new THREE.LineBasicMaterial( {color:"red", linewidth:2} )
+  let pt_mat = new THREE.MeshStandardMaterial( {color:"blue" } )
+  let cube_mat = new THREE.MeshStandardMaterial( {color:"yellow", opacity:0.2, transparent:true } )
+  
+  let mark_line = function(mat, ... coords) {
+    let geom = new THREE.Geometry()
+    for (let coord of coords) {
+      geom.vertices.push( new THREE.Vector3(coord.x, coord.y, coord.z) )
+    }
+    obj.add(new THREE.Line(geom, mat))
+  }
+  
+  
+  let mark_intercept = function(... coords) {
+    for (let coord of coords) {
+      var geom = new THREE.SphereGeometry( 0.125, 8, 8 )
+      let sp = new THREE.Mesh(geom, pt_mat)
+      sp.position.copy(coord)
+      obj.add( sp )
+      
+    }
+  }
+  
+  let mark_position = function(... coords) {
+    for (let coord of coords) {
+      var geom = new THREE.BoxGeometry( 1,1,1 )
+      let cb = new THREE.Mesh(geom, cube_mat)
+      cb.position.copy(coord)
+      obj.add( cb )
+      console.log(cb)
+    }
+  }
+  
+  console.log("BEGIN DEBUG-LINE")
+  console.log("START:", start)
+  mark_line(main_mat, start, end)
+  
+  let prev = start
+  let _plot = function(coord) {
+    let realpos = { x:coord.x+coord.interceptX, y:coord.y+coord.interceptY, z:coord.z+coord.interceptZ }
+    mark_line(seg_mat, prev, realpos)
+    mark_intercept(realpos)
+    mark_position(coord)
+    prev = realpos
+    console.log(coord)
+    return plot(coord)
+  }
+  plotLine(start, end, _plot)
+  console.log("END:", end)
+  console.log("END DEBUG-LINE")
+  return obj
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

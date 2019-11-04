@@ -14,7 +14,7 @@ import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { direction } from '../libek/direction.js'
 import { BoxTerrain, DECAL_UVTYPE } from '../libek/gen.js'
 import { VxScene } from '../libek/scene.js'
-import { plotLine } from '../libek/plot.js'
+import { plotLine, debugLine } from '../libek/plot.js'
 
 // Global rendering properties & controls (Mainly, materials and managed shader properties)
 var renderCTL = window.rctl = {
@@ -691,6 +691,8 @@ $(async function MAIN() {
   cursor3d.mdl.add(cubeCursor)
   put(cursor3d,0,0,0)
   
+  let draw_debugline = false
+  let debug_obj
   {(async function Cursor3DControl () {
     let evtman = new NextEventManager()
     
@@ -713,10 +715,7 @@ $(async function MAIN() {
           ray_end.multiplyScalar(PICKRAY_LENGTH)
           ray_end.add(origin)
           
-          // Plot a line from the mouse position, outward from the camera
-          // (mouse position is the screen-space mouse coordinates, projected onto the camera's backplane)
-          plotLine(mray.origin, ray_end, (coord)=>{
-                    
+          let plot = function(coord) {
             //check the spatial class of each object at each plotted position against the ActiveTool spatial-class-pick list.
             //  If a match is found, then pick either the position of the object or the immediately adjacent position [along the picked face up vector]
             //  and cancel the plotting operation.
@@ -725,7 +724,6 @@ $(async function MAIN() {
             if (ctn.contents) {
               for (let obj of ctn.contents) {
                 if (obj.spec && spclasses.indexOf(obj.spec.spatialClass) != -1) {
-                  console.log("picked", obj)
                   up = coord.up
                   forward = coord.forward
                   mp3d = coord
@@ -758,7 +756,31 @@ $(async function MAIN() {
             }
             //continue the plotting operation
             return true
-          })
+          }
+          
+          // Plot a line from the mouse position, outward from the camera
+          // (mouse position is the screen-space mouse coordinates, projected onto the camera's backplane)
+          if (draw_debugline) {
+            if (debug_obj) {
+              vxc.scene.remove(debug_obj)
+              for (let ch of debug_obj.children) {
+                if (ch.isGeometry) {
+                  ch.dispose()
+                }
+                if (ch.material) {
+                  ch.material.dispose()
+                }
+              }
+            }
+            debug_obj = debugLine(mray.origin, ray_end, plot)
+            vxc.scene.add(debug_obj)
+            draw_debugline = false
+            controlActive = true
+          }
+          else {
+            plotLine(mray.origin, ray_end, plot)
+            controlActive = true
+          }
         } break
       } 
       
@@ -820,6 +842,9 @@ $(async function MAIN() {
         recentPos.x = cursor3d.x
         recentPos.y = cursor3d.y
         recentPos.z = cursor3d.z
+      }
+      else {
+        draw_debugline = true
       }
       if (opspec.click) { opspec.click() }
       if (opspec.drag_evttype) {

@@ -171,8 +171,7 @@ $(async function MAIN() {
   })
   sviewCTL.run()
   
-  
-  let PICKRAY_LENGTH = 10
+  let PICKRAY_LENGTH = 50
   let recentPos = new THREE.Vector3(0,0,0)
   let pickmode = "xz"
   
@@ -713,6 +712,10 @@ $(async function MAIN() {
           let ray_end = mray.direction.clone()
           ray_end.multiplyScalar(PICKRAY_LENGTH)
           ray_end.add(origin)
+          origin.x += 0.5
+          origin.z += 0.5
+          ray_end.x += 0.5
+          ray_end.z += 0.5
           
           let plot = function(coord) {
             //check the spatial class of each object at each plotted position against the ActiveTool spatial-class-pick list.
@@ -771,13 +774,13 @@ $(async function MAIN() {
                 }
               }
             }
-            debug_obj = debugLine(mray.origin, ray_end, plot)
+            debug_obj = debugLine(origin, ray_end, plot)
             vxc.scene.add(debug_obj)
             draw_debugline = false
             controlActive = true
           }
           else {
-            plotLine(mray.origin, ray_end, plot)
+            plotLine(origin, ray_end, plot)
             controlActive = true
           }
         } break
@@ -842,9 +845,9 @@ $(async function MAIN() {
         recentPos.y = cursor3d.y
         recentPos.z = cursor3d.z
       }
-      else {
-        draw_debugline = true
-      }
+      //else {
+      //  draw_debugline = true
+      //}
       if (opspec.click) { opspec.click() }
       if (opspec.drag_evttype) {
         inner:

@@ -18,43 +18,54 @@ import { direction } from './direction.js'
 //    Closes orthogonal forward vector of the point of intersection (vector pointing from the center of the face to the point of intersection)
 // The computations involved are a simplified equivalent to raycasting against a set of collider cubes [arranged in a 3d matrix] in a physics engine
 var plotLine = function(start, end, plot) {
-  
-  //unpack the arguments
-  let startx = start.x
-  let starty = start.y
-  let startz = start.z
-  let endx = end.x
-  let endy = end.y
-  let endz = end.z
-  
+    
   // convert vector format to absolute-value and sign
   //  The plotter operates in a simplified domain - uses a positive slope in all dimensions
-  let diffx = endx - startx
-  let diffy = endy - starty
-  let diffz = endz - startz
+  let diffx = end.x - start.x
+  let diffy = end.y - start.y
+  let diffz = end.z - start.z
   let signx = Math.sign(diffx)
   let signy = Math.sign(diffy)
   let signz = Math.sign(diffz)
   diffx = Math.abs(diffx)
   diffy = Math.abs(diffy)
   diffz = Math.abs(diffz)
-  startx = Math.abs(startx)
-  starty = Math.abs(starty)
-  startz = Math.abs(startz)
-  endx = startx + diffx
-  endy = starty + diffy
-  endz = startz + diffz
   
   // prepare position and accumulator fields
-  let intstartx = Math.floor(startx)
-  let intstarty = Math.floor(starty)
-  let intstartz = Math.floor(startz)
   let posx = 0
   let posy = 0
   let posz = 0
-  let accx = startx-intstartx
-  let accy = starty-intstarty
-  let accz = startz-intstartz
+  let accx = start.x%1
+  let accy = start.y%1
+  let accz = start.z%1
+  
+  // force the accumulator into range [0:1]
+  if (accx < 0) {
+    accx+=1
+  }
+  if (accy < 0) {
+    accy+=1
+  }
+  if (accz < 0) {
+    accz+=1
+  }
+  
+  // truncate the start coordinates [to be re-combined with the accumulator values for the output plots]
+  let ofsx = start.x-accx
+  let ofsy = start.y-accy
+  let ofsz = start.z-accz
+  
+  //Additionally, if any negative in any dimension, flip the corresponding accumulator to the other side
+  //  (product of successful shotgun debugging: after adding this adjustment, the plotted path aligned with the requested path in all cases)
+  if (signx == -1) {
+    accx = 1-accx
+  }
+  if (signy == -1) {
+    accy = 1-accy
+  }
+  if (signz == -1) {
+    accz = 1-accz
+  }
   
   // output "up" vectors (normals of front-faces inrtersected by the line)
   //  (these are the inverses of [orthogonal] directions the line is pointing toward)
@@ -75,21 +86,23 @@ var plotLine = function(start, end, plot) {
   
     let coord = {
       // transform x,y,z from the simplified domain the plotter operates on back to the domain of the requested line
-      x:Math.floor(start.x) + posx * signx,
-      y:Math.floor(start.y) + posy * signy,
-      z:Math.floor(start.z) + posz * signz,
+      x:ofsx + posx * signx,
+      y:ofsy + posy * signy,
+      z:ofsz + posz * signz,
       
       //attach the up vector (normal of the intercepted face)
       up:up,
     }
     
-    //local position of the intercept
+    // local intercept position
+    coord.interceptX = signx > 0 ? accx : 1-accx
+    coord.interceptY = signy > 0 ? accy : 1-accy
+    coord.interceptZ = signz > 0 ? accz : 1-accz
+    
+    //local intercept position offset for the purpose of forward vector calculation
     let ix = signx > 0 ? accx-0.5 : 0.5-accx
     let iy = signy > 0 ? accy-0.5 : 0.5-accy
     let iz = signz > 0 ? accz-0.5 : 0.5-accz
-    coord.interceptX = ix
-    coord.interceptY = iy
-    coord.interceptZ = iz
     
     // Find the best forward vector and attach it to the output
     //   (orthogonal direction which is closest to the vector originating at the center of the intercepted face and pointing toward the intercept)
@@ -304,7 +317,7 @@ let debugLine = function(start, end, plot) {
   let mark_line = function(mat, ... coords) {
     let geom = new THREE.Geometry()
     for (let coord of coords) {
-      geom.vertices.push( new THREE.Vector3(coord.x, coord.y, coord.z) )
+      geom.vertices.push( new THREE.Vector3(coord.x-0.5, coord.y, coord.z-0.5) )
     }
     obj.add(new THREE.Line(geom, mat))
   }
@@ -314,7 +327,7 @@ let debugLine = function(start, end, plot) {
     for (let coord of coords) {
       var geom = new THREE.SphereGeometry( 0.125, 8, 8 )
       let sp = new THREE.Mesh(geom, pt_mat)
-      sp.position.copy(coord)
+      sp.position.set(coord.x-0.5,coord.y,coord.z-0.5)
       obj.add( sp )
       
     }
@@ -324,9 +337,9 @@ let debugLine = function(start, end, plot) {
     for (let coord of coords) {
       var geom = new THREE.BoxGeometry( 1,1,1 )
       let cb = new THREE.Mesh(geom, cube_mat)
-      cb.position.copy(coord)
+      //cb.position.copy(coord)
+      cb.position.set(coord.x,coord.y+0.5,coord.z)
       obj.add( cb )
-      console.log(cb)
     }
   }
   

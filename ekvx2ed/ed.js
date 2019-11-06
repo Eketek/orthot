@@ -172,8 +172,11 @@ $(async function MAIN() {
   sviewCTL.run()
   
   // mrayDragOBJs is used by mouse-ray pickmode controller to avoid picking against objects placed during the current click & drag operation
+  // The list is initalized when LMB is pressed and reset when LMB is released or if click & drag is cancelled
   //  (This makes click & drag useful for building things more interesting than a chain of blocks pointing directly at the camera)
   let mrayDragOBJs
+  //Maximum amount of objects to avoid picking against (if limit is reached, it starts removing the holdest objects in the list)
+  let MrayDragLimit = 4
   
   let PICKRAY_LENGTH = 50
   let recentPos = new THREE.Vector3(0,0,0)
@@ -834,6 +837,9 @@ $(async function MAIN() {
       // if an aligned object, append the alignment
     if (mrayDragOBJs) {
       mrayDragOBJs.push(obj)
+      if (mrayDragOBJs.length >= MrayDragLimit) {
+        mrayDragOBJs.shift(1)
+      }
     }
     put(obj, cursor3d.x, cursor3d.y, cursor3d.z)
   }

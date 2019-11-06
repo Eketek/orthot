@@ -1002,7 +1002,7 @@ $(async function MAIN() {
   let toDecalParams = function(decalSpec) {
     let k = JSON.stringify(decalSpec)
     if (ddefs[k]) {
-      return _ddefs[k]
+      return ddefs[k]
     }
     let ddef
     if (decalSpec.tile) {
@@ -1221,6 +1221,81 @@ $(async function MAIN() {
     */
   }
   
+  edCTL.configure = (async function(cfg) {
+    if (typeof(cfg) == "string") {
+      cfg = JSON.parse(cfg)
+    }
+    let appname = cfg.AppName
+    if (!appname) {
+      appname = "SomeoneDidntAssignThe_AppName"
+    }
+    
+    edCTL.AppName = appname
+    edCTL.DataVersion = cfg.DataVersion
+    
+    let rscver = cfg.EdrscVersion|0
+    let prev_ver = 0|parseInt(window.localStorage[appname+"EDVER"])
+    let reloadOPT = (rscver > prev_ver) ? {cache:"no-store"} : undefined
+    window.localStorage[appname+"EDVER"] = rscver
+    
+    if (cfg.Resources) {
+      try {
+        let update = async function(propname, loadit) {
+          let result = await loadit(reloadOPT)
+          return result
+        }
+        
+        let promises = []
+        let textureRefs = []
+        for (let rscname in (cfg.Resources)) {
+          let data = cfg.Resources[rscname]
+          if (data.type == "texture") {
+            textureRefs.push({
+              name:rscname,
+              url:data.src,
+              properties:TextureProps
+            })
+          }
+        }
+        if (textureRefs.length > 0) {
+          promises.push(
+            update(appname, (fetchOPTS)=>{
+              return loadMuch( edCTL.assets, fetchOPTS, textureRefs )
+            }),
+          )
+        }
+        
+        // Whene everything is loaded, update local storage with the versions of the cached files
+        await Promise.all(promises)
+        console.log("Loaded Ekvxed2 app-resources")
+      }
+      catch (err) {
+        console.log("ERROR loading app-resources:", err)
+      }
+    }
+    
+    if (cfg.Tools) {
+      for (let tooldef of cfg.Tools) {
+        if (tooldef.extend) {
+          tooldef = Object.assign({}, cfg.AbstractTools[tooldef.extend], tooldef)
+          defineTool(tooldef)
+        }
+        else {
+          defineTool(tooldef)
+        }
+        if (tooldef.default) {
+          setTool(tooldef.name)
+        }
+        
+        console.log("TDEF:", tooldef)
+      }
+    }
+  }).bind(this)
+  
+  if (document.DEFAULT_EDITOR_CFG) {
+    edCTL.configure(document.DEFAULT_EDITOR_CFG)
+  }
+  /*
   defineTool({
     type:"wall",                            // object type indicator
     name:"Wall",                            // Name for reference and display in-editor
@@ -1265,7 +1340,7 @@ $(async function MAIN() {
     lockedParams:{}                         // immutable arbitrary properties to add to all templates
   })
   setTool("Wall")
-  
+  */
   let serialize = function() {
     let o = {
       surfaceDefs:surfaceDefs,

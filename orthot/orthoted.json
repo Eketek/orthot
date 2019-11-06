@@ -1,0 +1,130 @@
+{
+  "AppName":"Orthot",
+  "DataVersion":1,
+  "EdrscVersion":1,
+  "Resources":{
+    "AppIcons": {
+      "type":"texture",
+      "src":"assets/textures/orthot_editoricons.png",
+      "NumRows":16,
+      "NumCols":16,
+      "TileWidth":48,
+      "TileHeight":22
+    },
+    "BorderImg":{
+      "type":"texture",
+      "src":"assets/textures/wall_8bit_fg.png",
+      "NumRows":16,
+      "NumCols":16,
+      "TileWidth":32,
+      "TileHeight":32
+    },
+    "PatternImg":{
+      "type":"texture",
+      "src":"assets/textures/patterns.png",
+      "NumRows":8,
+      "NumCols":8,
+      "TileWidth":64,
+      "TileHeight":64
+    }
+  },
+  "AbstractTools":{
+    "Wall":{
+      "type":"wall",
+      "name":"Wall",
+      "pickModes":["xz", "xy", "yz", "mray"],
+      "alignMode":"none",
+      "pickOut":true,
+      "spatialClass":"solid",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "planarPick":true,
+      "routine":"buildcube",
+      "template":{},
+      "terrain":{
+        "primary":{
+          "all":{
+            "eightbit":true,
+            "layout":"grid",
+            "gridWidth":1,
+            "gridHeight":1,
+            "block":0
+          }
+        },
+        "decal":{
+          "all":{
+            "tile":true,
+            "layout":"tiles",
+            "width":8,
+            "height":8,
+            "pickrand_init":true,
+            "randmin":0,
+            "randmax":6
+          }
+        }
+      },
+      "params":{},
+      "lockedParams":{}
+    }
+  },
+  "Tools":[
+    {
+      "name":"Wall-OneColor",
+      "extend":"Wall",
+      "default":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":1,
+        "col":0
+      },
+      "color":{
+        "amount":1,
+        "default":["white"],
+        "mutable":[true],
+        "mainIndex":0
+      }
+    },
+    {
+      "name":"Wall-ThreeColors",
+      "extend":"Wall",
+      "icon":{
+        "sheet":"AppIcons",
+        "row":1,
+        "col":1
+      },
+      "color":{
+        "amount":3,
+        "default":["white", "yellow", "orange"],
+        "mutable":[true],
+        "mainIndex":0
+      }
+    },
+    {
+      "name":"Wall-SixColors",
+      "extend":"Wall",
+      "default":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":1,
+        "col":2
+      },
+      "color":{
+        "amount":6,
+        "default":["white", "yellow", "green", "orange", "lightblue", "white"],
+        "mutable":[true],
+        "mainIndex":0
+      }
+    }
+  ]
+}
+
+
+
+
+
+
+
+
+
+
+

@@ -1,3 +1,6 @@
-15-28 Oct 2019
-  ongoing development: Ekvx2ed
-  various internal fixes
+6 Nov 2019
+  Tool specifications are now loaded from a JSON-formatted configuration file.
+    (intent here is to mostly de-couple EkvxEd from Orthot, to make it a bit easier to turn it into a standalone volumetric layout and modelling tool)
+
+15 Oct 2019 - 5 Nov 2019
+  Initial development of EkvxEd2.

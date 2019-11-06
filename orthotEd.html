@@ -9,6 +9,14 @@
     <script src="lib/jszip.js"></script>
 
     <script type="module" src="ekvx2ed/ed.js"></script>
+    
+    <script> 
+      (async function f() {
+        let resp = await fetch("/orthot/orthoted.json", {cache:"no-store"})
+        document.DEFAULT_EDITOR_CFG = JSON.parse(await resp.text())
+      })();
+    </script>
+  </head>
   <body>
     <div class="mainblock section">
      <span class="name" id="NameDisp"> Orthot III Puzzle Editor </span>

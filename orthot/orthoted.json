@@ -32,6 +32,7 @@
     "Wall":{
       "type":"wall",
       "name":"Wall",
+      "shortname":"Wall",
       "pickModes":["xz", "xy", "yz", "mray"],
       "alignMode":"none",
       "pickOut":true,

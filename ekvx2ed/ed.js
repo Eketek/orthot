@@ -228,13 +228,13 @@ $(async function MAIN() {
     ctx.fillRect(0,0,52,52)
     ctx.strokeRect(2,2,49,49)
     
-    let src
-    if (sheet == "general") {
-      src = ectl.assets.editoricons.image
-    }
-    else {
+    let src = edCTL.assets[sheet].image
+    //if (sheet == "general") {
+    //  src = ectl.assets.editoricons.image
+    //}
+    //else {
       //src = ectl.assets.appicons.image
-    }
+    //}
     
     let draw = function() {
       if (activating) {
@@ -280,8 +280,9 @@ $(async function MAIN() {
       if (typeof(value) == "function") {
         value()
       }
-      else {
+      else if (typeof(value) == "string") {
         // set active tool
+        setTool(value)
       }
     })
     on($btn, "mouseup", ()=> {
@@ -317,10 +318,10 @@ $(async function MAIN() {
     pickplane.constant *= -1
   }
   
-  addEditorBTN("MRAY", "Pick against object under mouse cursor", setMraypickmode, false, "options", "pickmode", "general", 0, 0, 40, 5)
-  addEditorBTN("XZ", "Pick against an XZ plane", setXZpickmode, true, "options", "pickmode", "general", 0, 1, 40, 5)
-  addEditorBTN("XY", "Pick against an XY plane", setXYpickmode, false, "options", "pickmode", "general", 0, 2, 40, 5)
-  addEditorBTN("YZ", "Pick against an YZ plane", setYZpickmode, false, "options", "pickmode", "general", 0, 3, 40, 5)
+  addEditorBTN("MRAY", "Pick against object under mouse cursor", setMraypickmode, false, "options", "pickmode", "editoricons", 0, 0, 40, 5)
+  addEditorBTN("XZ", "Pick against an XZ plane", setXZpickmode, true, "options", "pickmode", "editoricons", 0, 1, 40, 5)
+  addEditorBTN("XY", "Pick against an XY plane", setXYpickmode, false, "options", "pickmode", "editoricons", 0, 2, 40, 5)
+  addEditorBTN("YZ", "Pick against an YZ plane", setYZpickmode, false, "options", "pickmode", "editoricons", 0, 3, 40, 5)
 
   on($("#foldcommandsBTN"), "click", ()=>{ $("#commands").toggle()})
   on($("#foldtoolsBTN"), "click", ()=>{ $("#tools").toggle()})
@@ -969,6 +970,22 @@ $(async function MAIN() {
     
     //store the tool
     tools[spec.name] = tool
+    
+    
+  //let addEditorBTN = edCTL.addEditorBTN = function(name, desc, value, init_active, position, activeClass, sheet, row, col, hue, hdev) {
+  //addEditorBTN("MRAY", "Pick against object under mouse cursor", setMraypickmode, false, "options", "pickmode", "editoricons", 0, 0, 40, 5)
+  
+    addEditorBTN(
+      spec.shortname ? spec.shortname : spec.name, 
+      spec.desc ? spec.desc : spec.name,
+      spec.name, 
+      false, 
+      "tools", 
+      "*", 
+      spec.icon.sheet, spec.icon.row, spec.icon.col, 
+      275, 5
+    )
+    
   }
   
   let setTool = function(name) {

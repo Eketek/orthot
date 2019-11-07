@@ -536,7 +536,7 @@ $(async function MAIN() {
     numHues = clamp(Number.parseFloat($("#numHuesTA")[0].value), 0, 360)
     for (let l = 0; l < numHues; l++) {      
       _col.setHSL(0, 0, l/(numHues-1))
-      paletteBTNS.push(new colorBTN({ loc:"palleteColors", color:_col.getStyle(), small:true }))
+      paletteBTNS.push(new colorBTN({ loc:"palleteColors", color:_col.getStyle(), small:true, setRecent:true }))
       count++
       if (count > 1800) {
         return

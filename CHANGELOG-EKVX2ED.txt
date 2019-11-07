@@ -1,6 +1,7 @@
 7 Nov 2019
   Reset mray pickmode memory on mouse release
   Add UI buttons to select the active tool.
+  Gray color-buttons now update the "recent colors" list.
 
 6 Nov 2019
   Tool specifications are now loaded from a JSON-formatted configuration file.

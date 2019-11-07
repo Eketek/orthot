@@ -1,3 +1,6 @@
+7 Nov 2019
+  Reset mray pickmode memory on mouse release
+
 6 Nov 2019
   Tool specifications are now loaded from a JSON-formatted configuration file.
     (intent here is to mostly de-couple EkvxEd from Orthot, to make it a bit easier to turn it into a standalone volumetric layout and modelling tool)

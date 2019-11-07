@@ -878,6 +878,9 @@ $(async function MAIN() {
               if (opspec.cancel) { opspec.cancel() }
               return
             case "lmb_up":
+              if (!mrayDragOBJs || mrayDragOBJs.length != 0) {
+                mrayDragOBJs = []
+              }
               if (opspec.release) { opspec.release() }
               break inner
             case opspec.drag_evttype:

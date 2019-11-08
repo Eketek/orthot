@@ -714,7 +714,7 @@ $(async function MAIN() {
     let evtman = new NextEventManager()
     
     while (true) {
-      let evt = await evtman.next(disp_elem, "mousemove", document, ".wasd arrows")
+      let evt = await evtman.next(disp_elem, "mousemove", document, ".wasd arrows", edCTL.event, "refresh")
       //console.log(evt)
       let mp3d, up, forward
       
@@ -747,7 +747,7 @@ $(async function MAIN() {
                 if (mrayDragPOSs && (mrayDragPOSs.indexOf(strpos) != -1)) {
                   continue
                 }
-                if ((spclasses == "*") || (obj.spec && (spclasses.indexOf(obj.spec.spatialClass) != -1))) {
+                if ((!obj.isEditorUI) && ((spclasses == "*") || (obj.spec && (spclasses.indexOf(obj.spec.spatialClass) != -1)))) {
                   up = coord.up
                   forward = coord.forward
                   mp3d = coord
@@ -946,6 +946,7 @@ $(async function MAIN() {
                 mrayDragPOSs = []
               }
               if (opspec.release) { opspec.release() }
+              edCTL.event.dispatchEvent( new Event("refresh"))
               break inner
             case opspec.drag_evttype:
               if (opspec.drag) { opspec.drag() }

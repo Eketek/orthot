@@ -1,3 +1,7 @@
+8 Nov 2019
+  Add a block-eraser tool
+  Force a 3d cursor update after the "left-mouse-button-up" tool operation (immediate cursor updates in mouse-ray pickmode)
+
 7 Nov 2019
   Reset mray pickmode memory on mouse release
   Add UI buttons to select the active tool.

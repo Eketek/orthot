@@ -36,6 +36,7 @@
       "pickModes":["xz", "xy", "yz", "mray"],
       "alignMode":"none",
       "pickOut":true,
+      "cursorModel":"CubeCursor",
       "spatialClass":"solid",
       "spclassPick":["solid"],
       "spclassCoexist":[],

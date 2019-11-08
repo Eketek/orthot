@@ -4,7 +4,7 @@ import {
   tt, initLIBEK, 
   Display, 
   load, loadMuch, loadZIP, fetchText,
-  assignMaterials, getAsset, storeAsset, 
+  assignMaterials, getAsset, releaseAsset, storeAsset, 
   pickAgainstPlane, debug_tip 
 } from '../libek/libek.js'
 import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
@@ -140,11 +140,23 @@ $(async function MAIN() {
 
   let markmats = [{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
   let cursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
+  let erasecursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}, {color:"red", emissive:"red", emissiveIntensity:0.333}]
 
   assignMaterials(edCTL.assets.CubeMark, markmats)
   assignMaterials(edCTL.assets.FaceMark, markmats)
   assignMaterials(edCTL.assets.CubeCursor, cursormats)
   assignMaterials(edCTL.assets.FaceCursor, cursormats)
+  assignMaterials(edCTL.assets.EraseCubeCursor, erasecursormats)
+  assignMaterials(edCTL.assets.EraseFaceCursor, erasecursormats)
+  
+  {  
+    // a nearly opaque black cube to cover "erased" objects [prior to actual erasure]
+    let shadeGEOM = new THREE.BoxGeometry( 1.05, 1.05, 1.05 );
+    shadeGEOM.translate(0,0.525,0)
+    let shadeMAT = new THREE.MeshStandardMaterial({color:"black", transparent:true, opacity:0.8})
+    let shadeOBJ = new THREE.Mesh(shadeGEOM, shadeMAT)
+    storeAsset(edCTL.assets, "ShadeCube", shadeOBJ)
+  }
   
   let pickplane = new THREE.Plane(direction.vector.UP.clone(), 0)
   
@@ -171,10 +183,10 @@ $(async function MAIN() {
   })
   sviewCTL.run()
   
-  // mrayDragOBJs is used by mouse-ray pickmode controller to avoid picking against objects placed during the current click & drag operation
+  // mrayDragPOSs is used by mouse-ray pickmode controller to avoid picking against objects placed during the current click & drag operation
   // The list is initalized when LMB is pressed and reset when LMB is released or if click & drag is cancelled
   //  (This makes click & drag useful for building things more interesting than a chain of blocks pointing directly at the camera)
-  let mrayDragOBJs
+  let mrayDragPOSs
   //Maximum amount of objects to avoid picking against (if limit is reached, it starts removing the holdest objects in the list)
   let MrayDragLimit = 4
   
@@ -630,7 +642,7 @@ $(async function MAIN() {
   vxc.scene.add(dlight)
   
   renderCTL.display.scene.add(vxc.scene)
-  
+    
   let put = function(obj, x,y,z, ld=false) {
     let ctn = vxc.get(obj.x,obj.y,obj.z)
     if (ctn.contents) {
@@ -649,7 +661,6 @@ $(async function MAIN() {
     }
     ctn.contents.push(obj)
     if (obj.terrainID) {
-      console.log(obj)
       if (ld) {
         vxc.loadTerrain(x,y,z, obj.terrainID)
       }
@@ -667,12 +678,12 @@ $(async function MAIN() {
     
   }
   
-  let remove = function(obj) {
+  let remove = function(obj, x,y,z) {
     if (obj.terrainID) {
       vxc.setTerrain(x,y,z, 0)
-      return
+      //return
     }
-    let ctn = vxc.get(obj.x,obj.y,obj.z)
+    let ctn = vxc.get(x,y,z)
     if (ctn.contents) {
       let idx = ctn.contents.indexOf(obj)
       if (idx != -1) {
@@ -683,20 +694,18 @@ $(async function MAIN() {
       if (obj.mdl.parent) {
         obj.mdl.parent.remove(obj)
       }
-    }
-    let idx = data.objects.indexOf(obj)
-    if (idx != -1) {
-      data.objects.splice(idx, 1)
+      releaseAsset(edCTL.assets, obj.mdl)
     }
   }
   
   let cursor3d = {
     x:0,y:0,z:0,
-    isDecorative:true,
+    isEditorUI:true,
     mdl:new THREE.Object3D()
   }
-  let cubeCursor = getAsset(edCTL.assets, "CubeCursor")
-  cursor3d.mdl.add(cubeCursor)
+  
+  let cursorMDL = getAsset(edCTL.assets, "CubeCursor")
+  cursor3d.mdl.add(cursorMDL)
   put(cursor3d,0,0,0)
   
   let draw_debugline = false
@@ -733,11 +742,12 @@ $(async function MAIN() {
             let ctn = vxc.get(coord.x, coord.y, coord.z)
             let spclasses = activeTool.spec.spclassPick
             if (ctn.contents) {
+              let strpos = `${coord.x},${coord.y},${coord.z}`
               for (let obj of ctn.contents) {
-                if (mrayDragOBJs && (mrayDragOBJs.indexOf(obj) != -1)) {
+                if (mrayDragPOSs && (mrayDragPOSs.indexOf(strpos) != -1)) {
                   continue
                 }
-                if (obj.spec && spclasses.indexOf(obj.spec.spatialClass) != -1) {
+                if ((spclasses == "*") || (obj.spec && (spclasses.indexOf(obj.spec.spatialClass) != -1))) {
                   up = coord.up
                   forward = coord.forward
                   mp3d = coord
@@ -836,17 +846,70 @@ $(async function MAIN() {
       //obj.data.$.push(align.forward)
     //}
       // if an aligned object, append the alignment
-    if (mrayDragOBJs) {
-      mrayDragOBJs.push(obj)
-      if (mrayDragOBJs.length >= MrayDragLimit) {
-        mrayDragOBJs.shift(1)
+    if (mrayDragPOSs) {
+      let strpos = `${cursor3d.x},${cursor3d.y},${cursor3d.z}`
+      mrayDragPOSs.push(strpos)
+      if (mrayDragPOSs.length > MrayDragLimit) {
+        mrayDragPOSs.shift(1)
       }
     }
     put(obj, cursor3d.x, cursor3d.y, cursor3d.z)
   }
   
+  let remLocs = []
+  let erase = function() {
+    let ctn = vxc.get(cursor3d.x, cursor3d.y, cursor3d.z)
+    if (ctn && ctn.contents) {
+      remLocs.push(ctn)
+      if (pickmode == "mray") {
+      
+        let shadeOBJ = {
+          x:cursor3d.x,y:cursor3d.y,z:cursor3d.z,
+          mdl:getAsset(edCTL.assets, "ShadeCube")
+        }
+        put(shadeOBJ,cursor3d.x, cursor3d.y, cursor3d.z)
+        
+        if (remLocs.length > MrayDragLimit) {
+          removeObjects(1)
+        }
+      }
+      else {
+        removeObjects()
+      }
+    }
+  }
+  let finishErase = function() {
+    erase()
+    removeObjects()
+  }
+  
+  let removeObjects = function(amt=99999) { 
+    for (let i = 0; i < amt; i++) {
+      if (remLocs.length == 0) {
+        return
+      }
+      let ctn = remLocs.shift(1)
+      for (let j = ctn.contents.length-1; j >= 0; j--) {
+        let obj = ctn.contents[j]
+        if (!obj.isEditorUI) {
+          remove(ctn.contents[j], ctn.x, ctn.y, ctn.z)
+        }
+      }
+    }
+  }
+  
   let opSpecs = {
-    buildcube: { click:build, drag:build, drag_evttype:"mousemove_cube" }
+    buildcube:{ 
+      click:build, 
+      drag:build,
+      drag_evttype:"mousemove_cube" 
+    },
+    erase:{
+      click:erase, 
+      drag:erase,
+      release:finishErase,
+      drag_evttype:"mousemove_cube"
+    }
   }
   
   let handleInput = async function(opspec) {
@@ -859,15 +922,15 @@ $(async function MAIN() {
       }
       if (pickmode == "mray") {
         //draw_debugline = true
-        if (!mrayDragOBJs || mrayDragOBJs.length != 0) {
-          mrayDragOBJs = []
+        if (!mrayDragPOSs || mrayDragPOSs.length != 0) {
+          mrayDragPOSs = []
         }
       }
       else {
         recentPos.x = cursor3d.x
         recentPos.y = cursor3d.y
         recentPos.z = cursor3d.z
-        mrayDragOBJs = undefined
+        mrayDragPOSs = undefined
       }
       if (opspec.click) { opspec.click() }
       if (opspec.drag_evttype) {
@@ -879,8 +942,8 @@ $(async function MAIN() {
               if (opspec.cancel) { opspec.cancel() }
               return
             case "lmb_up":
-              if (!mrayDragOBJs || mrayDragOBJs.length != 0) {
-                mrayDragOBJs = []
+              if (!mrayDragPOSs || mrayDragPOSs.length != 0) {
+                mrayDragPOSs = []
               }
               if (opspec.release) { opspec.release() }
               break inner
@@ -1012,6 +1075,11 @@ $(async function MAIN() {
       }
     }
     updateColors()
+    
+    cursor3d.mdl.remove(cursorMDL)
+    releaseAsset(edCTL.assets, cursorMDL)
+    cursorMDL = getAsset(edCTL.assets, activeTool.spec.cursorModel)
+    cursor3d.mdl.add(cursorMDL)
   }
   
   // BoxTerrain configuration section
@@ -1315,6 +1383,23 @@ $(async function MAIN() {
   if (document.DEFAULT_EDITOR_CFG) {
     edCTL.configure(document.DEFAULT_EDITOR_CFG)
   }
+  
+  defineTool({
+    type:"erase",
+    name:"Erase",
+    pickModes:["xz", "xy", "yz", "pick"],
+    alignMode:"none",
+    pickIn:true,
+    spclassPick:"*",
+    routine:"erase",
+    cursorModel:"EraseCubeCursor",
+    icon:{
+      sheet:"editoricons",
+      row:1,
+      col:1
+    },
+  })
+  
   /*
   defineTool({
     type:"wall",                            // object type indicator
@@ -1325,7 +1410,6 @@ $(async function MAIN() {
     spatialClass:"solid",                   // Tag used in-editor for picking and coexistance checks (not intended to be data)
     spclassPick:["solid"],                  // allow picking against objects of these classes
     spclassCoexist:[],                      // Objects that the defined object may coexist with
-    planarPick:true,                        // allow picking against XY, XZ, and YZ planes
     routine:"buildcube",                    // Input handler to run while tool is active
     template:{},                            // Put these properties in the template
     color:{                                 // Colorable object declaration

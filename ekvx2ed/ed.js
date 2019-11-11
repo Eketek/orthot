@@ -659,6 +659,7 @@ $(async function MAIN() {
     boxterrain:bxtbldr,
     chunks_per_tick:4
   })
+  let UniqueObjects = {}
   
   var amblCol = new THREE.Color("white")
   amblCol.setHSL ( 0.125, 1, 0.5 )
@@ -928,11 +929,22 @@ $(async function MAIN() {
       }
     }
   }
-  
   let build = function() {
-    evict()
-    controlActive = true
+    evict() 
     let obj = {}
+    let uprop = activeTool.spec.unique
+    if (uprop) {
+      if (typeof(uprop) != "string") {
+        uprop = "type"
+      }
+      let other = UniqueObjects[activeTool.spec[uprop]]
+      if (other) {
+        console.log("remove?", other)
+        remove(other, other.x, other.y, other.z)
+      }
+      UniqueObjects[activeTool.spec[uprop]] = obj
+    }
+    controlActive = true
     obj.data = {}
     for (let k in activeTool.spec.params) {
       if (obj[k] == undefined) {

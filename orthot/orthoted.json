@@ -179,9 +179,10 @@
     {
       "extend":"HorizObject",
       "type":"start",
-      "name":"Player-Start",
+      "name":"Player-Start", 
       "shortname":"Start",
       "model":"man",
+      "unique":"type",
       "mutablecolors":true,
       "icon":{
         "sheet":"AppIcons",

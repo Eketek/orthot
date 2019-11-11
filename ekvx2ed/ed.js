@@ -977,19 +977,33 @@ $(async function MAIN() {
       
       // if an aligned object, append the alignment
       if ((activeTool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
-        let _align = {
-          up:direction.code.UP,
-          forward:direction.code.NORTH
-        }
+        let up, forward
         switch(activeTool.spec.alignMode) {
+        
+          //Horizontal mode:  
+          //  up vector is locked to World-UP, 
+          //  If the cursor is horizontal (World-UP or World-DOWN), the cursor forward vector is retained
+          //  If the cursor is vertical, the cursor's up vector is used as forward (point object away from a vertical surface behind the cursor)
           case "horiz":
           case "horizontal":
-          
+            up = direction.code.UP
+            if ( (cursor3d.up == direction.code.UP) || (cursor3d.up == direction.code.DOWN) ) {
+              forward = cursor3d.forward
+            }
+            else {
+              forward = cursor3d.up
+            }
+            break
+          case "any":
+          case "*":
+            up = cursor3d.up
+            forward = cursor3d.forward
+            break
         }
-        obj.data.$.push(cursor3d.up)
-        obj.data.$.push(cursor3d.forward)
+        obj.data.$.push(up)
+        obj.data.$.push(forward)
         let orientation = {}
-        setOrientation(orientation, cursor3d.forward, cursor3d.up)
+        setOrientation(orientation, forward, up)
         mdl.position.copy(orientation.position)
         mdl.setRotationFromEuler(orientation.rotation)
       }

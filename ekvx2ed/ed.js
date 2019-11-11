@@ -897,7 +897,7 @@ $(async function MAIN() {
   })()}
   
   // If any object(s) that conflict with the active tool are present at the cursor position, delete them
-  let evict = function() {  
+  let evict = function(up) {  
     let ctn = vxc.get(cursor3d.x, cursor3d.y, cursor3d.z)
     if (ctn.contents) {
       let coexistWith = activeTool.spec.spclassCoexist
@@ -914,9 +914,9 @@ $(async function MAIN() {
               continue
             }
           }
-          // If an attachment tool, but the object is not at the cursor position, ignore it
+          // If an attachment tool, but the object is not at the expected position, ignore it
           else {
-            if (cursor3d.up != obj.up) {
+            if (up != obj.up) {
               continue
             }
           }
@@ -930,7 +930,33 @@ $(async function MAIN() {
     }
   }
   let build = function() {
-    evict() 
+    let up, forward
+    // if an aligned object, determine up and forward vectors
+    if ((activeTool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
+      switch(activeTool.spec.alignMode) {
+      
+        //Horizontal mode:  
+        //  up vector is locked to World-UP, 
+        //  If the cursor is horizontal (World-UP or World-DOWN), the cursor forward vector is retained
+        //  If the cursor is vertical, the cursor's up vector is used as forward (point object away from a vertical surface behind the cursor)
+        case "horiz":
+        case "horizontal":
+          up = direction.code.UP
+          if ( (cursor3d.up == direction.code.UP) || (cursor3d.up == direction.code.DOWN) ) {
+            forward = cursor3d.forward
+          }
+          else {
+            forward = cursor3d.up
+          }
+          break
+        case "any":
+        case "*":
+          up = cursor3d.up
+          forward = cursor3d.forward
+          break
+      }
+    }
+    evict(up) 
     let obj = {}
     let uprop = activeTool.spec.unique
     if (uprop) {
@@ -975,31 +1001,7 @@ $(async function MAIN() {
       assignMaterials(mdl, mats)
       obj.data.materials = activeTool.colors
       
-      // if an aligned object, append the alignment
       if ((activeTool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
-        let up, forward
-        switch(activeTool.spec.alignMode) {
-        
-          //Horizontal mode:  
-          //  up vector is locked to World-UP, 
-          //  If the cursor is horizontal (World-UP or World-DOWN), the cursor forward vector is retained
-          //  If the cursor is vertical, the cursor's up vector is used as forward (point object away from a vertical surface behind the cursor)
-          case "horiz":
-          case "horizontal":
-            up = direction.code.UP
-            if ( (cursor3d.up == direction.code.UP) || (cursor3d.up == direction.code.DOWN) ) {
-              forward = cursor3d.forward
-            }
-            else {
-              forward = cursor3d.up
-            }
-            break
-          case "any":
-          case "*":
-            up = cursor3d.up
-            forward = cursor3d.forward
-            break
-        }
         obj.data.$.push(up)
         obj.data.$.push(forward)
         let orientation = {}

@@ -623,10 +623,7 @@ $(async function MAIN() {
   let updateColors = function() {
     if (activeTool) {
       if (activeTool.spec.terrain) {
-        activeTool.terrainID = bxtsfcdefiners[activeTool.spec.terrain.name](activeTool.colors)
-      }
-      else if (activeTool.mesh) {
-        // use a soon-to-be material generator to update mesh materials
+        activeTool.terrainID = boxterrainDefiners[activeTool.spec.terrain.name](activeTool.colors)
       }
     }
     
@@ -646,6 +643,22 @@ $(async function MAIN() {
     $("#colorOutline")[0].style["border-image"] = cssStr
   }
   
+  let btnfunc = function(location, btntext, func) {
+    let $btn = $('<span class="btn_neutral">')
+    $btn.text(btntext)
+    let $loc = $("#" + location)
+    on($btn, "click", func)
+    $btn.appendTo($loc)
+  }
+  
+  //reset button.  At some point, the confirmation dialog should probably be removed and the deleted data instead made restoreable through an 'undo' function
+  btnfunc("commands", "reset", ()=>{
+    if (confirm("Editor Reset Confirmation\n* * * *\nClick 'OK' to confirm the reset and delete everything.\nClick 'Cancel' to cancel the reset.")) {
+      reset()
+      initialize()
+   }
+  })
+  
   let btnA = new colorBTN({ loc:"objColors", color:"black", main:true })
   let btnB = new colorBTN({ loc:"objColors", color:"red", main:true })
   let btnC = new colorBTN({ loc:"objColors", color:"green", main:true })
@@ -654,28 +667,112 @@ $(async function MAIN() {
   btnB.setPrimary()
   updateColors()
   
-  let bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
-  let vxc = new VxScene({
-    boxterrain:bxtbldr,
-    chunks_per_tick:4
-  })
-  let UniqueObjects = {}
-  
   var amblCol = new THREE.Color("white")
   amblCol.setHSL ( 0.125, 1, 0.5 )
   var vambl = new THREE.AmbientLight(amblCol, 0.125)
   var ambl = new THREE.AmbientLight(0xffffff, 0.125)
-  vxc.scene.add(ambl)
-  vxc.scene.add(vambl)
+  renderCTL.display.scene.add(ambl)
+  renderCTL.display.scene.add(vambl)
   let dlight = new THREE.DirectionalLight( 0xffffff, 0.5 )
   dlight.position.set(300,1000,700)
   renderCTL.display.scene.add(dlight)
   
   var camlight = new THREE.PointLight( 0xffffff, 3.5, 16, 2 );
   camlight.position.set( 0,0,0 );
-  
   renderCTL.display.scene.add(camlight)
-  renderCTL.display.scene.add(vxc.scene)
+  
+  let bxtbldr
+  
+  // scene + data storage
+  let vxc, UniqueObjects
+  
+  // 3d mouse cursor
+  let cursor3d, cursorMDL
+  
+  // Templates are fixed lists of properties which are to be copied into the data (often this will be just be an Object type identifier).
+  // Each generated object references one template
+  let next_templateID = 1
+  let templates = {}
+  
+  // All defined tools
+  let tools = {}
+  
+  // terrain specification / utility objects
+  
+  //box terrain definers:
+  //  These are generated functions which are used both to configure BoxTerrain and to generate a serializeable configuration for BoxTerrain.
+  //  One of these is generated for each defined Terrain tool.
+  //  These are called when the colors are modified through color picker UI if the ActiveTool is a terrain tool.
+  //  The ActiveTool colors are passed in, the terrain for the specified colors is configured [as needed], and the corresponding terrainID is returned
+  let boxterrainDefiners = {}
+  
+  // single surface specifications:  Each surface specifcation has these components:
+  //  border:  A 256-entry texture coordinate lookup table (relative dimensions of each border tile in a texture atlas)
+  //  decal: Texture coordinates for the pattern to apply to all parts of the surface
+  //  color:  An arbitrary color value to mix with the border and decal texture components
+  let surfaceDefs
+  let sfcIDs
+  let next_sfcid
+  let decalDefs
+  
+  // top-level terrain specification.
+  // Each of these is a set of 6 surface definitions.  One for each orthogonal direction.
+  //  NOTE:  terrainDefs is only a mapping of a concatenation of its surfaceDef IDs to an ID.  
+  //         The complete terrain definition is stored internally by BoxTerrain and must be reconstructed whenever the data is loaded
+  let terrainDefs
+  let terrainIDs
+  let next_terrainid
+  
+  // recently invalidated objects.  When erasing in mray pickmode, the most recently "erased" objects are stored here temporarilly, so that they
+  // can be used to capture and nullify subsequent raycasts (instead of rapidly digging deep holes)
+  let remLocs
+  
+  var reset = function() {
+    controlActive = true
+    vxc.forAll((ctn)=>{
+      if (ctn.contents && ctn.contents.length > 0) {
+        for (let obj of (ctn.contents)) {
+          if (obj.mdl) {
+            releaseAsset(edCTL.assets, obj.mdl)
+          }
+        }
+      }
+    })
+    vxc.dispose()
+    renderCTL.display.scene.remove(vxc.scene)
+    
+  }
+  let initialize = function() {
+    bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
+    vxc = new VxScene({
+      boxterrain:bxtbldr,
+      chunks_per_tick:4
+    })
+    renderCTL.display.scene.add(vxc.scene)
+    cursor3d = {
+      x:0,y:0,z:0,
+      up:direction.code.UP,
+      forward:direction.code.NORTH,
+      isEditorUI:true,
+      mdl:new THREE.Object3D()
+    }
+    
+    cursorMDL = getAsset(edCTL.assets, "CubeCursor")
+    cursor3d.mdl.add(cursorMDL)
+    cursor3d._mdl = cursorMDL
+    put(cursor3d,0,0,0)
+    
+    UniqueObjects = {}
+    next_terrainid = 1
+    next_sfcid = 1
+    terrainIDs = {}
+    sfcIDs = {}
+    surfaceDefs = {}
+    terrainDefs = {}
+    decalDefs = {}
+    remLocs = []
+    updateColors()
+  }
     
   let put = function(obj, x,y,z, ld=false) {
     let ctn = vxc.get(obj.x,obj.y,obj.z)
@@ -709,7 +806,6 @@ $(async function MAIN() {
       }
       obj.mdl.position.set(x,y,z)
     }
-    
   }
   
   let remove = function(obj, x,y,z) {
@@ -732,18 +828,6 @@ $(async function MAIN() {
     }
   }
   
-  let cursor3d = {
-    x:0,y:0,z:0,
-    up:direction.code.UP,
-    forward:direction.code.NORTH,
-    isEditorUI:true,
-    mdl:new THREE.Object3D()
-  }
-  
-  let cursorMDL = getAsset(edCTL.assets, "CubeCursor")
-  cursor3d.mdl.add(cursorMDL)
-  cursor3d._mdl = cursorMDL
-  put(cursor3d,0,0,0)
   
   let draw_debugline = false
   let debug_obj
@@ -1020,7 +1104,6 @@ $(async function MAIN() {
     put(obj, cursor3d.x, cursor3d.y, cursor3d.z)
   }
   
-  let remLocs = []
   let erase = function() {
     let ctn = vxc.get(cursor3d.x, cursor3d.y, cursor3d.z)
     if (ctn && ctn.contents) {
@@ -1126,10 +1209,6 @@ $(async function MAIN() {
     }
   }
   
-  let next_templateID = 1
-  let templates = {}
-  
-  let tools = {}
   let defineTool = function(spec) {
     //wrap the spec
     let tool = {
@@ -1216,7 +1295,6 @@ $(async function MAIN() {
     //store the tool
     tools[spec.name] = tool
     
-    
   //let addEditorBTN = edCTL.addEditorBTN = function(name, desc, value, init_active, position, activeClass, sheet, row, col, hue, hdev) {
   //addEditorBTN("MRAY", "Pick against object under mouse cursor", setMraypickmode, false, "options", "pickmode", "editoricons", 0, 0, 40, 5)
   
@@ -1230,7 +1308,6 @@ $(async function MAIN() {
       spec.icon.sheet, spec.icon.row, spec.icon.col, 
       275, 5
     )
-    
   }
   
   let setTool = function(name) {
@@ -1279,11 +1356,10 @@ $(async function MAIN() {
   // Purpose of this is to expose the internal features of BoxTerrain (multiple sets of boundary graphics from a texture atlas, arbitrary decals from a second 
   // texture atlas, and unique configurations for each of the 6 directions)
   
-  let ddefs = {}
   let toDecalParams = function(decalSpec) {
     let k = JSON.stringify(decalSpec)
-    if (ddefs[k]) {
-      return ddefs[k]
+    if (decalDefs[k]) {
+      return decalDefs[k]
     }
     let ddef
     if (decalSpec.tile) {
@@ -1299,7 +1375,7 @@ $(async function MAIN() {
       ddef.lut.num_rows = decalSpec.width,
       ddef.lut.num_cols = decalSpec.height
     }
-    ddefs[k] = ddef
+    decalDefs[k] = ddef
     return ddef
   }
   
@@ -1315,20 +1391,16 @@ $(async function MAIN() {
     params.texcoord_br = {x:right, y:bottom}
   }
   
-  let bxtsfcdefiners = {}   //box terrain surface definers
-  let next_terrainid = 1
-  let next_sfcid = 1
-  let terrainIDs = {}       // terrain IDs (to avoid inserting duplicate terrain definitions into BoxTerrain)
-  let sfcIDs = {}           // surface IDs (to avoid inserting duplicate surface definitions into BoxTerrain)
-  let surfaceDefs = {}
-  let terrainDefs = {}
   let defineTerrain = function(terrspec) {
     //surfaceDefs[name] = sfcdef
     
     // Set up the "decal" specifications for all directions
     //  (the decal specifciation is the secondary texture coordinates for 
     let nd, ed, sd, wd, ud, dd
-    if (terrspec.decal.all) {
+    if (terrspec.decal.a) {
+      nd = ed = sd = wd = ud = dd = toDecalParams(terrspec.decal.a)
+    }
+    else if (terrspec.decal.all) {
       nd = ed = sd = wd = ud = dd = toDecalParams(terrspec.decal.all)
     }
     if (terrspec.decal.h) {
@@ -1405,7 +1477,7 @@ $(async function MAIN() {
     
     //console.log(facedefs)
     
-    bxtsfcdefiners[terrspec.name] = function config_bxt(colors) {
+    boxterrainDefiners[terrspec.name] = function config_bxt(colors) {
       let k = baseK + colors.join(" ")
       if (terrainIDs[k]) {
         return terrainIDs[k]
@@ -1482,25 +1554,11 @@ $(async function MAIN() {
       }
       bxtbldr.defineTerrain.apply(bxtbldr, sfcdefids)
       terrainDefs[tid] = sfcdefids.slice(1)
-      //console.log(facedefs, colors, sfcdefids)
       return tid
-      //bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
     }
-    
-    /*  
-    let defineWallTerrain = function(id, color) {
-      bxtbldr.defineSurface_8bit(id, {
-        color:color,
-        uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
-      })
-      bxtbldr.defineSurface_8bit(id+'H', {
-        color:color,
-        uv2info:{type:DECAL_UVTYPE.TILE, scale:33, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
-      })
-      bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
-    }
-    */
   }
+  
+  initialize()
   
   edCTL.configure = (async function(cfg) {
     if (typeof(cfg) == "string") {
@@ -1598,51 +1656,6 @@ $(async function MAIN() {
     },
   })
   
-  /*
-  defineTool({
-    type:"wall",                            // object type indicator
-    name:"Wall",                            // Name for reference and display in-editor
-    pickModes:["xz", "xy", "yz", "pick"],   // use all pickmodes, default to "xz"
-    alignMode:"none",                       // no alignment
-    pickOut:true,                           // If in mouse-ray pick mode, pick the space "on top" of the picked object
-    spatialClass:"solid",                   // Tag used in-editor for picking and coexistance checks (not intended to be data)
-    spclassPick:["solid"],                  // allow picking against objects of these classes
-    spclassCoexist:[],                      // Objects that the defined object may coexist with
-    routine:"buildcube",                    // Input handler to run while tool is active
-    template:{},                            // Put these properties in the template
-    color:{                                 // Colorable object declaration
-      amount:3,                             // Number of [defined] colors 
-      default:["white", "green", "blue"],   // default for each defined color
-      mutable:[true],                       // indicate which defined colors may be selected by User
-      mainIndex:0,                          // "shorthand" color picking assigns to this entry in the color table
-    },  
-    terrain:{                               // defines the UVs to use for rendering terain (blocks of entries in a texture atlas)
-      primary:{                             // Primary texture coordinate definition
-        all:{                               // all -- use the same component for all sides
-          eightbit:true,                    // use the "8 bit" texture coordinate generator (use contiguity with 8 neighboring tiles to select tile UVs)
-          layout:"grid",                    // declare a standard "grid" layout for texture coordinates
-          gridWidth:1,                      // Clarify aforementioned grid layout as being 1x1
-          gridHeight:1,                     //    ''
-          block:0,                          // Use the first block [from the grid layout]
-        }
-      },
-      decal:{                               // Secondary texture coordinate definition
-        all:{                               // all -- use the same component for all sides
-          tile:true,                        // single-tile decal
-          layout:"tiles",                   // A grid of tiles with no assumed relationships
-          width:8,                          // Clarify the tile-grid as being 8x8 
-          height:8,                         //    ''
-          pickrand_init:true,               // Pick a random tile during initilization and use it for all surfaces of the same class
-          randmin:0,                        //  random selection minimum
-          randmax:6,                        //  random selection maximum
-        }
-      }
-    },
-    params:{},                              // arbitrary properties to add to all templates
-    lockedParams:{}                         // immutable arbitrary properties to add to all templates
-  })
-  setTool("Wall")
-  */
   let serialize = function() {
     let o = {
       surfaceDefs:surfaceDefs,
@@ -1663,72 +1676,6 @@ $(async function MAIN() {
     })
     return JSON.stringify(o)
   }
-  /*
-  defineTerrain("asdf", {
-    primary:{
-      all:{                               // Primary texture coordinate definition:
-        eightbit:true,                    // use the "8 bit" texture coordinate generator (use contiguity with 8 neighboring tiles to select tile UVs)
-        layout:"grid",                    // declare a standard "grid" layout for texture coordinates
-        gridWidth:1,                      // Clarify aforementioned grid layout as being 1x1
-        gridHeight:1,                     //    ''
-        block:0,                          // Use the first block [from the grid layout]
-      },
-    },
-    decal:{
-      all:{                               // Secondary texture coordinate definition for all cube surfaces (U, D, N, E, S, and W)
-        tile:true,                        // Pick a tile
-        layout:"tiles",                   // A grid of tiles with no assumed relationships
-        width:8,                          // Clarify the tile-grid as being 8x8 
-        height:8,                         //    ''
-        pickrand_init:true,               // Pick a random tile during initilization and use it for all surfaces of the same class
-        randmin:0,                        //  random selection minimum
-        randmax:6,                        //  random selection maximum
-      }
-    }
-  })
-  */
-  
-  // Item description display
-  // These functions (orthot.showDescription and orthot.updateDescription and orthot.hideDescription) are used to allow items to show tooltips and run graphical
-  // visualizarion routines.  These are called as objects or interface-elements are moused-over and moused-out
-  /*
-  let shownItem
-  let tiptext = ""
-  edCTL.showDescription = function(item) {
-    if (shownItem && shownItem != item) {
-      edCTL.hideDescription(shownItem)
-    }
-    shownItem = item
-    tiptext = item.description ? item.description : ""
-    if (item.visualizer) {
-      item.visualizer(true)
-      controlActive = true
-    }
-  }
-  edCTL.updateDescription = function(item) {
-    if (item != shownItem) {
-      return
-    }
-    tiptext = item.description ? item.description : ""
-    if (item.visualizer) {
-      item.visualizer(true)
-      controlActive = true
-    }
-  }
-
-  edCTL.hideDescription = function(item) {
-    if (item != shownItem) {
-      return
-    }
-    shownItem = null
-    tiptext = ""
-    if (item.visualizer) {
-      item.visualizer(false)
-      controlActive = true
-    }
-  }
-  */
-
 
   var run = function run () {
     requestAnimationFrame( run );

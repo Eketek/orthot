@@ -10,6 +10,7 @@
   Add a coexistance check based on spatial classes.  If an object can not coexist with an existing object, the existing object gets replaced.
   Add support for unique objects
   Add horizontal alignment mode ("sane" orientation for things that are to be thought of as standing)
+  Add a reset function 
 
 8 Nov 2019
   Add a block-eraser tool

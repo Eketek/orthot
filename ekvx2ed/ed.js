@@ -939,7 +939,6 @@ $(async function MAIN() {
       }
       let other = UniqueObjects[activeTool.spec[uprop]]
       if (other) {
-        console.log("remove?", other)
         remove(other, other.x, other.y, other.z)
       }
       UniqueObjects[activeTool.spec[uprop]] = obj
@@ -974,6 +973,7 @@ $(async function MAIN() {
         }
       }
       assignMaterials(mdl, mats)
+      obj.data.materials = activeTool.colors
       
       // if an aligned object, append the alignment
       if ((activeTool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {

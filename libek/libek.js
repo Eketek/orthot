@@ -470,7 +470,7 @@ var load = async function(url, loader, fetchOPTS) {
         loader:  [Optional] A function which accepts a URL and passes the result to a callback when it completes - If not specified, libek.load() will select
                             one based on filename extension
   */
-var loadMuch = async function(assets, fetchOPTS, ... entries) {
+var loadMuch = async function(assets, override, fetchOPTS, ... entries) {
   entries = flatten(entries)
   let plist = new Array(entries.length)
   for (let i = 0; i < entries.length; i++) {
@@ -505,7 +505,9 @@ var loadMuch = async function(assets, fetchOPTS, ... entries) {
           name = name.substring(0,i)
         }
       }
-      assets[name] = val
+      if (!assets[name] || override) {
+        assets[name] = val
+      }
     }
   })
 }
@@ -518,7 +520,7 @@ var loadMuch = async function(assets, fetchOPTS, ... entries) {
 //      Asset names can be overriden by specifying a name in the manifest file (*.mf)
 //    url:  location to load the ZIP file from
 //    fetch_options:  [optional] parameters to initialize the fetch()
-var loadZIP = async function(assets, url, fetch_options) {
+var loadZIP = async function(assets, override, url, fetch_options) {
   let buf = await load_to_ArrayBuffer(url, fetch_options)
   let jz = new JSZip()
   let archive = await jz.loadAsync(buf)
@@ -566,6 +568,9 @@ var loadZIP = async function(assets, url, fetch_options) {
     }
     else {
       name = name.substring(0,i)
+    }
+    if (assets[name] && !override) {
+      continue
     }
     switch(ext) {
       case 'mf':

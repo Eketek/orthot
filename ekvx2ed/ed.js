@@ -9,9 +9,9 @@ import {
 } from '../libek/libek.js'
 import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
-import { anythingIN, clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
+import { deepcopy, anythingIN, clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
-import { direction } from '../libek/direction.js'
+import { direction, setOrientation, toForward } from '../libek/direction.js'
 import { BoxTerrain, DECAL_UVTYPE } from '../libek/gen.js'
 import { VxScene } from '../libek/scene.js'
 import { plotLine, debugLine } from '../libek/plot.js'
@@ -84,6 +84,7 @@ $(async function MAIN() {
       update("texture", (fetchOPTS)=>{
         return loadMuch(
           edCTL.assets,
+          true,
           fetchOPTS,
           {url:"assets/textures/patterns.png", properties:TextureProps},
           {url:"assets/textures/wall_8bit_fg.png", properties:TextureProps},
@@ -91,7 +92,7 @@ $(async function MAIN() {
         )
       }),
       update("model", (fetchOPTS)=>{
-        return loadZIP(edCTL.assets, 'assets/ekvxed2models.zip', fetchOPTS)
+        return loadZIP(edCTL.assets, true, 'assets/ekvxed2models.zip', fetchOPTS)
       })
     ]
     
@@ -138,25 +139,53 @@ $(async function MAIN() {
     `
   })
 
-  let markmats = [{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
-  let cursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
-  let erasecursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}, {color:"red", emissive:"red", emissiveIntensity:0.333}]
+  let markmats = [
+    {color:"green", emissive:"green", emissiveIntensity:0.333}, 
+    {color:"black", transparent:true, opacity:0.4}]
+  let cursormats = [
+    {color:"white", emissive:"white", emissiveIntensity:0.333}, 
+    {color:"black", transparent:true, opacity:0.4}]
+  let erasecursormats = [
+    {color:"white", emissive:"white", emissiveIntensity:0.333}, 
+    {color:"black", transparent:true, opacity:0.4}, 
+    {color:"red", emissive:"red", emissiveIntensity:0.333}]
+
 
   assignMaterials(edCTL.assets.CubeMark, markmats)
   assignMaterials(edCTL.assets.FaceMark, markmats)
+  assignMaterials(edCTL.assets.DirCursor, [
+    {color:"white", emissive:"white", emissiveIntensity:0.333},
+    {color:"black", transparent:true, opacity:0.4},
+    {color:"red", emissive:"red", emissiveIntensity:0.333}])
   assignMaterials(edCTL.assets.CubeCursor, cursormats)
   assignMaterials(edCTL.assets.FaceCursor, cursormats)
   assignMaterials(edCTL.assets.EraseCubeCursor, erasecursormats)
   assignMaterials(edCTL.assets.EraseFaceCursor, erasecursormats)
   
-  {  
-    // a nearly opaque black cube to cover "erased" objects [prior to actual erasure]
-    let shadeGEOM = new THREE.BoxGeometry( 1.05, 1.05, 1.05 );
-    shadeGEOM.translate(0,0.525,0)
-    let shadeMAT = new THREE.MeshStandardMaterial({color:"black", transparent:true, opacity:0.8})
-    let shadeOBJ = new THREE.Mesh(shadeGEOM, shadeMAT)
-    storeAsset(edCTL.assets, "ShadeCube", shadeOBJ)
-  }
+  // Split the DirCursor model into a "Simple" and an "Advanced" version.  The advanced version has an extra mark showing the right vector.  The Simple version only shows forward.
+  let DirCursor = getAsset(edCTL.assets, "DirCursor")
+  let AdvDirCursor = getAsset(edCTL.assets, "DirCursor")
+  DirCursor.remove(DirCursor.children[2])
+  assignMaterials(DirCursor, [
+    {color:"white", emissive:"white", emissiveIntensity:0.333},
+    {color:"black", transparent:true, opacity:0.4}])
+  assignMaterials(AdvDirCursor, [
+    {color:"white", emissive:"white", emissiveIntensity:0.333},
+    {color:"black", transparent:true, opacity:0.4},
+    {color:"red", emissive:"red", emissiveIntensity:0.333}])
+  storeAsset(edCTL.assets, "DirCursor", DirCursor)
+  storeAsset(edCTL.assets, "AdvancedDirCursor", AdvDirCursor)
+  
+  // Generate a nearly opaque dark cube to temporarilly obscure erased objects
+  // (while using a click & drag operation to mass-erase blocks, the most recently "erased" blocks are retained for a bit and used to intercept raycasts, 
+  //  to prevent click & drag erasing operations from rapidly creating deep holes.  Objects are removed from the display  [along with the "ShadeCube"] 
+  //  once there is no need to prevent raycasts from hitting deeper objects -- either because the mouse was released or because the bypass capacity has been
+  //  exceeded) 
+  let shadeGEOM = new THREE.BoxGeometry( 1.05, 1.05, 1.05 );
+  shadeGEOM.translate(0,0.525,0)
+  let shadeMAT = new THREE.MeshStandardMaterial({color:"black", transparent:true, opacity:0.8})
+  let shadeOBJ = new THREE.Mesh(shadeGEOM, shadeMAT)
+  storeAsset(edCTL.assets, "ShadeCube", shadeOBJ)
   
   let pickplane = new THREE.Plane(direction.vector.UP.clone(), 0)
   
@@ -637,10 +666,14 @@ $(async function MAIN() {
   var ambl = new THREE.AmbientLight(0xffffff, 0.125)
   vxc.scene.add(ambl)
   vxc.scene.add(vambl)
-  let dlight = new THREE.DirectionalLight( 0xffffff, 1 )
+  let dlight = new THREE.DirectionalLight( 0xffffff, 0.5 )
   dlight.position.set(300,1000,700)
-  vxc.scene.add(dlight)
+  renderCTL.display.scene.add(dlight)
   
+  var camlight = new THREE.PointLight( 0xffffff, 3.5, 16, 2 );
+  camlight.position.set( 0,0,0 );
+  
+  renderCTL.display.scene.add(camlight)
   renderCTL.display.scene.add(vxc.scene)
     
   let put = function(obj, x,y,z, ld=false) {
@@ -700,12 +733,15 @@ $(async function MAIN() {
   
   let cursor3d = {
     x:0,y:0,z:0,
+    up:direction.code.UP,
+    forward:direction.code.NORTH,
     isEditorUI:true,
     mdl:new THREE.Object3D()
   }
   
   let cursorMDL = getAsset(edCTL.assets, "CubeCursor")
   cursor3d.mdl.add(cursorMDL)
+  cursor3d._mdl = cursorMDL
   put(cursor3d,0,0,0)
   
   let draw_debugline = false
@@ -716,13 +752,36 @@ $(async function MAIN() {
     while (true) {
       let evt = await evtman.next(disp_elem, "mousemove", document, ".wasd arrows", edCTL.event, "refresh")
       //console.log(evt)
-      let mp3d, up, forward
+      let mp3d, up, forward, _
+      mp3d = sviewCTL.mpos3d
       
       switch(pickmode) {
         case "xz":
+          if (sviewCTL.campos.phi/Math.PI < 0.5) {
+            up = direction.code.UP
+          }
+          else {
+            up = direction.code.DOWN
+          }
+          ;[forward, _] = toForward(up, mp3d.x-Math.round(mp3d.x), 0, mp3d.z-Math.round(mp3d.z))
+          break
         case "xy":
+          if ( (sviewCTL.campos.theta/Math.PI < 0.5) || (sviewCTL.campos.theta/Math.PI > 1.5) ) {
+            up = direction.code.SOUTH
+          }
+          else {
+            up = direction.code.NORTH
+          }
+          ;[forward, _] = toForward(up, mp3d.x-Math.round(mp3d.x), mp3d.y-Math.floor(mp3d.y)-0.5, 0)
+          break
         case "yz":
-          mp3d = sviewCTL.mpos3d
+          if (sviewCTL.campos.theta > 0) {
+            up = direction.code.EAST
+          }
+          else {
+            up = direction.code.WEST
+          }
+          ;[forward, _] = toForward(up, 0, mp3d.y-Math.floor(mp3d.y)-0.5, mp3d.z-Math.round(mp3d.z))
           break
         case "mray": {
           let mray = sviewCTL.mray
@@ -806,15 +865,25 @@ $(async function MAIN() {
             controlActive = true
           }
         } break
-      } 
+      }
+      if ( ((up != cursor3d.up) || (forward != cursor3d.forward)) && (forward != direction.code.NODIR) && (up != undefined) && (forward != undefined) ) {
+        cursor3d.up = up
+        cursor3d.forward = forward
+        let orientation = {}
+        setOrientation(orientation, direction.invert[forward], up)
+        cursor3d._mdl.position.copy(orientation.position)
+        cursor3d._mdl.setRotationFromEuler(orientation.rotation)
+        controlActive = true
+      }
       
       if (mp3d) {
-        //point
         edCTL.event.dispatchEvent( new Event("mousemove_point"))
-          
+        
+        // Truncate mouse position to obtain integer coordinates
+        // The origin of each unit-cube is positioned at the center of the bottom face.
         let x = Math.round(mp3d.x)
-        let y = Math.round(mp3d.y)
-        let z = Math.round(mp3d.z)
+        let y = Math.floor(mp3d.y+0.001) //hack to keep XZ picking consistant - no formal means has yet been defined to fix coordinates in one dimension
+        let z = Math.round(mp3d.z)       //everything else can be as jittery as it wants
         
         //cube
         if ( (x != cursor3d.x) | (y != cursor3d.y) | (z != cursor3d.z)) {
@@ -822,12 +891,12 @@ $(async function MAIN() {
           controlActive = true
           edCTL.event.dispatchEvent(new Event("mousemove_cube"))
         }
-        //face + alignment
       }
     }
   })()}
   
   let build = function() {
+    controlActive = true
     let obj = {}
     obj.data = {}
     for (let k in activeTool.spec.params) {
@@ -841,11 +910,43 @@ $(async function MAIN() {
       obj.terrainID = activeTool.terrainID
       obj.data.$.push(activeTool.terrainID)
     }
-    //else if (activeTool.align != undefined) {
-      //obj.data.$.push(align.up)
-      //obj.data.$.push(align.forward)
-    //}
+    else if (activeTool.spec.model) {
+      let mdl = getAsset(edCTL.assets, activeTool.spec.model.main)
+      obj.mdl = new THREE.Object3D()
+      obj.mdl.add(mdl)
+      let mats = deepcopy(activeTool.spec.model.color.default)
+      if (!Array.isArray(mats)) {
+        mats = [mats]
+      }
+      for (let i = 0; i < mats.length; i++) {
+        if (typeof(mats[i] == "string")) {
+          mats[i] = activeTool.colors[i]
+        }
+        else {
+          mats[i].color = activeTool.colors[i]
+        }
+      }
+      assignMaterials(mdl, mats)
+      
       // if an aligned object, append the alignment
+      if ((activeTool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
+        let _align = {
+          up:direction.code.UP,
+          forward:direction.code.NORTH
+        }
+        switch(activeTool.spec.alignMode) {
+          case "horiz":
+          case "horizontal":
+          
+        }
+        obj.data.$.push(cursor3d.up)
+        obj.data.$.push(cursor3d.forward)
+        let orientation = {}
+        setOrientation(orientation, cursor3d.forward, cursor3d.up)
+        mdl.position.copy(orientation.position)
+        mdl.setRotationFromEuler(orientation.rotation)
+      }
+    }
     if (mrayDragPOSs) {
       let strpos = `${cursor3d.x},${cursor3d.y},${cursor3d.z}`
       mrayDragPOSs.push(strpos)
@@ -996,22 +1097,39 @@ $(async function MAIN() {
       spec.spclassCoexist = spec.spclassCoexist.split(" ")
     }
     
-    // build the default preset for the tool
+    let col_obj
     if (spec.color) {
-      if (spec.color.default) {
-        if (Array.isArray(spec.color.default)) {
-          for ( let i = 0; i < spec.color.amount; i++ ) {
-            tool.colors.push(spec.color.default[i])
+      col_obj = spec.color
+    }
+    else if (spec.model && spec.model.color) {
+      col_obj = spec.model.color
+    }
+    // build the default preset for the tool
+    if (col_obj) {
+      if (col_obj.default) {
+        if (Array.isArray(col_obj.default)) {
+          for ( let i = 0; i < col_obj.amount; i++ ) {
+            if (typeof(col_obj.default[i]) == "object") {
+              tool.colors.push(col_obj.default[i].color)
+            }
+            else {
+              tool.colors.push(col_obj.default[i])
+            }
           }
         }
         else {
-          for ( let i = 0; i < spec.color.amount; i++ ) {
-            tool.colors.push(spec.color.default)
+          for ( let i = 0; i < col_obj.amount; i++ ) {
+            if (typeof(col_obj.default) == "object") {
+              tool.colors.push(col_obj.default.color)
+            }
+            else {
+              tool.colors.push(col_obj.default)
+            }
           }
         }
       }
       else {
-        for ( let i = 0; i < spec.color.amount; i++ ) {
+        for ( let i = 0; i < col_obj.amount; i++ ) {
           tool.colors.push("white")
         }
       }
@@ -1062,17 +1180,27 @@ $(async function MAIN() {
       mbtn.remove()
     }
     mainBTNS = []
-    if (activeTool.spec.color) {
-      for (let col of activeTool.colors) {
-        let mbtn = new colorBTN({ loc:"objColors", color:col, main:true })
-      }
+    if (activeTool.spec.mutablecolors) {
+      let col_obj
       
-      //if a default primary color is specified, use it.  Otherwise, use the first.
-      if (activeTool.spec.color.mainIndex != undefined) {
-        mainBTNS[activeTool.spec.color.mainIndex].setPrimary()
+      if (activeTool.spec.color) {
+        col_obj = activeTool.spec.color
       }
-      else if (mainBTNS.length > 0) {
-        mainBTNS[0].setPrimary()
+      else if (activeTool.spec.model) {
+        col_obj = activeTool.spec.model.color
+      }
+      if (col_obj) {
+        for (let col of activeTool.colors) {
+          let mbtn = new colorBTN({ loc:"objColors", color:col, main:true })
+        }
+        
+        //if a default primary color is specified, use it.  Otherwise, use the first.
+        if (col_obj.mainIndex != undefined) {
+          mainBTNS[col_obj.mainIndex].setPrimary()
+        }
+        else if (mainBTNS.length > 0) {
+          mainBTNS[0].setPrimary()
+        }
       }
     }
     updateColors()
@@ -1080,6 +1208,7 @@ $(async function MAIN() {
     cursor3d.mdl.remove(cursorMDL)
     releaseAsset(edCTL.assets, cursorMDL)
     cursorMDL = getAsset(edCTL.assets, activeTool.spec.cursorModel)
+    cursor3d._mdl = cursorMDL
     cursor3d.mdl.add(cursorMDL)
   }
   
@@ -1324,7 +1453,7 @@ $(async function MAIN() {
     
     let rscver = cfg.EdrscVersion|0
     let prev_ver = 0|parseInt(window.localStorage[appname+"EDVER"])
-    let reloadOPT = (rscver > prev_ver) ? {cache:"no-store"} : undefined
+    let reloadOPT = (rscver > prev_ver) ? {cache:"reload"} : undefined
     window.localStorage[appname+"EDVER"] = rscver
     
     if (cfg.Resources) {
@@ -1345,11 +1474,18 @@ $(async function MAIN() {
               properties:TextureProps
             })
           }
+          else if (data.type == "archive") {
+            promises.push(
+              update(appname, (fetchOPTS)=>{
+                return loadZIP(edCTL.assets, false, data.src, reloadOPT)
+              })
+            )
+          }
         }
         if (textureRefs.length > 0) {
           promises.push(
             update(appname, (fetchOPTS)=>{
-              return loadMuch( edCTL.assets, fetchOPTS, textureRefs )
+              return loadMuch( edCTL.assets, false, reloadOPT, textureRefs )
             }),
           )
         }
@@ -1367,16 +1503,14 @@ $(async function MAIN() {
       for (let tooldef of cfg.Tools) {
         if (tooldef.extend) {
           tooldef = Object.assign({}, cfg.AbstractTools[tooldef.extend], tooldef)
-          defineTool(tooldef)
         }
-        else {
-          defineTool(tooldef)
+        if (tooldef.model) {
+          tooldef.model = cfg.Models[tooldef.model]
         }
+        defineTool(tooldef)
         if (tooldef.default) {
           setTool(tooldef.name)
         }
-        
-        console.log("TDEF:", tooldef)
       }
     }
   }).bind(this)
@@ -1543,6 +1677,7 @@ $(async function MAIN() {
     
     if (controlActive) {
       controlActive = false
+      camlight.position.set(renderCTL.display.camera.position.x, renderCTL.display.camera.position.y+5, renderCTL.display.camera.position.z)
       renderCTL.display.render()
     }
   }

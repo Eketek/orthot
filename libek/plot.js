@@ -1,5 +1,5 @@
 export { plotLine, debugLine }
-import { direction } from './direction.js'
+import { direction, toForward } from './direction.js'
 
 // A 3-dimensional line plotter.
 //
@@ -67,7 +67,7 @@ var plotLine = function(start, end, plot) {
     accz = 1-accz
   }
   
-  // output "up" vectors (normals of front-faces inrtersected by the line)
+  // output "up" vectors (normals of front-faces intersected by the line)
   //  (these are the inverses of [orthogonal] directions the line is pointing toward)
   let dirx = signx > 0 ? direction.code.EAST : direction.code.WEST
   let diry = signy > 0 ? direction.code.DOWN : direction.code.UP
@@ -107,84 +107,7 @@ var plotLine = function(start, end, plot) {
     // Find the best forward vector and attach it to the output
     //   (orthogonal direction which is closest to the vector originating at the center of the intercepted face and pointing toward the intercept)
     // if the intercept is exactly equal to the face center, a null direction is used
-    let rad
-    switch (up) {
-      case direction.code.UP:
-      case direction.code.DOWN:
-        rad = Math.atan2(iz, ix)
-        coord.rad = rad
-        if (rad > Math.PI * 0.75) {
-          coord.fwd = direction.code.EAST
-        }
-        else if (rad > Math.PI * 0.25) {
-          coord.fwd = direction.code.NORTH
-        }
-        else if (rad > Math.PI * -0.25) {
-          if ( (rad == 0) && (iz == 0) && (ix == 0) ) {
-            coord.fwd = direction.code.NODIR
-          }
-          else {
-            coord.fwd = direction.code.WEST
-          }
-        }
-        else if (rad > Math.PI * -0.75) {
-          coord.fwd = direction.code.SOUTH
-        }
-        else {
-          coord.fwd = direction.code.EAST
-        }
-        break
-      case direction.code.NORTH:
-      case direction.code.SOUTH:
-        rad = Math.atan2(iy, ix)
-        coord.rad = rad
-        if (rad > Math.PI * 0.75) {
-          coord.fwd = direction.code.EAST
-        }
-        else if (rad > Math.PI * 0.25) {
-          coord.fwd = direction.code.UP
-        }
-        else if (rad > Math.PI * -0.25) {
-          if ( (rad == 0) && (iy == 0) && (ix == 0) ) {
-            coord.fwd = direction.code.NODIR
-          }
-          else {
-            coord.fwd = direction.code.WEST
-          }
-        }
-        else if (rad > Math.PI * -0.75) {
-          coord.fwd = direction.code.DOWN
-        }
-        else {
-          coord.fwd = direction.code.EAST
-        }
-        break
-      case direction.code.EAST:
-      case direction.code.WEST:
-        rad = Math.atan2(iy, iz)
-        coord.rad = rad
-        if (rad > Math.PI * 0.75) {
-          coord.fwd = direction.code.SOUTH
-        }
-        else if (rad > Math.PI * 0.25) {
-          coord.fwd = direction.code.UP
-        }
-        else if (rad > Math.PI * -0.25) {
-          if ( (rad == 0) && (iy == 0) && (iz == 0) ) {
-            coord.fwd = direction.code.NODIR
-          }
-          else {
-            coord.fwd = direction.code.NORTH
-          }
-        }
-        else if (rad > Math.PI * -0.75) {
-          coord.fwd = direction.code.DOWN
-        }
-        else {
-          coord.fwd = direction.code.SOUTH
-        }
-        break
-    }
+    ;[coord.forward, coord.rad] = toForward(up, ix, iy, iz)
     return plot(coord)
   }
   

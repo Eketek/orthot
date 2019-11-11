@@ -1,3 +1,13 @@
+9-11 Nov 2019
+  Add starting position tool
+  Add handling for object alignment'
+  Add a "cam light" to the editor
+  Various alterations & fixes to object positioning
+  Add a Model specification to the application-specific editor configuration (working toward a common configuration system for both the editor and the application)
+    colors/materials
+    main model name (reference to the model to display)
+    poses (for now, sets of mappings of names to model references)
+
 8 Nov 2019
   Add a block-eraser tool
   Force a 3d cursor update after the "left-mouse-button-up" tool operation (immediate cursor updates in mouse-ray pickmode)

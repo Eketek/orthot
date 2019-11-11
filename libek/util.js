@@ -1,10 +1,34 @@
 export {
+  deepcopy,
   objprop, property, mergeObjects, properties_fromstring,
   clamp,
   flatten, anythingIN, removeItems,
   parseVec3, parseColor, toBinColor,
   putFloatingElement, centerElementOverElement
 }
+
+// recursively copy properties from a source object to a new object
+//   WARNING:  will blindly copy references
+//   WARNING:  will fail spectacularly if it encounters a circular reference)
+var deepcopy = function(obj) {
+  let r
+  if (Array.isArray(obj)) {
+    r = obj.slice()
+  }
+  else if (typeof(obj) == "object") {
+    r = Object.assign({}, obj)
+  }
+  else {
+    return r
+  }
+  for (let [k, v] of Object.entries(obj)) {
+    if (typeof(v) == "object") {
+      r[k] = deepcopy(v)
+    }
+  }
+  return r
+}
+
 var objprop = function(obj, name, defaultVal) {
   if (obj[name]) {
     return obj[name]

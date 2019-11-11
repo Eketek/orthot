@@ -1,0 +1,7 @@
+11 Nov 2019
+  Remove the forward vector calculation from the plotter (plot.js), convert it into a utility function, and place it in direction.js
+    (for re-use with planar picking)
+  Invert the interior NORTH, EAST, SOUTH, and WEST positioning & orientation data used by setOrientation() (direction.js)
+    (Fixes an error that became evident after putting it to use for the first time)
+  Add flags to loadMuch() and loadZIP() (libek.js) to indicate whether or not newly loaded objects should override existing objects.
+  Add function "deepcopy" to util.js  ( recursively copies properties from a source object to a new object )

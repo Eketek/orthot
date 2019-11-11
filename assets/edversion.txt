@@ -1,2 +1,2 @@
-model 1
+model 2
 texture 1

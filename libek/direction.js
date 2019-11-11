@@ -1,4 +1,4 @@
-export { direction, crossDirections, rotateDirection_bydirections, rotateVector_byvectors, rotation_byvectors, getKeyDirection, setOrientation }
+export { direction, crossDirections, rotateDirection_bydirections, rotateVector_byvectors, rotation_byvectors, getKeyDirection, setOrientation, toForward }
 import { T, rad_tosector } from './libek.js'
 
 {
@@ -130,6 +130,22 @@ import { T, rad_tosector } from './libek.js'
       { rotation:new THREE.Euler(0, T*0.00, T*0.50), position:new THREE.Vector3(0,1,0) },
       { rotation:new THREE.Euler(0, T*0.75, T*0.50), position:new THREE.Vector3(0,1,0) }  ],
 
+    //south
+    [ { rotation:new THREE.Euler(T*0.25, T*0.00, 0), position:new THREE.Vector3(0,0.5,-0.5) },
+      { rotation:new THREE.Euler(T*0.25, T*0.50, 0), position:new THREE.Vector3(0,0.5,-0.5) },
+      0,
+      { rotation:new THREE.Euler(T*0.25, T*0.25, 0), position:new THREE.Vector3(0,0.5,-0.5) },
+      0,
+      { rotation:new THREE.Euler(T*0.25, T*0.75, 0), position:new THREE.Vector3(0,0.5,-0.5) }  ],
+
+    //west
+    [ { rotation:new THREE.Euler(T*0.25, 0, T*0.25), position:new THREE.Vector3(0.5,0.5,0) },
+      { rotation:new THREE.Euler(T*0.75, 0, T*0.25), position:new THREE.Vector3(0.5,0.5,0) },
+      { rotation:new THREE.Euler(T*0.50, 0, T*0.25), position:new THREE.Vector3(0.5,0.5,0) },
+      0,
+      { rotation:new THREE.Euler(T*0.00, 0, T*0.25), position:new THREE.Vector3(0.5,0.5,0) },
+      0,                                                                                       ],
+      
     //north
     [ {rotation:new THREE.Euler(T*0.75, T*0.50, 0), position:new THREE.Vector3(0,0.5,0.5) },
       {rotation:new THREE.Euler(T*0.75, T*0.00, 0), position:new THREE.Vector3(0,0.5,0.5) },
@@ -146,21 +162,6 @@ import { T, rad_tosector } from './libek.js'
       { rotation:new THREE.Euler(T*0.00, 0, T*0.75), position:new THREE.Vector3(-0.5,0.5,0) },
       0                                                                                       ],
 
-    //south
-    [ { rotation:new THREE.Euler(T*0.25, T*0.00, 0), position:new THREE.Vector3(0,0.5,-0.5) },
-      { rotation:new THREE.Euler(T*0.25, T*0.50, 0), position:new THREE.Vector3(0,0.5,-0.5) },
-      0,
-      { rotation:new THREE.Euler(T*0.25, T*0.25, 0), position:new THREE.Vector3(0,0.5,-0.5) },
-      0,
-      { rotation:new THREE.Euler(T*0.25, T*0.75, 0), position:new THREE.Vector3(0,0.5,-0.5) }  ],
-
-    //west
-    [ { rotation:new THREE.Euler(T*0.25, 0, T*0.25), position:new THREE.Vector3(0.5,0.5,0) },
-      { rotation:new THREE.Euler(T*0.75, 0, T*0.25), position:new THREE.Vector3(0.5,0.5,0) },
-      { rotation:new THREE.Euler(T*0.50, 0, T*0.25), position:new THREE.Vector3(0.5,0.5,0) },
-      0,
-      { rotation:new THREE.Euler(T*0.00, 0, T*0.25), position:new THREE.Vector3(0.5,0.5,0) },
-      0,                                                                                       ],
   ]
   let outside_orientation = [
     //UP
@@ -309,6 +310,86 @@ direction.sideorientations = [
   }
 }
 
+// Compute the best forward vector for a given up vector and relative position.
+// Forward vector is a vector perpendicular to the up vector which passes through the specified coordinates
+// This returns both the best-fit orthogonal direction and the precise value in radians
+var toForward = function(up, relx,rely,relz) {
+  let rad
+  switch (up) {
+    case direction.code.UP:
+    case direction.code.DOWN:
+      rad = Math.atan2(relz, relx)
+      if (rad > Math.PI * 0.75) {
+        return [direction.code.EAST, rad]
+      }
+      else if (rad > Math.PI * 0.25) {
+        return [direction.code.NORTH, rad]
+      }
+      else if (rad > Math.PI * -0.25) {
+        if ( (rad == 0) && (relz == 0) && (relx == 0) ) {
+          return [direction.code.NODIR, NaN]
+        }
+        else {
+          return [direction.code.WEST, rad]
+        }
+      }
+      else if (rad > Math.PI * -0.75) {
+        return [direction.code.SOUTH, rad]
+      }
+      else {
+        return [direction.code.EAST, rad]
+      }
+      break
+    case direction.code.NORTH:
+    case direction.code.SOUTH:
+      rad = Math.atan2(rely, relx)
+      if (rad > Math.PI * 0.75) {
+        return [direction.code.EAST, rad]
+      }
+      else if (rad > Math.PI * 0.25) {
+        return [direction.code.UP, rad]
+      }
+      else if (rad > Math.PI * -0.25) {
+        if ( (rad == 0) && (rely == 0) && (relx == 0) ) {
+        return [direction.code.NODIR, NaN]
+        }
+        else {
+        return [direction.code.WEST, rad]
+        }
+      }
+      else if (rad > Math.PI * -0.75) {
+        return [direction.code.DOWN, rad]
+      }
+      else {
+        return [direction.code.EAST, rad]
+      }
+      break
+    case direction.code.EAST:
+    case direction.code.WEST:
+      rad = Math.atan2(rely, relz)
+      if (rad > Math.PI * 0.75) {
+        return [direction.code.SOUTH, rad]
+      }
+      else if (rad > Math.PI * 0.25) {
+        return [direction.code.UP, rad]
+      }
+      else if (rad > Math.PI * -0.25) {
+        if ( (rad == 0) && (rely == 0) && (relz == 0) ) {
+        return [direction.code.NODIR, rad]
+        }
+        else {
+        return [direction.code.NORTH, rad]
+        }
+      }
+      else if (rad > Math.PI * -0.75) {
+        return [direction.code.DOWN, rad]
+      }
+      else {
+        return [direction.code.SOUTH, rad]
+      }
+      break
+  }
+}
 
 
 

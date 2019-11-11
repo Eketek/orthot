@@ -26,6 +26,51 @@
       "NumCols":8,
       "TileWidth":64,
       "TileHeight":64
+    },
+    "Models":{
+      "src":"assets/models.zip",
+      "type":"archive"
+    }
+  },
+  "Models":{
+    "man":{
+      "main":"man",
+      "poses":{
+        "walk":{
+          "stand":"man",
+          "walk":"man_walk",
+          "climb":"man_climb",
+          "leap":"man_leap",
+          "slide1":"man_slide1",
+          "slide2":"man_slide2",
+          "slide3":"man_slide3",
+          "slide4":"man_slide4",
+          "slide5":"man_slide5"
+        },
+        "push":{
+          "stand":"man_push",
+          "walk":"man_pushwalk",
+          "climb":"man_climb",
+          "leap":"man_pushleap",
+          "slide1":"man_slide1",
+          "slide2":"man_slide2",
+          "slide3":"man_slide3",
+          "slide4":"man_slide4",
+          "slide5":"man_slide5"
+        }
+      },
+      "color":{
+        "amount":6,
+        "default":[
+          "hsl(25, 80%, 60%)", 
+          "blue", 
+          "hsl(15, 100%, 15%)", 
+          "black", 
+          {"color":"black", "metalness":1}, 
+          {"color":"white", "emissive":"yellow", "emissiveIntensity":1}
+        ],
+        "mainIndex":1
+      }
     }
   },
   "AbstractTools":{
@@ -65,8 +110,20 @@
           }
         }
       },
+      "mutablecolors":true,
       "params":{},
       "lockedParams":{}
+    },
+    "HorizObject":{
+      "pickModes":["xz", "xy", "yz", "mray"],
+      "alignMode":"horizontal",
+      "pickOut":true,
+      "cursorModel":"DirCursor",
+      "spatialClass":"solid",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "planarPick":true,
+      "routine":"buildcube"
     }
   },
   "Tools":[
@@ -115,6 +172,19 @@
         "default":["white", "yellow", "green", "orange", "lightblue", "white"],
         "mutable":[true],
         "mainIndex":0
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"start",
+      "name":"Player-Start",
+      "shortname":"Start",
+      "model":"man",
+      "mutablecolors":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":0,
+        "col":0
       }
     }
   ]

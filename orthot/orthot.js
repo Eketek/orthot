@@ -100,6 +100,7 @@ $(async function MAIN() {
       update("texture", (fetchOPTS)=>{
         return loadMuch(
           orthotCTL.assets,
+          true,
           fetchOPTS,
           {url:"assets/textures/patterns.png", properties:TextureProps},
           {url:"assets/textures/wall_8bit_fg.png", properties:TextureProps},
@@ -107,14 +108,15 @@ $(async function MAIN() {
         )
       }),
       update("model", (fetchOPTS)=>{
-        return loadZIP(orthotCTL.assets, 'assets/models.zip', fetchOPTS)
+        return loadZIP(orthotCTL.assets, true, 'assets/models.zip', fetchOPTS)
       }),
       update("ekvx", (fetchOPTS)=>{
-        return loadZIP(MAIN_ZONES, 'assets/ekvxdat.zip', fetchOPTS)
+        return loadZIP(MAIN_ZONES, true, 'assets/ekvxdat.zip', fetchOPTS)
       }),
       update("text", (fetchOPTS)=>{
         return loadMuch(
           orthotCTL.assets,
+          true,
           fetchOPTS,
           {url:"assets/maintexts.atxt"},
         )
@@ -145,6 +147,7 @@ $(async function MAIN() {
     let txts = {}
     await loadMuch(
       txts,
+      true,
       {cache:"reload"},
       {url:"assets/maintexts.atxt"},
     )
@@ -435,7 +438,7 @@ $(async function MAIN() {
   orthotCTL.forceReloadMainData = async function() {
     let zones = {}
     let texts = {}
-    await loadZIP(zones, orthotCTL.texts, 'assets/ekvxdat.zip', {cache:"reload"})
+    await loadZIP(zones, true, 'assets/ekvxdat.zip', {cache:"reload"})
     loadDataPack("MainGdataPack", "MainArea", zones, texts)
     orthotCTL.loadScene("MainArea")
   }

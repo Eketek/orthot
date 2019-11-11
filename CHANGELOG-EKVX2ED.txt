@@ -7,6 +7,7 @@
     colors/materials
     main model name (reference to the model to display)
     poses (for now, sets of mappings of names to model references)
+  Add a coexistance check based on spatial classes.  If an object can not coexist with an existing object, the existing object gets replaced.
 
 8 Nov 2019
   Add a block-eraser tool

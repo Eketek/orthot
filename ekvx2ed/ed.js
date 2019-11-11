@@ -895,7 +895,42 @@ $(async function MAIN() {
     }
   })()}
   
+  // If any object(s) that conflict with the active tool are present at the cursor position, delete them
+  let evict = function() {  
+    let ctn = vxc.get(cursor3d.x, cursor3d.y, cursor3d.z)
+    if (ctn.contents) {
+      let coexistWith = activeTool.spec.spclassCoexist
+      if (coexistWith.indexOf("*") != -1) {
+        return
+      }
+      for (let i = ctn.contents.length-1; i >= 0; i--) {
+        let obj = ctn.contents[i]
+        
+        if (obj.spec && obj.spec.spatialClass) {
+          // If the active tool is volumetric, but the object is not, ignore it
+          if (activeTool.spec.volumetric) {
+            if (!obj.spec.volumetric) {
+              continue
+            }
+          }
+          // If an attachment tool, but the object is not at the cursor position, ignore it
+          else {
+            if (cursor3d.up != obj.up) {
+              continue
+            }
+          }
+          
+          // If the object's spatial class is not present in the coexist list, it conflicts with the tool and should be removed
+          if (coexistWith.indexOf(obj.spec.spatialClass) == -1) {
+            remove(obj, cursor3d.x, cursor3d.y, cursor3d.z)
+          }
+        }
+      }
+    }
+  }
+  
   let build = function() {
+    evict()
     controlActive = true
     let obj = {}
     obj.data = {}

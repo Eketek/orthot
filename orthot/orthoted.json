@@ -80,6 +80,7 @@
       "shortname":"Wall",
       "pickModes":["xz", "xy", "yz", "mray"],
       "alignMode":"none",
+      "volumetric":true,
       "pickOut":true,
       "cursorModel":"CubeCursor",
       "spatialClass":"solid",
@@ -117,6 +118,7 @@
     "HorizObject":{
       "pickModes":["xz", "xy", "yz", "mray"],
       "alignMode":"horizontal",
+      "volumetric":true,
       "pickOut":true,
       "cursorModel":"DirCursor",
       "spatialClass":"solid",

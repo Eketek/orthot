@@ -98,17 +98,6 @@
             "gridHeight":1,
             "block":0
           }
-        },
-        "decal":{
-          "all":{
-            "tile":true,
-            "layout":"tiles",
-            "width":8,
-            "height":8,
-            "pickrand_init":true,
-            "randmin":0,
-            "randmax":6
-          }
         }
       },
       "mutablecolors":true,
@@ -138,11 +127,16 @@
         "row":1,
         "col":0
       },
+      "numSurfaceEntries":1,
       "color":{
-        "amount":1,
         "default":["white"],
         "mutable":[true],
         "mainIndex":0
+      },
+      "pattern":{
+        "rows":8,
+        "cols":8,
+        "default":[0,0]
       }
     },
     {
@@ -153,11 +147,17 @@
         "row":1,
         "col":1
       },
+      "numSurfaceEntries":3,
       "color":{
         "amount":3,
         "default":["white", "yellow", "orange"],
         "mutable":[true],
         "mainIndex":0
+      },
+      "pattern":{
+        "rows":8,
+        "cols":8,
+        "default":[0,0, 0,0, 0,0]
       }
     },
     {
@@ -169,11 +169,16 @@
         "row":1,
         "col":2
       },
+      "numSurfaceEntries":6,
       "color":{
-        "amount":6,
         "default":["white", "yellow", "green", "orange", "lightblue", "white"],
         "mutable":[true],
         "mainIndex":0
+      },
+      "pattern":{
+        "rows":8,
+        "cols":8,
+        "default":[0,0, 1,0, 2,0, 0,0, 0,0, 0,0]
       }
     },
     {

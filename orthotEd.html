@@ -25,11 +25,14 @@
     <div class="mainblock">
       <div class="section" id="leftside" style="min-width:126px">
         <span class="btn_active" id="foldcommandsBTN">Commands</span><br>
-        <div id="commands"></div>
+        <div id="commands" class="narrowblock"></div>
         <span class="btn_active" id="foldtoolsBTN">Tools</span><br>
-        <div id="tools"></div>
+        <div id="tools" class="narrowblock"></div>
         <span class="btn_active" id="foldoptionsBTN">Options</span><br>
-        <div id="options"></div>
+        <div id="options" class="narrowblock">
+          <div id="optionButtons" class="narrowblock"></div>
+          <div id="tpickerButtons" class="narrowblock"></div>
+        </div>
         Color:  <!--textarea id="manualColorPicker" rows="1" wrap="off" style="resize:none;height:18px">red;green;blue</textarea-->
         <div id="colorOutline" style="border-width:3px;margin-left:5px;border-style:solid">  <!-- ;border-style:solid;border-color:green -->
           "New-Object" Colors
@@ -58,6 +61,15 @@
           <select name="loadPuzzle" id="loadPuzzle" size=20 style="width:100%"></select>
         </div>
       </div>
+    </div>
+    <div id="texturePicker" class="info">
+      <div>
+        Texture Picker &nbsp&nbsp&nbsp
+        Rows:<textarea id="tpRows" rows=1 cols=5 style="width:50px;height:18px;resize:none">8</textarea>
+        Columns:<textarea id="tpCols" rows=1 cols=5 style="width:50px;height:18px;resize:none">8</textarea>
+      </div>
+      <canvas id="tpickerCNV" width=520 height=520></canvas>
+      <canvas id="tpickerOverlayCNV" width=520 height=520></canvas>
     </div>
     <div id="port" class="info" style="min-width:400px;width:33%;padding:10px">
       ekvx2 export/import<hr>

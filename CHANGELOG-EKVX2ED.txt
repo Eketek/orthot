@@ -1,3 +1,15 @@
+12 Nov 2019
+  Rename terrain "decal" to "pattern" (every such variable/name/thing that belongs to the editor)
+  Removed the random pattern selection from editor initialization.
+  Simplify pattern specification:  It now uses number of rows and columns, and an X and Y tile position to define a fixed/default pattern
+    (so far as editor/library/game logic is concerned, a "pattern" is only the relative/fractional size and position of a tile on a tilesheet)
+  Moved pattern specification to from the abstract "Wall" tool specification to the individual variants.
+  Apply patterns with the "box terrain definer" (same mechanism as is used to apply custom colors to terrain)
+  Rename, move, and repurpose the "color.amount" field in the tool specification.  It now is "numSurfaceEntries" and applies to both colors and patterns 
+    (and later, anything else that needs to be strongly associated with particular faces of a BoxTerrain cube)
+  Internals for a pattern selection interface.
+  Added logic for "merge classes" (ability to explicitly declare which defined surfaces the auto-texturing system should treat as merged)
+
 9-11 Nov 2019
   Add starting position tool
   Add handling for object alignment'

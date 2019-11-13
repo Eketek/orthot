@@ -359,10 +359,10 @@ $(async function MAIN() {
     pickplane.constant *= -1
   }
   
-  addEditorBTN("MRAY", "Pick against object under mouse cursor", setMraypickmode, false, "options", "pickmode", "editoricons", 0, 0, 40, 5)
-  addEditorBTN("XZ", "Pick against an XZ plane", setXZpickmode, true, "options", "pickmode", "editoricons", 0, 1, 40, 5)
-  addEditorBTN("XY", "Pick against an XY plane", setXYpickmode, false, "options", "pickmode", "editoricons", 0, 2, 40, 5)
-  addEditorBTN("YZ", "Pick against an YZ plane", setYZpickmode, false, "options", "pickmode", "editoricons", 0, 3, 40, 5)
+  addEditorBTN("MRAY", "Pick against object under mouse cursor", setMraypickmode, false, "optionButtons", "pickmode", "editoricons", 0, 0, 40, 5)
+  addEditorBTN("XZ", "Pick against an XZ plane", setXZpickmode, true, "optionButtons", "pickmode", "editoricons", 0, 1, 40, 5)
+  addEditorBTN("XY", "Pick against an XY plane", setXYpickmode, false, "optionButtons", "pickmode", "editoricons", 0, 2, 40, 5)
+  addEditorBTN("YZ", "Pick against an YZ plane", setYZpickmode, false, "optionButtons", "pickmode", "editoricons", 0, 3, 40, 5)
 
   on($("#foldcommandsBTN"), "click", ()=>{ $("#commands").toggle()})
   on($("#foldtoolsBTN"), "click", ()=>{ $("#tools").toggle()})
@@ -497,7 +497,7 @@ $(async function MAIN() {
         elem.style["background-color"] = col
         activeTool.colors[idx] = col      // activeTool.colors and mainBTNS are parallel
         this.color = col
-        updateColors()
+        updateTerrainProperties()
       }
     }
     //If not a "main" button, the button is used to pick the color of the primary button
@@ -620,10 +620,10 @@ $(async function MAIN() {
     return r
   }
   
-  let updateColors = function() {
+  let updateTerrainProperties = function() {
     if (activeTool) {
       if (activeTool.spec.terrain) {
-        activeTool.terrainID = boxterrainDefiners[activeTool.spec.terrain.name](activeTool.colors)
+        activeTool.terrainID = boxterrainDefiners[activeTool.spec.terrain.name](activeTool.colors, activeTool.patterns, activeTool.mergeClasses)
       }
     }
     
@@ -651,6 +651,100 @@ $(async function MAIN() {
     $btn.appendTo($loc)
   }
   
+  let patternPickerSRC = edCTL.assets.patterns.image
+  let buf = $("<canvas>")[0]
+  buf.width = patternPickerSRC.width
+  buf.height = patternPickerSRC.height
+  let bufctx = buf.getContext('2d')
+  bufctx.drawImage(patternPickerSRC, 0,0)
+  let ppixels = bufctx.getImageData(0,0,512,512)
+  //$(buf).appendTo($("body"))
+  
+  // [re]draw the pattern on the pattern picker canvas [using the same compositing operation as is used by the shader]
+  let drawPatternPicker = function(mainColor, section) {
+    if (!mainColor.isColor) {
+      mainColor = new THREE.Color(mainColor)
+    }
+    let $cnv = $("#tpickerCNV")
+    let ctx = $cnv[0].getContext('2d')
+    let x1 = 0
+    let x2 = 512
+    let y1 = 0
+    let y2 = 512
+    if (section) {
+      x1 = section.x1
+      x2 = section.x2
+      y1 = section.y1
+      y2 = section.y2
+    }
+    
+    for (let y = y1; y < y2; y++) {
+      for (let x = x1; x < x2; x++) {
+        // extract pattern pixel, rename and convert each channel to a number in range [0:1]
+        let pos = 4*(y*512+x)
+        let w_main = ppixels.data[pos]/255
+        let w_bg1 = ppixels.data[pos+1]/255
+        let w_bg2 = ppixels.data[pos+2]/255
+        
+        // apply the shader compositing operation
+        let r = clamp(mainColor.r*w_main + renderCTL.bg1.value.r*w_bg1 + renderCTL.bg2.value.r*w_bg2, 0, 1)*255
+        let g = clamp(mainColor.g*w_main + renderCTL.bg1.value.g*w_bg1 + renderCTL.bg2.value.g*w_bg2, 0, 1)*255
+        let b = clamp(mainColor.b*w_main + renderCTL.bg1.value.b*w_bg1 + renderCTL.bg2.value.b*w_bg2, 0, 1)*255
+        
+        //draw the pixel onto the pattern picker UI
+        ctx.fillStyle = `rgb(${r},${g},${b})`
+        ctx.fillRect(x+4,y+4,1,1)
+        //console.log(w_main, w_bg1, w_bg2, r,g,b)
+      }
+    }
+  }
+  
+  //drawPatternPicker("yellow", {x1:0,y1:0, x2:16,y2:16})
+  drawPatternPicker("yellow")
+  
+  let patternPickerBTN = function(name, location, index, tileX, tileY) {
+    this.tileX = tileX
+    this.tileY = tileY
+    let $loc = $("#"+location)
+    let $btn = $('<canvas width=32 height=32>')
+    $btn.appendTo($loc)
+    let cnv = $btn[0]
+    let ctx = cnv.getContext('2d')
+    let src = $("#tpickerCNV")[0]
+    
+    let ofsx = 4
+    let ofsy = 4
+    
+    let abs_tx, abs_ty, abs_w, abs_h
+    
+    let updateCoords = function() {
+      let rows = Number.parseInt($("#tpRows").value)
+      let cols = Number.parseInt($("#tpCols").value)
+      if (!Number.isFinite(rows) || rows <= 0) {
+        rows = 8
+      }
+      if (!Number.isFinite(cols) || cols <= 0) {
+        cols = 8
+      }
+      abs_w = 512/rows
+      abs_h = 512/cols
+      abs_tx = this.tileX*abs_w
+      abs_ty = this.tileY*abs_h
+    }
+    ctx.font = '12px sans-serif'
+    ctx.textBaseline = "bottom"
+    
+    this.update = function() {
+      drawPatternPicker(activeTool.colors[index], {x1:abs_tx,y1:abs_ty, x2:abs_tx+abs_w,y2:abs_ty+abs_h})
+      ctx.drawImage(src, abs_tx, abs_ty, abs_w, abs_h, 0, 0, 32, 32);
+      ctx.fillText(name, 0, 32)
+      activeTool.patterns[index] = {
+        x:this.tileX, y:this.tileY, w:cols, h:rows
+      }
+      updateTerrainProperties()
+    }
+  }
+  
   //reset button.  At some point, the confirmation dialog should probably be removed and the deleted data instead made restoreable through an 'undo' function
   btnfunc("commands", "reset", ()=>{
     if (confirm("Editor Reset Confirmation\n* * * *\nClick 'OK' to confirm the reset and delete everything.\nClick 'Cancel' to cancel the reset.")) {
@@ -665,7 +759,7 @@ $(async function MAIN() {
   let btnD = new colorBTN({ loc:"objColors", color:"blue", main:true })
   
   btnB.setPrimary()
-  updateColors()
+  updateTerrainProperties()
   
   var amblCol = new THREE.Color("white")
   amblCol.setHSL ( 0.125, 1, 0.5 )
@@ -708,12 +802,12 @@ $(async function MAIN() {
   
   // single surface specifications:  Each surface specifcation has these components:
   //  border:  A 256-entry texture coordinate lookup table (relative dimensions of each border tile in a texture atlas)
-  //  decal: Texture coordinates for the pattern to apply to all parts of the surface
-  //  color:  An arbitrary color value to mix with the border and decal texture components
+  //  pattern: Texture coordinates for the pattern to apply to all parts of the surface
+  //  color:   An arbitrary color value to mix with the border and decal texture components
   let surfaceDefs
   let sfcIDs
   let next_sfcid
-  let decalDefs
+  let patternDefs
   
   // top-level terrain specification.
   // Each of these is a set of 6 surface definitions.  One for each orthogonal direction.
@@ -769,9 +863,9 @@ $(async function MAIN() {
     sfcIDs = {}
     surfaceDefs = {}
     terrainDefs = {}
-    decalDefs = {}
+    patternDefs = {}
     remLocs = []
-    updateColors()
+    updateTerrainProperties()
   }
     
   let put = function(obj, x,y,z, ld=false) {
@@ -1213,7 +1307,9 @@ $(async function MAIN() {
     //wrap the spec
     let tool = {
       spec:spec,
-      colors:[]
+      colors:[],
+      patterns:[],
+      mergeClasses:[]
     }
     
     // If pickModes is specified as a string, expand it to an array.
@@ -1246,11 +1342,19 @@ $(async function MAIN() {
     else if (spec.model && spec.model.color) {
       col_obj = spec.model.color
     }
+    let numSurfaceEntries = spec.numSurfaceEntries
+    if (spec.terrain && (numSurfaceEntries == undefined)) {
+      numSurfaceEntries = 1
+      console.log("WARNING:  terrain-type tool does not specify number of surfaces (numSurfaceEntries)")
+    }
     // build the default preset for the tool
     if (col_obj) {
+      if (col_obj.amount != undefined) {
+        numSurfaceEntries = col_obj.amount  // hack to re-use this for defining mesh materials
+      }
       if (col_obj.default) {
         if (Array.isArray(col_obj.default)) {
-          for ( let i = 0; i < col_obj.amount; i++ ) {
+          for ( let i = 0; i < numSurfaceEntries; i++ ) {
             if (typeof(col_obj.default[i]) == "object") {
               tool.colors.push(col_obj.default[i].color)
             }
@@ -1260,7 +1364,7 @@ $(async function MAIN() {
           }
         }
         else {
-          for ( let i = 0; i < col_obj.amount; i++ ) {
+          for ( let i = 0; i < numSurfaceEntries; i++ ) {
             if (typeof(col_obj.default) == "object") {
               tool.colors.push(col_obj.default.color)
             }
@@ -1271,8 +1375,59 @@ $(async function MAIN() {
         }
       }
       else {
-        for ( let i = 0; i < col_obj.amount; i++ ) {
+        for ( let i = 0; i < numSurfaceEntries; i++ ) {
           tool.colors.push("white")
+        }
+      }
+    }
+    if (spec.pattern) {
+      if (spec.pattern.default) {
+        if (Array.isArray(col_obj.default)) {
+          if (spec.pattern.default.length == numSurfaceEntries) {
+            for ( let i = 0; i < numSurfaceEntries; i++ ) {
+              let _pattern = Object.assign({}, spec.pattern)
+              if (typeof(spec.pattern.default[i]) == "number") {
+                _pattern.tileX = spec.pattern.default[i]%spec.pattern.cols
+                _pattern.tileY = Math.floor(spec.pattern.default[i]/spec.pattern.cols)
+              }
+              else if (typeof(spec.pattern.default[i]) == "object") {
+                Object.assign(_pattern, spec.pattern.default[i])
+              }
+              tool.patterns.push(_pattern)
+            }
+          }
+          else {
+            for ( let i = 0; i < numSurfaceEntries; i++ ) {
+              let _pattern = Object.assign({}, spec.pattern)
+              _pattern.tileX = spec.pattern.default[i*2]
+              _pattern.tileY = spec.pattern.default[i*2+1]
+              tool.patterns.push(_pattern)
+            }
+          }
+        }
+        else if (typeof(spec.pattern.default) == "object") {
+          for ( let i = 0; i < numSurfaceEntries; i++ ) {
+            let _pattern = Object.assign({}, spec.pattern, spec.pattern.default)  
+            tool.patterns.push(_pattern)
+          }
+        }
+      }
+      else {
+        for ( let i = 0; i < numSurfaceEntries; i++ ) {
+          let _pattern = Object.assign({}, spec.pattern)
+          tool.patterns.push(_pattern)
+        }
+      }
+    }
+    if (spec.mergeClass) {
+      if (typeof(spec.mergeClass) == "string") {
+        for ( let i = 0; i < numSurfaceEntries; i++ ) {
+          tool.mergeClasses.push(mergeClass)
+        }
+      }
+      else {
+        for ( let i = 0; i < numSurfaceEntries; i++ ) {
+          tool.mergeClasses.push(mergeClass[i])
         }
       }
     }
@@ -1280,6 +1435,27 @@ $(async function MAIN() {
     if (spec.terrain) {
       if (!spec.terrain.name) {
         spec.terrain.name = spec.type
+      }
+      if (!col_obj) {
+        for ( let i = 0; i < numSurfaceEntries; i++ ) {
+          tool.colors.push("white")
+        }
+      }
+      if (!spec.pattern) {
+        console.log("WARNING: terrain-type tool does not specify a pattern")
+        for ( let i = 0; i < numSurfaceEntries; i++ ) {
+          tool.patterns.push({
+            rows:8,
+            cols:8,
+            tileX:0,
+            tileY:0
+          })
+        }
+      }
+      if (!spec.mergeClass) {
+        for ( let i = 0; i < numSurfaceEntries; i++ ) {
+          tool.mergeClasses.push("none")
+        }
       }
       defineTerrain(spec.terrain)
     }
@@ -1343,7 +1519,7 @@ $(async function MAIN() {
         }
       }
     }
-    updateColors()
+    updateTerrainProperties()
     
     cursor3d.mdl.remove(cursorMDL)
     releaseAsset(edCTL.assets, cursorMDL)
@@ -1353,30 +1529,24 @@ $(async function MAIN() {
   }
   
   // BoxTerrain configuration section
-  // Purpose of this is to expose the internal features of BoxTerrain (multiple sets of boundary graphics from a texture atlas, arbitrary decals from a second 
+  // Purpose of this is to expose the internal features of BoxTerrain (multiple sets of boundary graphics from a texture atlas, arbitrary patterns from a second
   // texture atlas, and unique configurations for each of the 6 directions)
   
-  let toDecalParams = function(decalSpec) {
-    let k = JSON.stringify(decalSpec)
-    if (decalDefs[k]) {
-      return decalDefs[k]
+  let toPatternParams = function(patternSpec) {
+    let k = JSON.stringify(patternSpec)
+    if (patternDefs[k]) {
+      return patternDefs[k]
     }
-    let ddef
-    if (decalSpec.tile) {
-      ddef = {
-        type:DECAL_UVTYPE.TILE, 
+    let pdef = {
+      type:DECAL_UVTYPE.TILE,
+      lut:{
+        num_rows:patternSpec.rows,
+        num_cols:patternSpec.cols,
+        entry:patternSpec.cols*patternSpec.tileY + patternSpec.tileX
       }
-      if (decalSpec.pickrand_init) {
-        ddef.lut = { entry:Math.floor(Math.random()*(decalSpec.randmax-decalSpec.randmin))+decalSpec.randmin }
-      }
-      else {
-        ddef.lut = {entry:decalSpec.value|0}
-      }
-      ddef.lut.num_rows = decalSpec.width,
-      ddef.lut.num_cols = decalSpec.height
     }
-    decalDefs[k] = ddef
-    return ddef
+    patternDefs[k] = pdef
+    return pdef
   }
   
   // attach the specified "block" bounds to a params object (parameters for gen.build_texcoordLUT)
@@ -1392,49 +1562,7 @@ $(async function MAIN() {
   }
   
   let defineTerrain = function(terrspec) {
-    //surfaceDefs[name] = sfcdef
-    
-    // Set up the "decal" specifications for all directions
-    //  (the decal specifciation is the secondary texture coordinates for 
-    let nd, ed, sd, wd, ud, dd
-    if (terrspec.decal.a) {
-      nd = ed = sd = wd = ud = dd = toDecalParams(terrspec.decal.a)
-    }
-    else if (terrspec.decal.all) {
-      nd = ed = sd = wd = ud = dd = toDecalParams(terrspec.decal.all)
-    }
-    if (terrspec.decal.h) {
-      ud = dd = toDecalParams(terrspec.decal.h)
-    }
-    if (terrspec.decal.v) {
-      nd = ed = sd = wd = toDecalParams(terrspec.decal.v)
-    }
-    if (terrspec.decal.n) {
-      nd = toDecalParams(terrspec.decal.n)
-    }
-    if (terrspec.decal.e) {
-      ed = toDecalParams(terrspec.decal.e)
-    }
-    if (terrspec.decal.s) {
-      sd = toDecalParams(terrspec.decal.s)
-    }
-    if (terrspec.decal.w) {
-      wd = toDecalParams(terrspec.decal.w)
-    }
-    if (terrspec.decal.u) {
-      ud = toDecalParams(terrspec.decal.u)
-    }
-    if (terrspec.decal.d) {
-      dd = toDecalParams(terrspec.decal.d)
-    }
-    
-    let ddefs = [nd, ed, sd, wd, ud, dd]
-    
     let facedefs = [{}, {}, {}, {}, {}, {}]
-    
-    for (let i = 0; i < 6; i++) {
-      Object.assign(facedefs[i], ddefs[i])
-    }
     
     if (terrspec.primary.all) {
       apply8bitTerrspec(facedefs[0], terrspec.primary.all)
@@ -1447,7 +1575,7 @@ $(async function MAIN() {
     if (terrspec.primary.v) {
       apply8bitTerrspec(facedefs[0], terrspec.primary.v)
       apply8bitTerrspec(facedefs[1], terrspec.primary.v)
-      apply8bitTerrspec(sfcdefs[2], terrspec.primary.v)
+      apply8bitTerrspec(facedefs[2], terrspec.primary.v)
       apply8bitTerrspec(facedefs[3], terrspec.primary.v)
     }
     if (terrspec.primary.h) {
@@ -1475,10 +1603,8 @@ $(async function MAIN() {
     
     let baseK = JSON.stringify(terrspec)+"|"
     
-    //console.log(facedefs)
-    
-    boxterrainDefiners[terrspec.name] = function config_bxt(colors) {
-      let k = baseK + colors.join(" ")
+    boxterrainDefiners[terrspec.name] = function config_bxt(colors, patterns, mergeClasses) {
+      let k = baseK + JSON.stringify(colors) + "|" + JSON.stringify(patterns) + "|" + JSON.stringify(mergeClasses)
       if (terrainIDs[k]) {
         return terrainIDs[k]
       }
@@ -1496,6 +1622,22 @@ $(async function MAIN() {
           colors[terrspec.map[3]],
           colors[terrspec.map[4]],
           colors[terrspec.map[5]]
+        ]
+        patterns = [
+          patterns[terrspec.map[0]],
+          patterns[terrspec.map[1]],
+          patterns[terrspec.map[2]],
+          patterns[terrspec.map[3]],
+          patterns[terrspec.map[4]],
+          patterns[terrspec.map[5]]
+        ]
+        mergeClasses = [
+          mergeClasses[terrspec.map[0]],
+          mergeClasses[terrspec.map[1]],
+          mergeClasses[terrspec.map[2]],
+          mergeClasses[terrspec.map[3]],
+          mergeClasses[terrspec.map[4]],
+          mergeClasses[terrspec.map[5]]
         ]
       }
       else {
@@ -1521,10 +1663,54 @@ $(async function MAIN() {
             colors = [colors[1], colors[2], colors[3], colors[4], colors[0], colors[5]]
             break
         }
+        switch(patterns.length) {
+          case 1:
+            patterns = [patterns[0], patterns[0], patterns[0], patterns[0], patterns[0], patterns[0]]
+            break
+          case 2:
+            patterns = [patterns[1], patterns[1], patterns[1], patterns[1], patterns[0], patterns[0]]
+            break
+          case 3:
+            patterns = [patterns[1], patterns[1], patterns[1], patterns[1], patterns[0], patterns[2]]
+            break
+          case 4:
+            patterns = [patterns[1], patterns[2], patterns[1], patterns[2], patterns[0], patterns[3]]
+            break
+          case 5:
+            patterns = [patterns[1], patterns[2], patterns[3], patterns[4], patterns[0], patterns[0]]
+            break
+          case 6:
+            patterns = [patterns[1], patterns[2], patterns[3], patterns[4], patterns[0], patterns[5]]
+            break
+        }
+        switch(mergeClasses.length) {
+          case 1:
+            mergeClasses = [mergeClasses[0], mergeClasses[0], mergeClasses[0], mergeClasses[0], mergeClasses[0], mergeClasses[0]]
+            break
+          case 2:
+            mergeClasses = [mergeClasses[1], mergeClasses[1], mergeClasses[1], mergeClasses[1], mergeClasses[0], mergeClasses[0]]
+            break
+          case 3:
+            mergeClasses = [mergeClasses[1], mergeClasses[1], mergeClasses[1], mergeClasses[1], mergeClasses[0], mergeClasses[2]]
+            break
+          case 4:
+            mergeClasses = [mergeClasses[1], mergeClasses[2], mergeClasses[1], mergeClasses[2], mergeClasses[0], mergeClasses[3]]
+            break
+          case 5:
+            mergeClasses = [mergeClasses[1], mergeClasses[2], mergeClasses[3], mergeClasses[4], mergeClasses[0], mergeClasses[0]]
+            break
+          case 6:
+            mergeClasses = [mergeClasses[1], mergeClasses[2], mergeClasses[3], mergeClasses[4], mergeClasses[0], mergeClasses[5]]
+            break
+        }
       }
       
-      //Configure the box terrain for each surface [with the corresponding  input color]
-      //    (maybe think about preparing only one surface for each unique color-decaldef pair - present approach is just to not care about that...)
+      for (let i = 0; i < 6; i++) {
+        Object.assign(facedefs[i], toPatternParams(patterns[i]))
+        facedefs[i].mergeClass = mergeClasses[i]
+      }
+    
+      //Configure the box terrain for each surface [with the corresponding color & pattern parameters]
       let tid = next_terrainid
       terrainIDs[k] = tid
       let sfcdefids = [tid]

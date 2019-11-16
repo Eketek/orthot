@@ -423,8 +423,7 @@ $(async function MAIN() {
   //  This one also works directly on ekvx Tools.
   //  This one is also very short and simple (under 200 lines of code)
   //  And if that's not enough, this one [arguably unnecessarilly] also allows User to configure the palette generator
-  let primaryBTN
-  let mainBTNS = []  
+  let pickColor
   let colorBTN = function(params) {
     let $elem = $('<span class="noselect">')
     let $loc = $("#" + params.loc)
@@ -473,61 +472,36 @@ $(async function MAIN() {
     this.remove = function() {
       $(elem).remove()
     }
-      
-    // If a "main" button, this button controller is used to transfer picked colors to the active Tool color table.
-    if (params.main) {
-      this.unsetPrimary = function() {
-        resize(18)
-      }
-      this.setPrimary = (function() {
-        if (primaryBTN) {
-          primaryBTN.unsetPrimary()
-        }    
-        resize(24)
-        primaryBTN = this
-      }).bind(this)
-      this.unsetPrimary()
-      
-      let idx = mainBTNS.length
-      mainBTNS.push(this)
-      on(elem, "click", this.setPrimary)
-      
-      
-      this.setColor = function(col) {
+    let _color
+    Object.defineProperty(this, 'color', {
+      set:function(col) { 
+        _color = col
         elem.style["background-color"] = col
-        activeTool.colors[idx] = col      // activeTool.colors and mainBTNS are parallel
-        this.color = col
-        updateTerrainProperties()
+      },
+      get:function() {
+        return _color
       }
-    }
-    //If not a "main" button, the button is used to pick the color of the primary button
-    else {
-      let _color
-      Object.defineProperty(this, 'color', {
-        set:function(col) { 
-          _color = col
-          elem.style["background-color"] = col
-        },
-        get:function() {
-          return _color
+    })
+    this.color = params.color
+    if (params.setRecent) {
+      on(elem, "click", ()=>{
+        if (pickColor) {
+          //primaryBTN.setColor(this.color)
+          pickColor(this.color)
+          nextRecentColor(this.color)
+          $("#colorPicker").hide()
+          pickColor = undefined
         }
       })
-      this.color = params.color
-      if (params.setRecent) {
-        on(elem, "click", ()=>{
-          if (primaryBTN) {
-            primaryBTN.setColor(this.color)
-            nextRecentColor(this.color)
-          }
-        })
-      }
-      else {
-        on(elem, "click", ()=>{
-          if (primaryBTN) {
-            primaryBTN.setColor(this.color)
-          }
-        })
-      }
+    }
+    else {
+      on(elem, "click", ()=>{
+        if (pickColor) {
+          pickColor(this.color)
+          $("#colorPicker").hide()
+          pickColor = undefined
+        }
+      })
     }
   }
   
@@ -623,24 +597,21 @@ $(async function MAIN() {
   let updateTerrainProperties = function() {
     if (activeTool) {
       if (activeTool.spec.terrain) {
-        activeTool.terrainID = boxterrainDefiners[activeTool.spec.terrain.name](activeTool.colors, activeTool.patterns, activeTool.mergeClasses)
+        activeTool.terrainID = boxterrainDefiners[activeTool.spec.terrain.name]()
       }
     }
-    
-    // Color the border of the color selector with all of the colors selected.
-    let cssStr = "repeating-linear-gradient(45deg"
-    for (let i = 0; i < mainBTNS.length; i++) {
-      cssStr += ","
-      cssStr += mainBTNS[i].color
-      cssStr += ","
-      cssStr += mainBTNS[i].color
-      cssStr += ","
-      cssStr += mainBTNS[i].color
-      cssStr += ","
-      cssStr += mainBTNS[i].color
-    }
-    cssStr += " " + mainBTNS.length*5 + "px) 1 / 1 / 0"
-    $("#colorOutline")[0].style["border-image"] = cssStr
+  }
+  
+  let activateCpicker = function(targetElem, cpcallback) {
+    let $cpk = $("#colorPicker")
+    $cpk.show()
+    pickColor = cpcallback
+    let cooldown = Date.now()+333
+    on(document, "escape", (evt)=>{
+      $cpk.hide()
+      cpcallback = undefined
+    })
+    putFloatingElement($cpk[0], targetElem)
   }
   
   let btnfunc = function(location, btntext, func) {
@@ -753,12 +724,117 @@ $(async function MAIN() {
    }
   })
   
-  let btnA = new colorBTN({ loc:"objColors", color:"black", main:true })
-  let btnB = new colorBTN({ loc:"objColors", color:"red", main:true })
-  let btnC = new colorBTN({ loc:"objColors", color:"green", main:true })
-  let btnD = new colorBTN({ loc:"objColors", color:"blue", main:true })
+  let buildComponentEditor = function(target) {
+    if (!target) {
+      target = activeTool.components
+    }
+    
+    let $compelem = $("#objProperties")
+    $compelem.empty()
+    
+    let $tbl = $(`<table>`)
+    $tbl.append(`<colgroup><col style="width:5px"><col><col></colgroup>`)
+    $compelem.append($tbl)
+    
+    
+    let addRow = function(text, title, editElems) {
+      if (editElems) {
+        
+        let $row = $("<tr>")
+        $row.append(`<td>`)
+        $row.append(`<td title="${title}">${text}</td>`)
+        let $pedit = $(`<td>`)
+        $row.append($pedit)
+        $tbl.append($row)
+        
+        if (Array.isArray(editElems)) {
+          for (let elem of editElems) {
+            $pedit.append(elem)
+          }
+        }
+        else {
+          $pedit.append(editElems)
+        }
+      }
+      else {
+        $tbl.append($(`<tr><td colspan=3 style="font-size:10">${text}</td></tr>`))
+      }
+    }
+    
+    for (let [name, comp] of Object.entries(activeTool.components)) {
+      let proped = name
+      if (comp.proped) {
+        proped = comp.proped
+      }
+      switch(proped) {
+        // surface editor
+        case "up":
+        case "down":
+        case "north":
+        case "east":
+        case "south":
+        case "west":
+        case "all":
+        case "horiz":
+        case "vert":
+          addRow(name)
+          //color selector
+          //pattern selector
+          //mergeclass textarea
+          addRow("color", "Color", propEditor_color(comp, "color"))
+          addRow("merge", "Merge Class", propEditor_textarea(comp, "mergeClass", "auto"))
+          break
+        case "materials":
+          addRow(name)
+          for (let i = 0; i < comp.length; i++) {
+            if (typeof(comp[i]) == "string") {
+              addRow(`m${i}-col`, `Material #${i} Main Color`, propEditor_color(comp, i))
+            }
+            else {
+              addRow(`m${i}-col`, `Material #${i} Main Color`, propEditor_color(comp[i], "color"))
+            }
+          }
+          break
+      }
+    }
+  }
   
-  btnB.setPrimary()
+  let propEditor_color = function(obj, name) {
+    let btn = $("<div>")[0]
+    btn.style.width = 18
+    btn.style.height = 18
+    btn.style.border = "thin solid black"
+    btn.style.backgroundColor = obj[name]
+    on(btn, "click", ()=>{
+      activateCpicker(btn, (color)=>{
+        obj[name] = color
+        btn.style.backgroundColor = color
+        updateTerrainProperties()
+      })
+    })
+    return btn
+  }
+  
+  let propEditor_textarea = function(obj, name, nullVal="None", deleteIfnull=true) {
+    let ta = $("<textarea>")[0]
+    ta.value = obj[name]
+    if (obj[name] == undefined) {
+      ta.value = nullVal
+    }
+    ta.rows = 1
+    ta.cols = 10
+    ta.style.height = 16
+    ta.style.resize = "none"
+    on(ta, "input", ()=>{
+      obj[name] = ta.value
+      if (deleteIfnull && ((ta.value == nullVal) || (ta.value == "")) ) {
+        delete obj[name]
+      }
+      console.log(activeTool)
+    })
+    return ta
+  }
+  
   updateTerrainProperties()
   
   var amblCol = new THREE.Color("white")
@@ -1161,23 +1237,35 @@ $(async function MAIN() {
       obj.data.$.push(activeTool.terrainID)
     }
     else if (activeTool.spec.model) {
-      let mdl = getAsset(edCTL.assets, activeTool.spec.model.main)
+      let mdl = getAsset(edCTL.assets, activeTool.spec.model)
       obj.mdl = new THREE.Object3D()
       obj.mdl.add(mdl)
-      let mats = deepcopy(activeTool.spec.model.color.default)
-      if (!Array.isArray(mats)) {
-        mats = [mats]
-      }
-      for (let i = 0; i < mats.length; i++) {
-        if (typeof(mats[i] == "string")) {
-          mats[i] = activeTool.colors[i]
+      if (activeTool.components) {
+        for (let compName in activeTool.components) {
+          switch(compName) {
+            //bypass "virtual" components (mainly these are used for terrain properties)
+            case "up":
+            case "down":
+            case "north":
+            case "east":
+            case "south":
+            case "west":
+            case "all":
+            case "horiz":
+            case "vert":
+              break
+            case "materials":
+              let mats = deepcopy(activeTool.components[compName])
+              assignMaterials(mdl, mats)
+              obj.data[compName] = deepcopy(activeTool.components[compName])
+              break
+            //every other component
+            default:
+              obj.data[compName] = deepcopy(activeTool.components[compName])
+              break
+          }
         }
-        else {
-          mats[i].color = activeTool.colors[i]
-        }
       }
-      assignMaterials(mdl, mats)
-      obj.data.materials = activeTool.colors
       
       if ((activeTool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
         obj.data.$.push(up)
@@ -1303,15 +1391,58 @@ $(async function MAIN() {
     }
   }
   
+  
+  //Scan an Object for "target" objects with a property named "ref" or "copy".
+  //  When "ref" or "copy" is encountered, retrieve the referenced object by following names from the top-level object, then
+  //  if it is a "ref" field, replace the target object with a direct reference to the resolved object
+  //  if it is a "copy" field, replace the target object with a deep copy of the resolved object
+  //This could be replaced with something that adds a proper referncing scheme to JSON, but if going that far, 
+  //  might as well consider using a simpler markup language.
+  let resolveRefs = function(obj) {
+    let refs = []
+    findRefs(obj, obj, refs)
+    for (let ref of refs) {
+      ref.obj[ref.k] = ref.val
+    }
+  }
+  let findRefs = function(mainObj, obj, refs) {
+    for (let [k,v] of Object.entries(obj)) {
+      if (typeof(v) == "object") {
+        if (v.copy) {
+          refs.push({
+            obj:obj,
+            k:k,
+            val:deepcopy(resolveName(mainObj, v.copy))
+          })
+        }
+        else if (v.ref) {
+          refs.push({
+            obj:obj,
+            k:k,
+            val:resolveName(mainObj, v.ref)
+          })
+        }
+        else {
+          findRefs(mainObj, v, refs)
+        }
+      }
+    }
+  }
+  // scan a [heirarchical] object for a referenced object.
+  let resolveName = function(obj, ref) {
+    let names = ref.split('.')
+    for (let name of names) {
+      obj = obj[name]
+    }
+    return obj
+  }
+  
   let defineTool = function(spec) {
     //wrap the spec
     let tool = {
       spec:spec,
-      colors:[],
-      patterns:[],
-      mergeClasses:[]
+      components:deepcopy(spec.components)
     }
-    
     // If pickModes is specified as a string, expand it to an array.
     if (typeof(spec.pickModes) == "string") {
       switch(spec.pickModes) {
@@ -1334,128 +1465,10 @@ $(async function MAIN() {
     if (typeof(spec.spclassCoexist) == "string") {
       spec.spclassCoexist = spec.spclassCoexist.split(" ")
     }
-    
-    let col_obj
-    if (spec.color) {
-      col_obj = spec.color
-    }
-    else if (spec.model && spec.model.color) {
-      col_obj = spec.model.color
-    }
-    let numSurfaceEntries = spec.numSurfaceEntries
-    if (spec.terrain && (numSurfaceEntries == undefined)) {
-      numSurfaceEntries = 1
-      console.log("WARNING:  terrain-type tool does not specify number of surfaces (numSurfaceEntries)")
-    }
-    // build the default preset for the tool
-    if (col_obj) {
-      if (col_obj.amount != undefined) {
-        numSurfaceEntries = col_obj.amount  // hack to re-use this for defining mesh materials
-      }
-      if (col_obj.default) {
-        if (Array.isArray(col_obj.default)) {
-          for ( let i = 0; i < numSurfaceEntries; i++ ) {
-            if (typeof(col_obj.default[i]) == "object") {
-              tool.colors.push(col_obj.default[i].color)
-            }
-            else {
-              tool.colors.push(col_obj.default[i])
-            }
-          }
-        }
-        else {
-          for ( let i = 0; i < numSurfaceEntries; i++ ) {
-            if (typeof(col_obj.default) == "object") {
-              tool.colors.push(col_obj.default.color)
-            }
-            else {
-              tool.colors.push(col_obj.default)
-            }
-          }
-        }
-      }
-      else {
-        for ( let i = 0; i < numSurfaceEntries; i++ ) {
-          tool.colors.push("white")
-        }
-      }
-    }
-    if (spec.pattern) {
-      if (spec.pattern.default) {
-        if (Array.isArray(col_obj.default)) {
-          if (spec.pattern.default.length == numSurfaceEntries) {
-            for ( let i = 0; i < numSurfaceEntries; i++ ) {
-              let _pattern = Object.assign({}, spec.pattern)
-              if (typeof(spec.pattern.default[i]) == "number") {
-                _pattern.tileX = spec.pattern.default[i]%spec.pattern.cols
-                _pattern.tileY = Math.floor(spec.pattern.default[i]/spec.pattern.cols)
-              }
-              else if (typeof(spec.pattern.default[i]) == "object") {
-                Object.assign(_pattern, spec.pattern.default[i])
-              }
-              tool.patterns.push(_pattern)
-            }
-          }
-          else {
-            for ( let i = 0; i < numSurfaceEntries; i++ ) {
-              let _pattern = Object.assign({}, spec.pattern)
-              _pattern.tileX = spec.pattern.default[i*2]
-              _pattern.tileY = spec.pattern.default[i*2+1]
-              tool.patterns.push(_pattern)
-            }
-          }
-        }
-        else if (typeof(spec.pattern.default) == "object") {
-          for ( let i = 0; i < numSurfaceEntries; i++ ) {
-            let _pattern = Object.assign({}, spec.pattern, spec.pattern.default)  
-            tool.patterns.push(_pattern)
-          }
-        }
-      }
-      else {
-        for ( let i = 0; i < numSurfaceEntries; i++ ) {
-          let _pattern = Object.assign({}, spec.pattern)
-          tool.patterns.push(_pattern)
-        }
-      }
-    }
-    if (spec.mergeClass) {
-      if (typeof(spec.mergeClass) == "string") {
-        for ( let i = 0; i < numSurfaceEntries; i++ ) {
-          tool.mergeClasses.push(mergeClass)
-        }
-      }
-      else {
-        for ( let i = 0; i < numSurfaceEntries; i++ ) {
-          tool.mergeClasses.push(mergeClass[i])
-        }
-      }
-    }
-    
+        
     if (spec.terrain) {
       if (!spec.terrain.name) {
         spec.terrain.name = spec.type
-      }
-      if (!col_obj) {
-        for ( let i = 0; i < numSurfaceEntries; i++ ) {
-          tool.colors.push("white")
-        }
-      }
-      if (!spec.pattern) {
-        console.log("WARNING: terrain-type tool does not specify a pattern")
-        for ( let i = 0; i < numSurfaceEntries; i++ ) {
-          tool.patterns.push({
-            rows:8,
-            cols:8,
-            tileX:0,
-            tileY:0
-          })
-        }
-      }
-      if (!spec.mergeClass) {
-        for ( let i = 0; i < numSurfaceEntries; i++ ) {
-          tool.mergeClasses.push("none")
-        }
       }
       defineTerrain(spec.terrain)
     }
@@ -1470,9 +1483,6 @@ $(async function MAIN() {
     
     //store the tool
     tools[spec.name] = tool
-    
-  //let addEditorBTN = edCTL.addEditorBTN = function(name, desc, value, init_active, position, activeClass, sheet, row, col, hue, hdev) {
-  //addEditorBTN("MRAY", "Pick against object under mouse cursor", setMraypickmode, false, "options", "pickmode", "editoricons", 0, 0, 40, 5)
   
     addEditorBTN(
       spec.shortname ? spec.shortname : spec.name, 
@@ -1491,34 +1501,8 @@ $(async function MAIN() {
     activeTool = tools[name]
     let opspec = opSpecs[activeTool.spec.routine]
     handleInput(opspec)
-    primaryBTN = undefined
-    for (let mbtn of mainBTNS) {
-      mbtn.remove()
-    }
-    mainBTNS = []
-    if (activeTool.spec.mutablecolors) {
-      let col_obj
-      
-      if (activeTool.spec.color) {
-        col_obj = activeTool.spec.color
-      }
-      else if (activeTool.spec.model) {
-        col_obj = activeTool.spec.model.color
-      }
-      if (col_obj) {
-        for (let col of activeTool.colors) {
-          let mbtn = new colorBTN({ loc:"objColors", color:col, main:true })
-        }
-        
-        //if a default primary color is specified, use it.  Otherwise, use the first.
-        if (col_obj.mainIndex != undefined) {
-          mainBTNS[col_obj.mainIndex].setPrimary()
-        }
-        else if (mainBTNS.length > 0) {
-          mainBTNS[0].setPrimary()
-        }
-      }
-    }
+    
+    buildComponentEditor()
     updateTerrainProperties()
     
     cursor3d.mdl.remove(cursorMDL)
@@ -1542,7 +1526,7 @@ $(async function MAIN() {
       lut:{
         num_rows:patternSpec.rows,
         num_cols:patternSpec.cols,
-        entry:patternSpec.cols*patternSpec.tileY + patternSpec.tileX
+        entry:patternSpec.cols*patternSpec.y + patternSpec.x
       }
     }
     patternDefs[k] = pdef
@@ -1603,111 +1587,58 @@ $(async function MAIN() {
     
     let baseK = JSON.stringify(terrspec)+"|"
     
-    boxterrainDefiners[terrspec.name] = function config_bxt(colors, patterns, mergeClasses) {
-      let k = baseK + JSON.stringify(colors) + "|" + JSON.stringify(patterns) + "|" + JSON.stringify(mergeClasses)
+    boxterrainDefiners[terrspec.name] = function config_bxt() {
+      //let k = baseK + JSON.stringify(colors) + "|" + JSON.stringify(patterns) + "|" + JSON.stringify(mergeClasses)
+      let k = baseK + JSON.stringify(activeTool.components)
       if (terrainIDs[k]) {
         return terrainIDs[k]
       }
-      
-      for (let i = 0; i < colors.length; i++) {
-        colors[i] = toRGBstring(colors[i])
+      for (let k in activeTool.components) {
+        activeTool.components[k].color = toRGBstring(activeTool.components[k].color)
       }
       
-      // If a map is specified, use it to expand/rearrange the color array
-      if (terrspec.map) {
-        colors = [
-          colors[terrspec.map[0]],
-          colors[terrspec.map[1]],
-          colors[terrspec.map[2]],
-          colors[terrspec.map[3]],
-          colors[terrspec.map[4]],
-          colors[terrspec.map[5]]
-        ]
-        patterns = [
-          patterns[terrspec.map[0]],
-          patterns[terrspec.map[1]],
-          patterns[terrspec.map[2]],
-          patterns[terrspec.map[3]],
-          patterns[terrspec.map[4]],
-          patterns[terrspec.map[5]]
-        ]
-        mergeClasses = [
-          mergeClasses[terrspec.map[0]],
-          mergeClasses[terrspec.map[1]],
-          mergeClasses[terrspec.map[2]],
-          mergeClasses[terrspec.map[3]],
-          mergeClasses[terrspec.map[4]],
-          mergeClasses[terrspec.map[5]]
-        ]
+      let comps = []
+      if (activeTool.components.all) {
+        comps[0] = activeTool.components.all
+        comps[1] = activeTool.components.all
+        comps[2] = activeTool.components.all
+        comps[3] = activeTool.components.all
+        comps[4] = activeTool.components.all
+        comps[5] = activeTool.components.all
       }
-      else {
-        //If no map is specified, but the input color array is short, use a builtin mapping to expand it to 6 colors
-        //  Builtin mapping generally colors a cube from top to bottom
-        switch(colors.length) {
-          case 1:
-            colors = [colors[0], colors[0], colors[0], colors[0], colors[0], colors[0]]
-            break
-          case 2:
-            colors = [colors[1], colors[1], colors[1], colors[1], colors[0], colors[0]]
-            break
-          case 3:
-            colors = [colors[1], colors[1], colors[1], colors[1], colors[0], colors[2]]
-            break
-          case 4:
-            colors = [colors[1], colors[2], colors[1], colors[2], colors[0], colors[3]]
-            break
-          case 5:
-            colors = [colors[1], colors[2], colors[3], colors[4], colors[0], colors[0]]
-            break
-          case 6:
-            colors = [colors[1], colors[2], colors[3], colors[4], colors[0], colors[5]]
-            break
-        }
-        switch(patterns.length) {
-          case 1:
-            patterns = [patterns[0], patterns[0], patterns[0], patterns[0], patterns[0], patterns[0]]
-            break
-          case 2:
-            patterns = [patterns[1], patterns[1], patterns[1], patterns[1], patterns[0], patterns[0]]
-            break
-          case 3:
-            patterns = [patterns[1], patterns[1], patterns[1], patterns[1], patterns[0], patterns[2]]
-            break
-          case 4:
-            patterns = [patterns[1], patterns[2], patterns[1], patterns[2], patterns[0], patterns[3]]
-            break
-          case 5:
-            patterns = [patterns[1], patterns[2], patterns[3], patterns[4], patterns[0], patterns[0]]
-            break
-          case 6:
-            patterns = [patterns[1], patterns[2], patterns[3], patterns[4], patterns[0], patterns[5]]
-            break
-        }
-        switch(mergeClasses.length) {
-          case 1:
-            mergeClasses = [mergeClasses[0], mergeClasses[0], mergeClasses[0], mergeClasses[0], mergeClasses[0], mergeClasses[0]]
-            break
-          case 2:
-            mergeClasses = [mergeClasses[1], mergeClasses[1], mergeClasses[1], mergeClasses[1], mergeClasses[0], mergeClasses[0]]
-            break
-          case 3:
-            mergeClasses = [mergeClasses[1], mergeClasses[1], mergeClasses[1], mergeClasses[1], mergeClasses[0], mergeClasses[2]]
-            break
-          case 4:
-            mergeClasses = [mergeClasses[1], mergeClasses[2], mergeClasses[1], mergeClasses[2], mergeClasses[0], mergeClasses[3]]
-            break
-          case 5:
-            mergeClasses = [mergeClasses[1], mergeClasses[2], mergeClasses[3], mergeClasses[4], mergeClasses[0], mergeClasses[0]]
-            break
-          case 6:
-            mergeClasses = [mergeClasses[1], mergeClasses[2], mergeClasses[3], mergeClasses[4], mergeClasses[0], mergeClasses[5]]
-            break
-        }
+      if (activeTool.components.horiz) {
+        comps[4] = activeTool.components.horiz
+        comps[5] = activeTool.components.horiz
       }
+      if (activeTool.components.vert) {
+        comps[0] = activeTool.components.vert
+        comps[1] = activeTool.components.vert
+        comps[2] = activeTool.components.vert
+        comps[3] = activeTool.components.vert
+      }
+      if (activeTool.components.up) {
+        comps[4] = activeTool.components.up
+      }
+      if (activeTool.components.north) {
+        comps[0] = activeTool.components.north
+      }
+      if (activeTool.components.east) {
+        comps[1] = activeTool.components.east
+      }
+      if (activeTool.components.south) {
+        comps[2] = activeTool.components.south
+      }
+      if (activeTool.components.west) {
+        comps[3] = activeTool.components.west
+      }
+      if (activeTool.components.down) {
+        comps[5] = activeTool.components.down
+      }
+      
       
       for (let i = 0; i < 6; i++) {
-        Object.assign(facedefs[i], toPatternParams(patterns[i]))
-        facedefs[i].mergeClass = mergeClasses[i]
+        Object.assign(facedefs[i], toPatternParams(comps[i].pattern))
+        facedefs[i].mergeClass = comps[i].mergeClass
       }
     
       //Configure the box terrain for each surface [with the corresponding color & pattern parameters]
@@ -1718,7 +1649,7 @@ $(async function MAIN() {
       for (let i = 0; i < 6; i++) {
         let fdef = facedefs[i]
         let sfcparams = {
-          color:colors[i],
+          color:comps[i].color,
           uv2info:fdef
         }
         let k = JSON.stringify(sfcparams)
@@ -1729,10 +1660,10 @@ $(async function MAIN() {
         }
         else {
           bxtbldr.defineSurface_8bit(next_sfcid, {
-            color:colors[i],
+            color:comps[i].color,
             uv2info:fdef
           })
-          surfaceDefs[next_sfcid] = { color:colors[i], uv2info:fdef }
+          surfaceDefs[next_sfcid] = { color:comps[i].color, uv2info:fdef }
           sfcIDs[k] = next_sfcid
           sfcdefids[i+1] = next_sfcid
           next_sfcid++
@@ -1811,9 +1742,7 @@ $(async function MAIN() {
         if (tooldef.extend) {
           tooldef = Object.assign({}, cfg.AbstractTools[tooldef.extend], tooldef)
         }
-        if (tooldef.model) {
-          tooldef.model = cfg.Models[tooldef.model]
-        }
+        resolveRefs(tooldef, tooldef)
         defineTool(tooldef)
         if (tooldef.default) {
           setTool(tooldef.name)

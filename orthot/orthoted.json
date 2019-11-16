@@ -32,47 +32,6 @@
       "type":"archive"
     }
   },
-  "Models":{
-    "man":{
-      "main":"man",
-      "poses":{
-        "walk":{
-          "stand":"man",
-          "walk":"man_walk",
-          "climb":"man_climb",
-          "leap":"man_leap",
-          "slide1":"man_slide1",
-          "slide2":"man_slide2",
-          "slide3":"man_slide3",
-          "slide4":"man_slide4",
-          "slide5":"man_slide5"
-        },
-        "push":{
-          "stand":"man_push",
-          "walk":"man_pushwalk",
-          "climb":"man_climb",
-          "leap":"man_pushleap",
-          "slide1":"man_slide1",
-          "slide2":"man_slide2",
-          "slide3":"man_slide3",
-          "slide4":"man_slide4",
-          "slide5":"man_slide5"
-        }
-      },
-      "color":{
-        "amount":6,
-        "default":[
-          "hsl(25, 80%, 60%)", 
-          "blue", 
-          "hsl(15, 100%, 15%)", 
-          "black", 
-          {"color":"black", "metalness":1}, 
-          {"color":"white", "emissive":"yellow", "emissiveIntensity":1}
-        ],
-        "mainIndex":1
-      }
-    }
-  },
   "AbstractTools":{
     "Wall":{
       "type":"wall",
@@ -100,7 +59,6 @@
           }
         }
       },
-      "mutablecolors":true,
       "params":{},
       "lockedParams":{}
     },
@@ -127,16 +85,17 @@
         "row":1,
         "col":0
       },
-      "numSurfaceEntries":1,
-      "color":{
-        "default":["white"],
-        "mutable":[true],
-        "mainIndex":0
-      },
-      "pattern":{
-        "rows":8,
-        "cols":8,
-        "default":[0,0]
+      "components":{
+        "all":{
+          "color":"white",
+          "main":1,
+          "pattern":{
+            "rows":8,
+            "cols":8,
+            "x":0,
+            "y":0
+          }
+        }
       }
     },
     {
@@ -147,17 +106,37 @@
         "row":1,
         "col":1
       },
-      "numSurfaceEntries":3,
-      "color":{
-        "amount":3,
-        "default":["white", "yellow", "orange"],
-        "mutable":[true],
-        "mainIndex":0
-      },
-      "pattern":{
-        "rows":8,
-        "cols":8,
-        "default":[0,0, 0,0, 0,0]
+      "components":{
+        "up":{
+          "color":"white",
+          "main":1,
+          "pattern":{
+            "rows":8,
+            "cols":8,
+            "x":0,
+            "y":0
+          }
+        },
+        "vert":{
+          "color":"red",
+          "main":1,
+          "pattern":{
+            "rows":8,
+            "cols":8,
+            "x":0,
+            "y":0
+          }
+        },
+        "down":{
+          "color":"yellow",
+          "main":1,
+          "pattern":{
+            "rows":8,
+            "cols":8,
+            "x":0,
+            "y":0
+          }
+        }
       }
     },
     {
@@ -169,16 +148,62 @@
         "row":1,
         "col":2
       },
-      "numSurfaceEntries":6,
-      "color":{
-        "default":["white", "yellow", "green", "orange", "lightblue", "white"],
-        "mutable":[true],
-        "mainIndex":0
-      },
-      "pattern":{
-        "rows":8,
-        "cols":8,
-        "default":[0,0, 1,0, 2,0, 0,0, 0,0, 0,0]
+      
+      "components":{
+        "up":{
+          "color":"white",
+          "pattern":{
+            "rows":8,
+            "cols":8,
+            "x":0,
+            "y":0
+          }
+        },
+        "north":{
+          "color":"red",
+          "pattern":{
+            "rows":8,
+            "cols":8,
+            "x":0,
+            "y":4
+          }
+        },
+        "east":{
+          "color":"blue",
+          "pattern":{
+            "rows":8,
+            "cols":8,
+            "x":1,
+            "y":4
+          }
+        },
+        "south":{
+          "color":"red",
+          "pattern":{
+            "rows":8,
+            "cols":8,
+            "x":0,
+            "y":0
+          }
+        },
+        "west":{
+          "color":"blue",
+          "pattern":{
+            "rows":8,
+            "cols":8,
+            "x":0,
+            "y":0
+          }
+        },
+        "down":{
+          "color":"yellow",
+          "pattern":{
+            "rows":8,
+            "cols":8,
+            "x":0,
+            "y":0
+          }
+        }
       }
     },
     {
@@ -187,12 +212,26 @@
       "name":"Player-Start", 
       "shortname":"Start",
       "model":"man",
+      "modelMaterials":{ "ref":"components.materials" },
       "unique":"type",
       "mutablecolors":true,
       "icon":{
         "sheet":"AppIcons",
         "row":0,
         "col":0
+      },
+      "main":{
+        "material":1
+      },
+      "components":{
+        "materials":[
+          "hsl(25, 80%, 60%)", 
+          "blue", 
+          "hsl(15, 100%, 15%)", 
+          "black", 
+          {"color":"black", "metalness":1}, 
+          {"color":"white", "emissive":"yellow", "emissiveIntensity":1}
+        ]
       }
     }
   ]

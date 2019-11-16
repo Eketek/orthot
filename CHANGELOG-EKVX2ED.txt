@@ -1,3 +1,41 @@
+13-15 Nov 2019
+  Replace property arrays (colors, patterns, mergeClasses) with named components.
+    Each component is a property list containing one or more attributes which define some logical unit of an object.
+    In the case of terrain, a face (or set of faces) would be defined by a component which carries color, pattern, and mergeClass attributes.
+    Components may carry well-defined attributes which have specialized editors available (textures, colors, shader properties, etc.), 
+    Components may also carry undefined/arbitrary properties which are to be edited with generic editors (strings, numbers, arbitrary JSON objects, etc.)
+  [concept] Virtual components - These are configured and interacted with like standard components, but the data is managed by the editor and not directly
+    copied to objects (mainly, this is intended for terrain surface specifications, which gets special handling to prevent excessive data duplication).
+  Remove the model specification from editor configuration
+    The "model" property is now used by the editor to directly reference the model asset to display in-editor
+      (related to this was also a decision not to attempt to expand the editor configuration to a general application data/graphics configuration)
+    Move model materials to a "materials" component
+  Added a simple referencing scheme to the Tool-Definitions
+    Objects of form { "ref":"nameA.nameB.nameC ..." } and { "copy":"nameA.nameB.nameC ..." }
+    get replaced by either a reference to or a copy of an object in the Tool-Definition namespace.
+      (The tool definition namespace is { Tool properties + Abstract-Tool properties } )
+      (A roundabout way to use the "materials" component of a tool as materials for the displayed representation of the object)
+  Defined components
+    materials: An array of objects used to parameterize shaders.
+               Object entries are the params objects contianing raw shader properties.
+               String entries are materials with the main color field set to the entry value.
+    north, east, south, west, up, down:  Virtual components used to hold terrain properties
+    vert, horiz, all: Virtual components used for simplified terrain specification (combinations of faces which all use the same parameters)
+  Reworked the handling of colors.
+    The color picker has been removed from the main GUI and placed on a toggleable floating DIV.
+    The color picker is activated by the properties editor when a color button is clicked.
+    When a color is picked on the color picker, the picked color is transferred to an arbitrary object property (assigned by the properties editor)
+  Added properties editor
+    The properties editor constructs a table of all properties defined by object components (organized by component name)
+    Properties editor uses a combination of generic and context-specific property editors to allow manipulation of properties.
+      Color editor for editing colors
+      Text area for editing strings
+      [TODO] tile selector
+      [TODO] numeric stepper/slider for editing numbers
+      [TODO] enumerated type selector
+    Additionally, the properties editor can use a custom configuration for a component [rather than individual properties].
+    For now, context-specific properties editing is determined by component name (overrideable with the "proped" property in the component specification)
+
 12 Nov 2019
   Rename terrain "decal" to "pattern" (every such variable/name/thing that belongs to the editor)
   Removed the random pattern selection from editor initialization.

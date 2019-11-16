@@ -23,7 +23,7 @@
    </div>
 
     <div class="mainblock">
-      <div class="section" id="leftside" style="min-width:126px">
+      <div class="section" id="leftside" style="min-width:126px;overflow-y:auto;max-height:800px">
         <span class="btn_active" id="foldcommandsBTN">Commands</span><br>
         <div id="commands" class="narrowblock"></div>
         <span class="btn_active" id="foldtoolsBTN">Tools</span><br>
@@ -31,27 +31,11 @@
         <span class="btn_active" id="foldoptionsBTN">Options</span><br>
         <div id="options" class="narrowblock">
           <div id="optionButtons" class="narrowblock"></div>
-          <div id="tpickerButtons" class="narrowblock"></div>
-        </div>
-        Color:  <!--textarea id="manualColorPicker" rows="1" wrap="off" style="resize:none;height:18px">red;green;blue</textarea-->
-        <div id="colorOutline" style="border-width:3px;margin-left:5px;border-style:solid">  <!-- ;border-style:solid;border-color:green -->
-          "New-Object" Colors
-          <div id="objColors" class="narrowblock"></div>
-          <span class="btn_active" id="foldrecentBTN">Recent Colors</span><br>
-          <div id="recentColors" class="narrowblock"></div>
-          <span class="btn_active" id="foldpalettecfgBTN">Palette-config</span><br>
-          <table id="palettecfg">
-            <tr><td>#H</td><td><textarea id="numHuesTA" rows="1" wrap="off" style="resize:none;height:18px">18</textarea></td></tr>
-            <tr><td>S</td><td><textarea id="satsTA" rows="1" wrap="off" style="resize:none;height:18px">100 60 30 10</textarea></td></tr>
-            <tr><td>L</td><td><textarea id="lightsTA" rows="1" wrap="off" style="resize:none;height:18px">85 70 50 25 10</textarea></td></tr>
-            <tr><td></td><td><span id="resetHSLcfgBTN" class="btn_active">Reset</span></td></tr>
-          </table>
-          <span class="btn_active" id="foldpaletteBTN">Palette</span><br>
-          <div id="palleteColors" class="narrowblock"></div>
+          <div id="objProperties"></div>
         </div>
       </div>
       <div class="section" style="flex:1;height:800px">
-        <div id="editor" style="width:100%;height:100%"></div>
+        <div id="editor" style="width:calc( 100% - 80px );height:100%"></div>
       </div>
       <div class="section" id="rightside">
         CONTROLS
@@ -102,6 +86,28 @@
       <span class="btn_active" id="hideabout">Click -&gt<b>Here</b>&lt- or --&gt<b>there</b> to hide this message.</span>
     </div>
     <div id="textdisplay" style="position:absolute;margin:auto;pointer-events:none;opacity:0"></div>
+    
+    <div id="colorPicker" class="info">
+      Color Picker  <!--textarea id="manualColorPicker" rows="1" wrap="off" style="resize:none;height:18px">red;green;blue</textarea-->
+      <div id="colorOutline" style="border-width:3px;margin:1px;border-style:solid">  <!-- ;border-style:solid;border-color:green -->
+        <div style="float:left">
+          <span class="btn_active" id="foldrecentBTN">Recent Colors</span><br>
+          <div id="recentColors" class="narrowblock"></div>
+          <span class="btn_active" id="foldpalettecfgBTN">Palette-config</span><br>
+          <table id="palettecfg">
+            <tr><td>#H</td><td><textarea id="numHuesTA" rows="1" wrap="off" style="resize:none;height:18px">18</textarea></td></tr>
+            <tr><td>S</td><td><textarea id="satsTA" rows="1" wrap="off" style="resize:none;height:18px">100 60 30 10</textarea></td></tr>
+            <tr><td>L</td><td><textarea id="lightsTA" rows="1" wrap="off" style="resize:none;height:18px">85 70 50 25 10</textarea></td></tr>
+            <tr><td></td><td><span id="resetHSLcfgBTN" class="btn_active">Reset</span></td></tr>
+          </table>
+        </div>
+        <div style="float:left">
+          <span class="btn_active" id="foldpaletteBTN">Palette</span><br>
+          <div id="palleteColors" class="narrowblock"></div>
+        </div>
+        <div style="clear:left"></div>
+      </div>
+    </div>
   </body>
 </html>
 

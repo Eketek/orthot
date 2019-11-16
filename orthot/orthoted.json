@@ -118,7 +118,7 @@
           }
         },
         "vert":{
-          "color":"red",
+          "color":"white",
           "main":1,
           "pattern":{
             "rows":8,
@@ -128,7 +128,7 @@
           }
         },
         "down":{
-          "color":"yellow",
+          "color":"white",
           "main":1,
           "pattern":{
             "rows":8,
@@ -142,7 +142,6 @@
     {
       "name":"Wall-SixColors",
       "extend":"Wall",
-      "default":true,
       "icon":{
         "sheet":"AppIcons",
         "row":1,
@@ -160,25 +159,25 @@
           }
         },
         "north":{
-          "color":"red",
+          "color":"white",
           "pattern":{
             "rows":8,
             "cols":8,
             "x":0,
-            "y":4
+            "y":0
           }
         },
         "east":{
-          "color":"blue",
+          "color":"white",
           "pattern":{
             "rows":8,
             "cols":8,
-            "x":1,
-            "y":4
+            "x":0,
+            "y":0
           }
         },
         "south":{
-          "color":"red",
+          "color":"white",
           "pattern":{
             "rows":8,
             "cols":8,
@@ -187,7 +186,7 @@
           }
         },
         "west":{
-          "color":"blue",
+          "color":"white",
           "pattern":{
             "rows":8,
             "cols":8,
@@ -196,7 +195,7 @@
           }
         },
         "down":{
-          "color":"yellow",
+          "color":"white",
           "pattern":{
             "rows":8,
             "cols":8,

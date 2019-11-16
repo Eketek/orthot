@@ -631,11 +631,15 @@ $(async function MAIN() {
   let ppixels = bufctx.getImageData(0,0,512,512)
   //$(buf).appendTo($("body"))
   
+  let pickPattern_tileinfo
+  let pickPattern_callback
+  let pickPattern_color
   // [re]draw the pattern on the pattern picker canvas [using the same compositing operation as is used by the shader]
   let drawPatternPicker = function(mainColor, section) {
     if (!mainColor.isColor) {
       mainColor = new THREE.Color(mainColor)
     }
+    pickPattern_color = mainColor.getStyle()
     let $cnv = $("#tpickerCNV")
     let ctx = $cnv[0].getContext('2d')
     let x1 = 0
@@ -670,51 +674,61 @@ $(async function MAIN() {
     }
   }
   
-  //drawPatternPicker("yellow", {x1:0,y1:0, x2:16,y2:16})
-  drawPatternPicker("yellow")
-  
-  let patternPickerBTN = function(name, location, index, tileX, tileY) {
-    this.tileX = tileX
-    this.tileY = tileY
-    let $loc = $("#"+location)
-    let $btn = $('<canvas width=32 height=32>')
-    $btn.appendTo($loc)
-    let cnv = $btn[0]
-    let ctx = cnv.getContext('2d')
-    let src = $("#tpickerCNV")[0]
-    
-    let ofsx = 4
-    let ofsy = 4
-    
-    let abs_tx, abs_ty, abs_w, abs_h
-    
-    let updateCoords = function() {
-      let rows = Number.parseInt($("#tpRows").value)
-      let cols = Number.parseInt($("#tpCols").value)
-      if (!Number.isFinite(rows) || rows <= 0) {
-        rows = 8
+  {
+    let $cnv = $("#tpickerCNV")
+    let $cnvo = $("#tpickerOverlayCNV")
+    let ctxo = $cnvo[0].getContext('2d')
+    ctxo.lineWidth=4
+    on($cnv, "mousemove", (evt)=>{
+      if (pickPattern_tileinfo) {
+        ctxo.clearRect(0,0,520,520)
+        //console.log(evt)
+        let x = evt.reqtargetX-4
+        let y = evt.reqtargetY-4
+        let tw = 512/pickPattern_tileinfo.cols
+        let th = 512/pickPattern_tileinfo.rows
+        let rx = Math.floor((x/512)*pickPattern_tileinfo.cols)
+        let ry = Math.floor((y/512)*pickPattern_tileinfo.rows)
+        
+        ctxo.setLineDash([])
+        ctxo.strokeStyle = "black"
+        ctxo.strokeRect(rx*tw+2, ry*th+2, tw+4, th+4)
+        
+        ctxo.setLineDash([8, 8])
+        ctxo.strokeStyle = pickPattern_color
+        ctxo.strokeRect(rx*tw+2, ry*th+2, tw+4, th+4)
       }
-      if (!Number.isFinite(cols) || cols <= 0) {
-        cols = 8
-      }
-      abs_w = 512/rows
-      abs_h = 512/cols
-      abs_tx = this.tileX*abs_w
-      abs_ty = this.tileY*abs_h
-    }
-    ctx.font = '12px sans-serif'
-    ctx.textBaseline = "bottom"
+    })
     
-    this.update = function() {
-      drawPatternPicker(activeTool.colors[index], {x1:abs_tx,y1:abs_ty, x2:abs_tx+abs_w,y2:abs_ty+abs_h})
-      ctx.drawImage(src, abs_tx, abs_ty, abs_w, abs_h, 0, 0, 32, 32);
-      ctx.fillText(name, 0, 32)
-      activeTool.patterns[index] = {
-        x:this.tileX, y:this.tileY, w:cols, h:rows
+    on($cnv, "click", (evt)=>{
+      if (pickPattern_tileinfo && pickPattern_callback) {
+        let x = evt.reqtargetX-4
+        let y = evt.reqtargetY-4
+        let rx = Math.floor((x/512)*pickPattern_tileinfo.cols)
+        let ry = Math.floor((y/512)*pickPattern_tileinfo.rows)
+        //console.log(rx, ry)
+        pickPattern_tileinfo.x = rx
+        pickPattern_tileinfo.y = ry
+        pickPattern_callback()
       }
-      updateTerrainProperties()
-    }
+      $("#texturePicker").hide()
+    })
   }
+  
+  let activatePatternPicker = function(targetElem, tinfo, ppcallback) {
+    let $tpk = $("#texturePicker")
+    $tpk.show()
+    pickPattern_callback = ppcallback
+    on(document, "escape", (evt)=>{
+      $tpk.hide()
+      pickPattern_callback = undefined
+    })
+    putFloatingElement($tpk[0], targetElem)
+    pickPattern_tileinfo = tinfo
+  }
+  
+  drawPatternPicker("white")
+  
   
   //reset button.  At some point, the confirmation dialog should probably be removed and the deleted data instead made restoreable through an 'undo' function
   btnfunc("commands", "reset", ()=>{
@@ -782,6 +796,7 @@ $(async function MAIN() {
           //pattern selector
           //mergeclass textarea
           addRow("color", "Color", propEditor_color(comp, "color"))
+          addRow("pattern", "Pattern", propEditor_pattern(comp, "pattern"))
           addRow("merge", "Merge Class", propEditor_textarea(comp, "mergeClass", "auto"))
           break
         case "materials":
@@ -833,6 +848,43 @@ $(async function MAIN() {
       console.log(activeTool)
     })
     return ta
+  }
+  
+  let propEditor_pattern = function(obj, k) {
+    let $btn = $('<canvas width=32 height=32>')
+    let cnv = $btn[0]
+    let ctx = cnv.getContext('2d')
+    let src = $("#tpickerCNV")[0]
+    
+    let ofsx = 4
+    let ofsy = 4
+    
+    let abs_tx, abs_ty, abs_w, abs_h
+
+    let update = function() {
+      let rows = obj[k].rows
+      let cols = obj[k].cols
+      let x = obj[k].x
+      let y = obj[k].y
+      abs_w = 512/rows
+      abs_h = 512/cols
+      abs_tx = x*abs_w+4
+      abs_ty = y*abs_h+4
+      ctx.drawImage(src, abs_tx, abs_ty, abs_w, abs_h, 0, 0, 32, 32);
+    }
+    update()
+    
+    ctx.font = '12px sans-serif'
+    ctx.textBaseline = "bottom"
+    
+    on($btn, "click", ()=>{
+      activatePatternPicker($btn[0], obj[k], ()=>{
+        update()
+        updateTerrainProperties()
+      })
+    })
+    
+    return $btn
   }
   
   updateTerrainProperties()

@@ -1,4 +1,4 @@
-13-15 Nov 2019
+13-16 Nov 2019
   Replace property arrays (colors, patterns, mergeClasses) with named components.
     Each component is a property list containing one or more attributes which define some logical unit of an object.
     In the case of terrain, a face (or set of faces) would be defined by a component which carries color, pattern, and mergeClass attributes.
@@ -30,7 +30,7 @@
     Properties editor uses a combination of generic and context-specific property editors to allow manipulation of properties.
       Color editor for editing colors
       Text area for editing strings
-      [TODO] tile selector
+      Pattern selector
       [TODO] numeric stepper/slider for editing numbers
       [TODO] enumerated type selector
     Additionally, the properties editor can use a custom configuration for a component [rather than individual properties].

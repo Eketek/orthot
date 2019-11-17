@@ -845,7 +845,7 @@ $(async function MAIN() {
       if (deleteIfnull && ((ta.value == nullVal) || (ta.value == "")) ) {
         delete obj[name]
       }
-      console.log(activeTool)
+      updateTerrainProperties()
     })
     return ta
   }
@@ -1640,7 +1640,6 @@ $(async function MAIN() {
     let baseK = JSON.stringify(terrspec)+"|"
     
     boxterrainDefiners[terrspec.name] = function config_bxt() {
-      //let k = baseK + JSON.stringify(colors) + "|" + JSON.stringify(patterns) + "|" + JSON.stringify(mergeClasses)
       let k = baseK + JSON.stringify(activeTool.components)
       if (terrainIDs[k]) {
         return terrainIDs[k]
@@ -1713,7 +1712,8 @@ $(async function MAIN() {
         else {
           bxtbldr.defineSurface_8bit(next_sfcid, {
             color:comps[i].color,
-            uv2info:fdef
+            uv2info:fdef,
+            mergeClass:comps[i].mergeClass
           })
           surfaceDefs[next_sfcid] = { color:comps[i].color, uv2info:fdef }
           sfcIDs[k] = next_sfcid

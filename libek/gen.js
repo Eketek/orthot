@@ -261,13 +261,13 @@ var BoxTerrain = function(material, uv2spec) {
   //  id:           terrain class
   //  color:        face color or vertex colors to use with mesh output
   //  texcoords:    a map of texture coordinates
-  //  mergeWith:
+  //  mergeClass:
   this.defineSurface = function(id, params) {
 
     let sfc = surface[id] = {
       id:id,
       colors:buildColorArray(params.color),
-      mergeWith:params.mergewith ? params.mergewith : [id],
+      mergeClass:(params.mergeClass && (params.mergeClass != "auto")) ? params.mergeClass : id,
       indextype:params.index
     }
     if (params.index >= 0) {
@@ -499,9 +499,9 @@ var BoxTerrain = function(material, uv2spec) {
   //  8 surrounding tiles are used to generate an 8-bit number representing the border of the tile
   //  For each bit, a value of 0 indicates that the neighboring tile is of same or compatible type, and 1 indicates a border
   //  Each bit represents a neighboring tile, in clockwise order, starting at upper-left.
-  //this.defineSurface_8bit = function(id, color, mergeWith = undefined, texcoord_ul=undefined, texcoord_br=undefined, num_cols = 16) {
+  //this.defineSurface_8bit = function(id, color, mergeClass = undefined, texcoord_ul=undefined, texcoord_br=undefined, num_cols = 16) {
   //  let texcoords = libek.gen.build_texcoordLUT(texcoord_ul, texcoord_br, num_cols, 256/num_cols)
-  //  return this.defineSurface(id, color, texcoords, libek.gen.LUT_8BIT, mergeWith)
+  //  return this.defineSurface(id, color, texcoords, libek.gen.LUT_8BIT, mergeClass)
   // }
 
   this.defineSurface_8bit = function(id, params) {
@@ -522,7 +522,7 @@ var BoxTerrain = function(material, uv2spec) {
     let query = function(ctn) {
       if (ctn && ctn.terrain && ctn.terrain.id) {
         let adjsfc = terrain[ctn.terrain.id][dir]
-        if (sfc.mergeWith.indexOf(adjsfc.id) != -1) {
+        if (sfc.mergeClass == adjsfc.mergeClass) {
           return 2
         }
         else {

@@ -715,8 +715,27 @@ $(async function MAIN() {
     })
   }
   
+  on($("#tpRows"), "input", ()=>{
+    if (pickPattern_tileinfo) {
+      let rows = Number.parseInt($("#tpRows")[0].value)
+      if (Number.isFinite(rows) && rows > 0) {
+        pickPattern_tileinfo.rows = rows
+      }
+    }
+  })
+  on($("#tpCols"), "input", ()=>{
+    if (pickPattern_tileinfo) {
+      let cols = Number.parseInt($("#tpCols")[0].value)
+      if (Number.isFinite(cols) && cols > 0) {
+        pickPattern_tileinfo.cols = cols
+      }
+    }
+  })
+  
   let activatePatternPicker = function(targetElem, tinfo, ppcallback) {
     let $tpk = $("#texturePicker")
+    $("#tpRows")[0].value = tinfo.rows
+    $("#tpCols")[0].value = tinfo.cols
     $tpk.show()
     pickPattern_callback = ppcallback
     on(document, "escape", (evt)=>{

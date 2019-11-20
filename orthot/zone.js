@@ -1,7 +1,7 @@
 export { Zone }
 import { trit, T, getAsset, storeAsset, releaseAsset, Material } from '../libek/libek.js'
 import { property, properties_fromstring, mergeObjects, parseVec3, parseColor } from '../libek/util.js'
-import { BoxTerrain, DECAL_UVTYPE } from '../libek/gen.js'
+import { BoxTerrain, DECAL_UVTYPE } from '../libek/boxterrain.js'
 import { VxScene } from '../libek/scene.js'
 import { Reticle } from '../libek/reticle.js'
 
@@ -37,6 +37,7 @@ var Zone = function(ekvx, override_startloc, name) {
   let flipWorld = (ekvx.data_version <= 5)
 
   let walltemplates = {}
+  let walldefs = {}
   let targets = {}
 
   // For now, lighting is simplified to global ambient + global directional light + player-held lantern + maybe one light-bearing object
@@ -1419,15 +1420,16 @@ var Zone = function(ekvx, override_startloc, name) {
 
 
   let defineWallTerrain = function(id, color) {
-    bxtbldr.defineSurface_8bit(id, {
+    let sfc_v = bxtbldr.build_Sfcdef_8bit({
       color:color,
       uv2info:{type:DECAL_UVTYPE.TILE, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
     })
-    bxtbldr.defineSurface_8bit(id+'H', {
+    
+    let sfc_h = bxtbldr.build_Sfcdef_8bit({
       color:color,
       uv2info:{type:DECAL_UVTYPE.TILE, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
     })
-    bxtbldr.defineTerrain(id, id,id,id,id,id+'H',id+'H')
+    walldefs[id] = bxtbldr.build_Terraindef( sfc_v,sfc_v,sfc_v,sfc_v, sfc_h,sfc_h )
   }
   
   ekvx.loadConfig( (id, rawtemplate) => {
@@ -1532,7 +1534,7 @@ var Zone = function(ekvx, override_startloc, name) {
             break
 
           case 'wall':
-            vxc.loadTerrain(x,y,z, template.id)
+            vxc.loadTerrain(x,y,z, walldefs[template.id])
             this.putGameobject(loc, new Wall(this))
             break
           case 'stairs': {

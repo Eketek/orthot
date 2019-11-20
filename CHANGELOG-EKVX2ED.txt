@@ -1,3 +1,6 @@
+20 Nov 2019
+  Adjustments for changes to BoxTerrain
+
 13-16 Nov 2019
   Replace property arrays (colors, patterns, mergeClasses) with named components.
     Each component is a property list containing one or more attributes which define some logical unit of an object.

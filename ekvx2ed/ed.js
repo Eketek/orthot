@@ -12,7 +12,7 @@ import { QueryTriggeredButtonControl, SceneviewController } from '../libek/contr
 import { deepcopy, anythingIN, clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { direction, setOrientation, toForward } from '../libek/direction.js'
-import { BoxTerrain, DECAL_UVTYPE } from '../libek/gen.js'
+import { BoxTerrain, DECAL_UVTYPE } from '../libek/boxterrain.js'
 import { VxScene } from '../libek/scene.js'
 import { plotLine, debugLine } from '../libek/plot.js'
 
@@ -597,7 +597,7 @@ $(async function MAIN() {
   let updateTerrainProperties = function() {
     if (activeTool) {
       if (activeTool.spec.terrain) {
-        activeTool.terrainID = boxterrainDefiners[activeTool.spec.terrain.name]()
+        [activeTool.terrain, activeTool.terrainID] = boxterrainDefiners[activeTool.spec.terrain.name]()
       }
     }
   }
@@ -715,8 +715,27 @@ $(async function MAIN() {
     })
   }
   
+  on($("#tpRows"), "input", ()=>{
+    if (pickPattern_tileinfo) {
+      let rows = Number.parseInt($("#tpRows")[0].value)
+      if (Number.isFinite(rows) && rows > 0) {
+        pickPattern_tileinfo.rows = rows
+      }
+    }
+  })
+  on($("#tpCols"), "input", ()=>{
+    if (pickPattern_tileinfo) {
+      let cols = Number.parseInt($("#tpCols")[0].value)
+      if (Number.isFinite(cols) && cols > 0) {
+        pickPattern_tileinfo.cols = cols
+      }
+    }
+  })
+  
   let activatePatternPicker = function(targetElem, tinfo, ppcallback) {
     let $tpk = $("#texturePicker")
+    $("#tpRows")[0].value = tinfo.rows
+    $("#tpCols")[0].value = tinfo.cols
     $tpk.show()
     pickPattern_callback = ppcallback
     on(document, "escape", (evt)=>{
@@ -845,7 +864,7 @@ $(async function MAIN() {
       if (deleteIfnull && ((ta.value == nullVal) || (ta.value == "")) ) {
         delete obj[name]
       }
-      console.log(activeTool)
+      updateTerrainProperties()
     })
     return ta
   }
@@ -927,6 +946,7 @@ $(async function MAIN() {
   //  These are called when the colors are modified through color picker UI if the ActiveTool is a terrain tool.
   //  The ActiveTool colors are passed in, the terrain for the specified colors is configured [as needed], and the corresponding terrainID is returned
   let boxterrainDefiners = {}
+  let surfaceDefs_bterr = {}
   
   // single surface specifications:  Each surface specifcation has these components:
   //  border:  A 256-entry texture coordinate lookup table (relative dimensions of each border tile in a texture atlas)
@@ -943,6 +963,7 @@ $(async function MAIN() {
   //         The complete terrain definition is stored internally by BoxTerrain and must be reconstructed whenever the data is loaded
   let terrainDefs
   let terrainIDs
+  let terrains
   let next_terrainid
   
   // recently invalidated objects.  When erasing in mray pickmode, the most recently "erased" objects are stored here temporarilly, so that they
@@ -970,6 +991,7 @@ $(async function MAIN() {
       boxterrain:bxtbldr,
       chunks_per_tick:4
     })
+    surfaceDefs_bterr = {}
     renderCTL.display.scene.add(vxc.scene)
     cursor3d = {
       x:0,y:0,z:0,
@@ -988,6 +1010,7 @@ $(async function MAIN() {
     next_terrainid = 1
     next_sfcid = 1
     terrainIDs = {}
+    terrains = {}
     sfcIDs = {}
     surfaceDefs = {}
     terrainDefs = {}
@@ -1013,12 +1036,12 @@ $(async function MAIN() {
       ctn.contents = []
     }
     ctn.contents.push(obj)
-    if (obj.terrainID) {
+    if (obj.terrain) {
       if (ld) {
-        vxc.loadTerrain(x,y,z, obj.terrainID)
+        vxc.loadTerrain(x,y,z, obj.terrain)
       }
       else {
-        vxc.setTerrain(x,y,z, obj.terrainID)
+        vxc.setTerrain(x,y,z, obj.terrain)
       }
       return
     }
@@ -1031,8 +1054,8 @@ $(async function MAIN() {
   }
   
   let remove = function(obj, x,y,z) {
-    if (obj.terrainID) {
-      vxc.setTerrain(x,y,z, 0)
+    if (obj.terrain) {
+      vxc.setTerrain(x,y,z)
       //return
     }
     let ctn = vxc.get(x,y,z)
@@ -1284,8 +1307,8 @@ $(async function MAIN() {
     }
     obj.spec = activeTool.spec
     obj.data.$ = [activeTool.templateID, cursor3d.x, cursor3d.y, cursor3d.z]
-    if (activeTool.terrainID) {
-      obj.terrainID = activeTool.terrainID
+    if (activeTool.terrain) {
+      obj.terrain = activeTool.terrain
       obj.data.$.push(activeTool.terrainID)
     }
     else if (activeTool.spec.model) {
@@ -1640,10 +1663,9 @@ $(async function MAIN() {
     let baseK = JSON.stringify(terrspec)+"|"
     
     boxterrainDefiners[terrspec.name] = function config_bxt() {
-      //let k = baseK + JSON.stringify(colors) + "|" + JSON.stringify(patterns) + "|" + JSON.stringify(mergeClasses)
       let k = baseK + JSON.stringify(activeTool.components)
-      if (terrainIDs[k]) {
-        return terrainIDs[k]
+      if (terrains[k]) {
+        return [terrains[k], terrainIDs[k]]
       }
       for (let k in activeTool.components) {
         activeTool.components[k].color = toRGBstring(activeTool.components[k].color)
@@ -1696,7 +1718,8 @@ $(async function MAIN() {
       //Configure the box terrain for each surface [with the corresponding color & pattern parameters]
       let tid = next_terrainid
       terrainIDs[k] = tid
-      let sfcdefids = [tid]
+      let sfcdefs = []
+      let sfcdefids = []
       next_terrainid++
       for (let i = 0; i < 6; i++) {
         let fdef = facedefs[i]
@@ -1707,23 +1730,28 @@ $(async function MAIN() {
         let k = JSON.stringify(sfcparams)
         let sfcid = sfcIDs[k]
         if (sfcid) {
-          sfcdefids[i+1] = sfcid
+          sfcdefs[i] = surfaceDefs_bterr[sfcid]
+          sfcdefids[i] = sfcid
           continue
         }
         else {
-          bxtbldr.defineSurface_8bit(next_sfcid, {
+          let params = {
             color:comps[i].color,
-            uv2info:fdef
-          })
-          surfaceDefs[next_sfcid] = { color:comps[i].color, uv2info:fdef }
+            uv2info:fdef,
+            mergeClass:comps[i].mergeClass
+          }
+          let sfc = bxtbldr.build_Sfcdef_8bit(params)
+          surfaceDefs_bterr[next_sfcid] = sfc
+          surfaceDefs[next_sfcid] = params
+          sfcdefids[i] = next_sfcid
           sfcIDs[k] = next_sfcid
-          sfcdefids[i+1] = next_sfcid
+          sfcdefs[i] = sfc
           next_sfcid++
         }
       }
-      bxtbldr.defineTerrain.apply(bxtbldr, sfcdefids)
-      terrainDefs[tid] = sfcdefids.slice(1)
-      return tid
+      let terrain = terrains[k] = bxtbldr.build_Terraindef.apply(bxtbldr, sfcdefs)
+      terrainDefs[tid] = sfcdefids
+      return [terrain, tid]
     }
   }
   
@@ -1835,7 +1863,6 @@ $(async function MAIN() {
         for (let obj of (ctn.contents)) {
           console.log(obj)
           if (obj.data) {
-        
             o.objects.push(obj.data)
           }
         }

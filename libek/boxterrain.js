@@ -1,5 +1,6 @@
 export { BoxTerrain, DECAL_UVTYPE }
 import { UV_ATTRIBUTE_PREFIX } from './shader.js'
+import { getUID } from './libek.js'
 
 /*
 A voxel-terrain mesh generator.  As envisioned, it is intended to do many things, but that's a lot of work, so for now, it just generates box-terrain with
@@ -253,21 +254,20 @@ var DECAL_UVTYPE = {
   WORLD:2,
   PROJECT:3,
 }
+
+
 var BoxTerrain = function(material, uv2spec) {
-  let surface = {}
-  let terrain = {}
 
   // define a surface class.
   //  id:           terrain class
   //  color:        face color or vertex colors to use with mesh output
   //  texcoords:    a map of texture coordinates
-  //  mergeWith:
-  this.defineSurface = function(id, params) {
+  //  mergeClass:
+  this.build_Sfcdef = function(params) {
 
-    let sfc = surface[id] = {
-      id:id,
+    let sfc = {
       colors:buildColorArray(params.color),
-      mergeWith:params.mergewith ? params.mergewith : [id],
+      mergeClass:(params.mergeClass && (params.mergeClass != "auto")) ? params.mergeClass : getUID(),
       indextype:params.index
     }
     if (params.index >= 0) {
@@ -480,18 +480,15 @@ var BoxTerrain = function(material, uv2spec) {
   // define a volumetric terrain class.
   //  id:           terrain class
   //  <direction>:  surface class to use for each face
-  this.defineTerrain = function(id, north, east, south, west, up, down) {
-    // bam.  Data structure.
-    terrain[id] = {
-      id:id,
-      north:Object.assign( {}, surface[north], _BoxTerrain_MeshData.north ),
-      east:Object.assign( {}, surface[east], _BoxTerrain_MeshData.east ),
-      south:Object.assign( {}, surface[south], _BoxTerrain_MeshData.south ),
-      west:Object.assign( {}, surface[west], _BoxTerrain_MeshData.west ),
-      up:Object.assign( {}, surface[up], _BoxTerrain_MeshData.up ),
-      down:Object.assign( {}, surface[down], _BoxTerrain_MeshData.down ),
+  this.build_Terraindef = function(north, east, south, west, up, down) {
+    return {
+      north:Object.assign( {}, north, _BoxTerrain_MeshData.north ),
+      east:Object.assign( {}, east, _BoxTerrain_MeshData.east ),
+      south:Object.assign( {}, south, _BoxTerrain_MeshData.south ),
+      west:Object.assign( {}, west, _BoxTerrain_MeshData.west ),
+      up:Object.assign( {}, up, _BoxTerrain_MeshData.up ),
+      down:Object.assign( {}, down, _BoxTerrain_MeshData.down ),
     }
-    return terrain[id]
   }
 
   // "8 bit" wall is a virtual texture used in conjunction with a discriminator function to texture a visually distinct & coherent square
@@ -499,16 +496,16 @@ var BoxTerrain = function(material, uv2spec) {
   //  8 surrounding tiles are used to generate an 8-bit number representing the border of the tile
   //  For each bit, a value of 0 indicates that the neighboring tile is of same or compatible type, and 1 indicates a border
   //  Each bit represents a neighboring tile, in clockwise order, starting at upper-left.
-  //this.defineSurface_8bit = function(id, color, mergeWith = undefined, texcoord_ul=undefined, texcoord_br=undefined, num_cols = 16) {
+  //this.build_Sfcdef_8bit = function(id, color, mergeClass = undefined, texcoord_ul=undefined, texcoord_br=undefined, num_cols = 16) {
   //  let texcoords = libek.gen.build_texcoordLUT(texcoord_ul, texcoord_br, num_cols, 256/num_cols)
-  //  return this.defineSurface(id, color, texcoords, libek.gen.LUT_8BIT, mergeWith)
+  //  return this.build_Sfcdef(id, color, texcoords, libek.gen.LUT_8BIT, mergeClass)
   // }
 
-  this.defineSurface_8bit = function(id, params) {
+  this.build_Sfcdef_8bit = function(params) {
     let num_cols = params.num_cols ? params.num_cols : 16
     params.index = LUT_8BIT
     params.texcoords = build_texcoordLUT(params.texcoord_ul, params.texcoord_br, num_cols, 256/num_cols)
-    return this.defineSurface(id, params)// params.color, texcoords, params.index)
+    return this.build_Sfcdef(params)// params.color, texcoords, params.index)
   }
 
   // data: a scalar field representing the terrain to draw.  The value of each entry in the field is the object/surface class
@@ -520,9 +517,9 @@ var BoxTerrain = function(material, uv2spec) {
 
     let x,y,z, terr, sfc, dir, pos, ofs
     let query = function(ctn) {
-      if (ctn && ctn.terrain && ctn.terrain.id) {
-        let adjsfc = terrain[ctn.terrain.id][dir]
-        if (sfc.mergeWith.indexOf(adjsfc.id) != -1) {
+      if (ctn && ctn.terrain) {
+        let adjsfc = ctn.terrain[dir]
+        if (sfc.mergeClass == adjsfc.mergeClass) {
           return 2
         }
         else {
@@ -544,15 +541,14 @@ var BoxTerrain = function(material, uv2spec) {
       for (y = area.min.y; y <= area.max.y; y++) {
         for (x = area.min.x; x <= area.max.x; x++) {
           let ctn = data.get(x,y,z)
-          if (ctn && ctn.terrain && ctn.terrain.id) {
-            let tdat = ctn.terrain
-            let terr = terrain[tdat.id]
+          if (ctn && ctn.terrain) {
+            let terr = ctn.terrain
             if (terr) {
               let adj = data.get(x,y+1,z)
               pos.set(x,y,z)
               pos.add(ofs)
 
-              if ( (!tdat.koU) && (!adj || !adj.terrain || !adj.terrain.id)) {
+              if ( (!ctn.terr_koU) && (!adj || !adj.terrain)) {
                 dir = "up"
                 sfc = terr.up
                 switch (sfc.indextype) {
@@ -579,7 +575,7 @@ var BoxTerrain = function(material, uv2spec) {
               }
 
               adj = data.get(x,y-1,z)
-              if ( (!tdat.koD) && (!adj || !adj.terrain || !adj.terrain.id)) {
+              if ( (!ctn.terr_koD) && (!adj || !adj.terrain)) {
                 dir = "down"
                 sfc = terr.down
                 switch (sfc.indextype) {
@@ -606,7 +602,7 @@ var BoxTerrain = function(material, uv2spec) {
               }
 
               adj = data.get(x+1,y,z)
-              if ( (!tdat.koW) && (!adj || !adj.terrain || !adj.terrain.id)) {
+              if ( (!ctn.terr_koW) && (!adj || !adj.terrain)) {
                 dir = "east"
                 sfc = terr.east
                 switch (sfc.indextype) {
@@ -632,7 +628,7 @@ var BoxTerrain = function(material, uv2spec) {
                 }
               }
               adj = data.get(x-1,y,z)
-              if ( (!tdat.koE) && (!adj || !adj.terrain || !adj.terrain.id)) {
+              if ( (!ctn.terr_koE) && (!adj || !adj.terrain)) {
                 dir = "west"
                 sfc = terr.west
                 switch (sfc.indextype) {
@@ -661,7 +657,7 @@ var BoxTerrain = function(material, uv2spec) {
 
 
               adj = data.get(x,y,z-1)
-              if ( (!tdat.koS) && (!adj || !adj.terrain || !adj.terrain.id)) {
+              if ( (!ctn.terr_koS) && (!adj || !adj.terrain)) {
                 dir = "north"
                 sfc = terr.north
                 switch (sfc.indextype) {
@@ -688,7 +684,7 @@ var BoxTerrain = function(material, uv2spec) {
               }
 
               adj = data.get(x,y,z+1)
-              if ( (!tdat.koN) && (!adj || !adj.terrain || !adj.terrain.id)) {
+              if ( (!ctn.terr_koN) && (!adj || !adj.terrain)) {
                 dir = "south"
                 sfc = terr.south
                 switch (sfc.indextype) {

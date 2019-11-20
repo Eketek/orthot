@@ -1,4 +1,7 @@
 0.3.0:
+  20 Nov 2019
+    Adjustments for changes to BoxTerrain
+  
   28 Oct 2019:
     Added a 3-dimensional linear plotter with various specialized outputs (intended to support the editor, but designed to be useful generally)
     Specified a null direction

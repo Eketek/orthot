@@ -76,32 +76,24 @@ let VxScene = function(params={}) {
   }
 
   //assign a terrain value without touching chunk data (this is for quickly resetting scenes which do not use dynamic terrain)
-  this.assignTerrain = function(x,y,z, id) {
-    this.get(x,y,z).terrain = id
+  this.assignTerrain = function(x,y,z, value) {
+    this.get(x,y,z).terrain = value
   }
 
-  this.loadTerrain = function(x,y,z, id) {
+  this.loadTerrain = function(x,y,z, value) {
     let ctn = this.get(x,y,z)
-    if (!ctn.terrain) {
-      ctn.terrain = {id:id}
-    }
-    else {
-      ctn.terrain.id = id
-    }
+    ctn.terrain = value
+    
+    //console.log(value)
     let chk = getChunk(x,y,z)
     if (invalidChunks.indexOf(chk) == -1) {
       invalidChunks.push(chk)
     }
   }
 
-  this.setTerrain = function(x,y,z, id) {
+  this.setTerrain = function(x,y,z, value) {
     let ctn = this.get(x,y,z)
-    if (!ctn.terrain) {
-      ctn.terrain = {id:id}
-    }
-    else {
-      ctn.terrain.id = id
-    }
+    ctn.terrain = value
 
     getChunk(x,y,z)
     update_AffectedChunks(x,y,z)
@@ -113,27 +105,24 @@ let VxScene = function(params={}) {
       (Orthot II used similar functionality as a hack to try to prevent it from crashing when loading puzzles with many fixed objects )
   */
   this.setTerrainKnockout = function(ctn, dir, val=true) {
-    if (!ctn.terrain) {
-      ctn.terrain = {}
-    }
     switch(dir) {
       case direction.code.UP:
-        ctn.terrain.koU = val
+        ctn.terr_koU = val
       break
       case direction.code.DOWN:
-        ctn.terrain.koD = val
+        ctn.terr_koD = val
       break
       case direction.code.NORTH:
-        ctn.terrain.koN = val
+        ctn.terr_koN = val
       break
       case direction.code.EAST:
-        ctn.terrain.koE = val
+        ctn.terr_koE = val
       break
       case direction.code.SOUTH:
-        ctn.terrain.koS = val
+        ctn.terr_koS = val
       break
       case direction.code.WEST:
-        ctn.terrain.koW = val
+        ctn.terr_koW = val
       break
     }
   }

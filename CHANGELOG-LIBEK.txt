@@ -1,3 +1,8 @@
+20 Nov 2019
+  Simplify BoxTerrain
+    Remove IDs from Terrain and Surface data
+  rename gen.js to boxterrain.js
+
 11 Nov 2019
   Remove the forward vector calculation from the plotter (plot.js), convert it into a utility function, and place it in direction.js
     (for re-use with planar picking)

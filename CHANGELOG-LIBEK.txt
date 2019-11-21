@@ -3,6 +3,15 @@
     Remove IDs from Terrain and Surface data
   rename gen.js to boxterrain.js
 
+16 Nov 2019
+  Replaced BoxTerrain surface MergeWith with MergeClass
+    Borders between adjacent coplanar tiles (faces of cubes) are based on the MergeClass of a surface.  If two tiles share the same MergeClass,
+    then the border is drawn around the tiles.  If two tiles have a differeing MergeClass, then borders will be drawn between them.
+    If no MergeClass or the "auto" MergeClass is specified, then the Surface Unique Identifier is used 
+      (tiles merge only if they share the same surface specification)
+    The previous behavior ("MergeWith") was more flexible (though probably not meritoriously so), but also a lot more complex to configure.
+      (MergeWith would Merge tiles of a particular surface type with anything from a specified list of surface IDs)
+
 11 Nov 2019
   Remove the forward vector calculation from the plotter (plot.js), convert it into a utility function, and place it in direction.js
     (for re-use with planar picking)

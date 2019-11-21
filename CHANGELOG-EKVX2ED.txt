@@ -38,6 +38,7 @@
       [TODO] enumerated type selector
     Additionally, the properties editor can use a custom configuration for a component [rather than individual properties].
     For now, context-specific properties editing is determined by component name (overrideable with the "proped" property in the component specification)
+  Handling for MergeClass
 
 12 Nov 2019
   Rename terrain "decal" to "pattern" (every such variable/name/thing that belongs to the editor)

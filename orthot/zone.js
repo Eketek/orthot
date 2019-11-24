@@ -1,7 +1,7 @@
 export { Zone }
 import { trit, T, getAsset, storeAsset, releaseAsset, Material } from '../libek/libek.js'
 import { property, properties_fromstring, mergeObjects, parseVec3, parseColor } from '../libek/util.js'
-import { BoxTerrain, DECAL_UVTYPE } from '../libek/boxterrain.js'
+import { BoxTerrain } from '../libek/boxterrain.js'
 import { VxScene } from '../libek/scene.js'
 import { Reticle } from '../libek/reticle.js'
 

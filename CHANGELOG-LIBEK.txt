@@ -5,6 +5,7 @@
       Simplify the arguments that need to get passed to BoxTerrain to define a surface
       Turn texture coordinate specification into an array of texture coordinate specifcations (future-proofing / adjustments for planned multitexturing revision)
       Removed the "8bit" surface specification function (this is now "generic" to BoxTerrain)
+    Clean the code somewhat, compact a few things, remove unused/disused properties, and add some better comments.
   rename gen.js to boxterrain.js
 
 16 Nov 2019

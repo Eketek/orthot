@@ -12,7 +12,7 @@ import { QueryTriggeredButtonControl, SceneviewController } from '../libek/contr
 import { deepcopy, anythingIN, clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { direction, setOrientation, toForward } from '../libek/direction.js'
-import { BoxTerrain, DECAL_UVTYPE } from '../libek/boxterrain.js'
+import { BoxTerrain } from '../libek/boxterrain.js'
 import { VxScene } from '../libek/scene.js'
 import { plotLine, debugLine } from '../libek/plot.js'
 

@@ -3,45 +3,24 @@ import { UV_ATTRIBUTE_PREFIX } from './shader.js'
 import { getUID } from './libek.js'
 
 /*
-A voxel-terrain mesh generator.  As envisioned, it is intended to do many things, but that's a lot of work, so for now, it just generates box-terrain with
-rule-based auto-texturing.
+A voxel-terrain mesh generator.  This generates a blocky mesh chunks from volumetric data.
 
-The rest of this comment indicates what I was thinking before writing any code...
+It produces a BufferGeometry Mesh with vertices, triangle-indices, normals, vertex colors, and two sets of texture coordinates
+Each entry in the volumetric data results in a cube-shaped block in the mesh.
 
-Broadly speaking, this should define the underlying functionality for generating surface meshes from volumetric data.  The idea is that it should accept
-mesh generation commands, generate small chunks of 3D data from templates, knit them together (or not depending if the rules forbid), and output mesh data.
-Additionally, this should be able to alter a previously generated mesh, delete removed pieces, insert new pieces, and perform any re-arrangement or compaction
-needed to to re-generate the Mesh (ideally, should just manipulate buffers and flag the mesh for an update).
+The vertices are the corners (extent) of each block.
+All vertices are split (4 unique vertex/color/normal/texcoord sets per face, for a total of 24 for a lone 1x1x1 cube)
+The normals are vectors which are perpendicular to each face/side (per-vertex).
 
-Funtionality to consider:
-3D Scalar field -> simple blocky terrain (textured cubes)
-3D Scalar field -> blocky terrain (textured cubes) with offset geometry (vertices placed somewhere other than the 8 cube corners) and gadgets
-  (additional shapes inserted near the surface to represent detail)
-3D scalar field -> detailed terrain (all details encoded as geometry, textures used strictly for texture)
-3D scalar field -> isosurface (marching cubes/tetrahedrons)
+Each face/side of each block is textured/colored independently by generating surface specifications for each side 
+  (these are stored in the volmetric data at ContainerObject.terrain[side] ).
 
-heightmap -> 2D tesselated plane with vertically offset vertices
-heightmap -> terraced terrain (terrain with flat levels at different heights)
-Complex terraced terrain - Each terrace defined individually, with manipulations (slanted or curved areas, caves&bridges)
-
-The various functionalities differ greatly enough and that they will probably implemented with separate coponents
-
-hmmm.. back to honeycomb-based volume rendering!  (Actually, not really)
-
-The plan at least for cube-type volumetric data is to split the cube into an "DOWN", "NORTH", and "EAST" regions
-(each dominating an octahedron-shaped region and corresponding to one of the cube's faces)
-These spaces will have origins:  Down:(0,0,0) North:(0,0,0.5) East:(0.5,0,0)
-
-The following procedure is envisioned:
-For each face of each volume:
-  Sample  - grab information about main object adn surrounding objects
-  Cull    - Check for obvious terminal cases and exit if found (generally, if the face either is between two volumetric objects or it is between two empty spaces
-  Reduce  - convert alternative cases into the main case (remove excess bits of data non-destructively)
-  Decimate  Further reduce combinatorial explosion by ignoring more bits of data.
-  Lookup  - take the binary representation of what remains of the scalar data, and look up what to do/draw
-  Output  - send commands to the generator to add/stich in the relevant mesh parts
-
-Additionally, it should be possible simply to merge coplanar polygons and have it trianglulated)
+Color is written to vertex colors (same color for all 4 vertices)
+Two sets of texture coordinates are produced.
+  A "fixed-pattern" texture coordinate set is used for drawing a single tile from a texture atlas to every tile in the output mesh
+  A "border" texture coordinate set is used for drawing a border around irregularly-shaped groups of coplanar adjacent surfaces (of the same mergeClass)
+    (mergeClass is used to control which tiles are "merged" to form a group - if not specified, a unique ID will be generated and applied to surfaces defined
+     by the same Object)
 */
 
 

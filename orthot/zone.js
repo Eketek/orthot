@@ -1420,14 +1420,24 @@ var Zone = function(ekvx, override_startloc, name) {
 
 
   let defineWallTerrain = function(id, color) {
-    let sfc_v = bxtbldr.build_Sfcdef_8bit({
+    let sfc_v = bxtbldr.build_Sfcdef({
       color:color,
-      uv2info:{type:DECAL_UVTYPE.TILE, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*4)+32 }}
+      tile:{
+        rows:8,
+        cols:8,
+        x:Math.floor(Math.random()*4),
+        y:4
+      }
     })
     
-    let sfc_h = bxtbldr.build_Sfcdef_8bit({
+    let sfc_h = bxtbldr.build_Sfcdef({
       color:color,
-      uv2info:{type:DECAL_UVTYPE.TILE, lut:{num_rows:8, num_cols:8, entry:Math.floor(Math.random()*5)}}
+      tile:{
+        rows:8,
+        cols:8,
+        x:Math.floor(Math.random()*5),
+        y:0
+      }
     })
     walldefs[id] = bxtbldr.build_Terraindef( sfc_v,sfc_v,sfc_v,sfc_v, sfc_h,sfc_h )
   }

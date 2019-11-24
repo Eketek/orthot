@@ -1590,74 +1590,44 @@ $(async function MAIN() {
   // BoxTerrain configuration section
   // Purpose of this is to expose the internal features of BoxTerrain (multiple sets of boundary graphics from a texture atlas, arbitrary patterns from a second
   // texture atlas, and unique configurations for each of the 6 directions)
-  
-  let toPatternParams = function(patternSpec) {
-    let k = JSON.stringify(patternSpec)
-    if (patternDefs[k]) {
-      return patternDefs[k]
-    }
-    let pdef = {
-      type:DECAL_UVTYPE.TILE,
-      lut:{
-        num_rows:patternSpec.rows,
-        num_cols:patternSpec.cols,
-        entry:patternSpec.cols*patternSpec.y + patternSpec.x
-      }
-    }
-    patternDefs[k] = pdef
-    return pdef
-  }
-  
-  // attach the specified "block" bounds to a params object (parameters for gen.build_texcoordLUT)
-  let apply8bitTerrspec = function(params, terrspec) {
-    let left = (terrspec.block % terrspec.gridWidth) / terrspec.gridWidth
-    let right = left + 1/terrspec.gridWidth
-    let top = Math.floor(terrspec.block / terrspec.gridWidth) / terrspec.gridHeight
-    let bottom = top + 1/terrspec.gridHeight
-    params.num_rows = 16 * terrspec.gridHeight,
-    params.num_cols = 16 * terrspec.gridWidth,
-    params.texcoord_ul = {x:left, y:top},
-    params.texcoord_br = {x:right, y:bottom}
-  }
-  
   let defineTerrain = function(terrspec) {
     let facedefs = [{}, {}, {}, {}, {}, {}]
     
     if (terrspec.primary.all) {
-      apply8bitTerrspec(facedefs[0], terrspec.primary.all)
-      apply8bitTerrspec(facedefs[1], terrspec.primary.all)
-      apply8bitTerrspec(facedefs[2], terrspec.primary.all)
-      apply8bitTerrspec(facedefs[3], terrspec.primary.all)
-      apply8bitTerrspec(facedefs[4], terrspec.primary.all)
-      apply8bitTerrspec(facedefs[5], terrspec.primary.all)
+      facedefs[0].area8b = terrspec.primary.all
+      facedefs[1].area8b = terrspec.primary.all
+      facedefs[2].area8b = terrspec.primary.all
+      facedefs[3].area8b = terrspec.primary.all
+      facedefs[4].area8b = terrspec.primary.all
+      facedefs[5].area8b = terrspec.primary.all
     }
     if (terrspec.primary.v) {
-      apply8bitTerrspec(facedefs[0], terrspec.primary.v)
-      apply8bitTerrspec(facedefs[1], terrspec.primary.v)
-      apply8bitTerrspec(facedefs[2], terrspec.primary.v)
-      apply8bitTerrspec(facedefs[3], terrspec.primary.v)
+      facedefs[0].area8b = terrspec.primary.v
+      facedefs[1].area8b = terrspec.primary.v
+      facedefs[2].area8b = terrspec.primary.v
+      facedefs[3].area8b = terrspec.primary.v
     }
     if (terrspec.primary.h) {
-      apply8bitTerrspec(facedefs[4], terrspec.primary.h)
-      apply8bitTerrspec(facedefs[5], terrspec.primary.h)
+      facedefs[4].area8b = terrspec.primary.h
+      facedefs[5].area8b = terrspec.primary.h
     }
     if (terrspec.primary.n) {
-      apply8bitTerrspec(facedefs[0], terrspec.primary.n)
+      facedefs[0].area8b = terrspec.primary.n
     }
     if (terrspec.primary.e) {
-      apply8bitTerrspec(facedefs[1], terrspec.primary.e)
+      facedefs[1].area8b = terrspec.primary.e
     }
     if (terrspec.primary.s) {
-      apply8bitTerrspec(facedefs[2], terrspec.primary.s)
+      facedefs[2].area8b = terrspec.primary.s
     }
     if (terrspec.primary.w) {
-      apply8bitTerrspec(facedefs[3], terrspec.primary.w)
+      facedefs[3].area8b = terrspec.primary.w
     }
     if (terrspec.primary.u) {
-      apply8bitTerrspec(facedefs[4], terrspec.primary.u)
+      facedefs[4].area8b = terrspec.primary.u
     }
     if (terrspec.primary.d) {
-      apply8bitTerrspec(facedefs[5], terrspec.primary.d)
+      facedefs[5].area8b = terrspec.primary.d
     }
     
     let baseK = JSON.stringify(terrspec)+"|"
@@ -1710,10 +1680,11 @@ $(async function MAIN() {
       }
       
       
-      for (let i = 0; i < 6; i++) {
-        Object.assign(facedefs[i], toPatternParams(comps[i].pattern))
-        facedefs[i].mergeClass = comps[i].mergeClass
-      }
+      //for (let i = 0; i < 6; i++) {
+        //Object.assign(facedefs[i], toPatternParams(comps[i].pattern))
+        //facedefs[i].tile = comps[i].pattern
+        //facedefs[i].mergeClass = comps[i].mergeClass
+      //}
     
       //Configure the box terrain for each surface [with the corresponding color & pattern parameters]
       let tid = next_terrainid
@@ -1723,11 +1694,10 @@ $(async function MAIN() {
       next_terrainid++
       for (let i = 0; i < 6; i++) {
         let fdef = facedefs[i]
-        let sfcparams = {
-          color:comps[i].color,
-          uv2info:fdef
-        }
-        let k = JSON.stringify(sfcparams)
+        fdef.tile = comps[i].pattern
+        fdef.mergeClass = comps[i].mergeClass
+        fdef.color = comps[i].color
+        let k = JSON.stringify(fdef)
         let sfcid = sfcIDs[k]
         if (sfcid) {
           sfcdefs[i] = surfaceDefs_bterr[sfcid]
@@ -1735,14 +1705,9 @@ $(async function MAIN() {
           continue
         }
         else {
-          let params = {
-            color:comps[i].color,
-            uv2info:fdef,
-            mergeClass:comps[i].mergeClass
-          }
-          let sfc = bxtbldr.build_Sfcdef_8bit(params)
+          let sfc = bxtbldr.build_Sfcdef(fdef)
           surfaceDefs_bterr[next_sfcid] = sfc
-          surfaceDefs[next_sfcid] = params
+          surfaceDefs[next_sfcid] = fdef
           sfcdefids[i] = next_sfcid
           sfcIDs[k] = next_sfcid
           sfcdefs[i] = sfc

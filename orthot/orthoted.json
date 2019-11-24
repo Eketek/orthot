@@ -51,11 +51,11 @@
       "terrain":{
         "primary":{
           "all":{
-            "eightbit":true,
-            "layout":"grid",
-            "gridWidth":1,
-            "gridHeight":1,
-            "block":0
+            "ul":{"x":0,"y":0},
+            "br":{"x":1,"y":1},
+            "map":"full",
+            "rows":16,
+            "cols":16
           }
         }
       },

@@ -256,7 +256,39 @@ var DECAL_UVTYPE = {
 }
 
 
+var TEXCOORDTYPE = {
+  TILE:1,
+  LUT8B:5
+}
+
 var BoxTerrain = function(material, uv2spec) {
+
+  // This array is used to generate texture coordinatges
+  // For each entry, a texture coordinate attribute is added to the output mesh.
+  // Each entry defines what generator to use, the paramter name to read (from the surface specification), and the attribute name to write (to the mesh)
+  // For the time being, this is only an internal simplification (was previously hard-coded logic), but will eventually be exposed to application logic
+  // as part of a planned texturing system
+  let texcoordInfos = [
+    {
+      // fixed tile/pattern texture coordinate spec
+      // Use the same texture coordinates for each tile
+      type:TEXCOORDTYPE.TILE,
+      attrname:uv2spec.attrname,
+      parname:"tile"
+    },
+    
+    {
+      // "8 bit" border texture coordinate spec
+      // produces texture coordinates per-tile (side) based on adjacent [coplanar] tiles
+      // For each bit, a value of 0 indicates that the neighboring tile is of same or compatible type, and 1 indicates a border
+      // Each bit represents a neighboring tile, in clockwise order, starting at upper-left.
+      type:TEXCOORDTYPE.LUT8B,
+      parname:"area8b",
+      attrname:"uv"
+    }
+  ]
+  
+  let is8b = false
 
   // define a surface class.
   //  id:           terrain class
@@ -268,211 +300,41 @@ var BoxTerrain = function(material, uv2spec) {
     let sfc = {
       colors:buildColorArray(params.color),
       mergeClass:(params.mergeClass && (params.mergeClass != "auto")) ? params.mergeClass : getUID(),
-      indextype:params.index
+      tci:[],  //texture coordinate information
+      tcs:[]    //texture coordinates
     }
-    if (params.index >= 0) {
-      sfc.indextype = FIXED
-      sfc.uvs = params.texcoords[params.index]
-    }
-    else {
-      sfc.texcoords = params.texcoords
-    }
-
-    if (params.uv2info) {
-      let uv2info = params.uv2info
-      let utype
-      utype = uv2info.type
-
-      switch(utype) {
-        case DECAL_UVTYPE.TILE:
-          let tile
-          if (uv2info.literal) {
-            tile = uv2info.literal
-          }
-          else if (uv2info.lut) {
-            let ncols = uv2info.lut.num_cols ? uv2info.lut.num_cols : 16
-            let nrows = uv2info.lut.num_rows ? uv2info.lut.num_rows : 16
-            let tctbl = build_texcoordLUT(uv2info.lut.texcoord_ul, uv2info.lut.texcoord_br, ncols, nrows)
-            tile = tctbl[uv2info.lut.entry]
+    
+    for (let i = 0; i < texcoordInfos.length; i++) {
+      let tci = texcoordInfos[i]
+      switch(tci.type) {
+        case TEXCOORDTYPE.TILE:
+          let tparams = params[tci.parname]
+          let tw = 1/tparams.cols
+          let th = 1/tparams.rows
+          let x1 = tparams.x*tw
+          let y1 = 1-tparams.y*th-th
+          sfc.tci[i] = Float32Array.from([
+            x1,    y1,
+            x1+tw, y1,
+            x1+tw, y1+th,
+            x1,    y1+th
+          ])
+          break
+        case TEXCOORDTYPE.LUT8B: {
+          is8b = true
+          let lutparams = params[tci.parname]
+          if (lutparams) {
+            if (Array.isArray(lutparams)) {
+              sfc.tcis[i] = lutparams
+              continue
+            }
+            sfc.tci[i] = build_texcoordLUT(lutparams.ul, lutparams.br, lutparams.cols, lutparams.rows)
           }
           else {
-            tile = Float32Array.from([ 0,0, 1,0, 1,1, 0,1 ])
+            sfc.tci[i] = build_texcoordLUT({x:0,y:0}, {x:1,y:1}, 16, 16)
           }
-          sfc.gen_uv2 = function() { return tile }
-        break
-        case DECAL_UVTYPE.WORLD:
-          let scale = uv2info.scale ? uv2info.scale : 1
-          let f = 1.0 / scale
-          let h = 0.5 / scale
-          sfc.gen_uv2 = function(x,y,z) {
-            let _x = x*f
-            let _y = y*f
-            let _z = z*f
-
-            switch(dir) {
-              case "up":
-              case "down":
-                return Float32Array.from([ _x-h,_z-h, _x+h,_z-h, _x+h,_z+h, _x-h,_z+h ])
-              break
-              case "east":
-              case "west":
-                return Float32Array.from([ _z-h,_y+f, _z+h,_y+f, _z+h,_y, _z-h,_y ])
-              break
-              case "north":
-              case "south":
-                return Float32Array.from([ _x-h,_y+f, _x+h,_y+f, _x+h,_y, _x-h,_y ])
-              break
-              default:
-                return Float32Array.from([ 0,0, 1,0, 1,1, 0,1 ])
-              break
-            }
-          }
-        break
-        case DECAL_UVTYPE.PROJECT:
-          let vpos = new THREE.Vector3()
-          let um, dm, nm, em, sm, wm
-          if (uv2info.matrix) {
-            um = dm = nm = sm = em = wm = uv2info.matrix
-          }
-          um = uv2info.up ? uv2info.up : um
-          dm = uv2info.down ? uv2info.down : dm
-          nm = uv2info.north ? uv2info.north : nm
-          em = uv2info.east ? uv2info.east : em
-          sm = uv2info.south ? uv2info.south : sm
-          wm = uv2info.west ? uv2info.west : wm
-
-          sfc.gen_uv2 = function(x,y,z) {
-            let mat
-            let r = new Float32Array(8)
-            switch(dir) {
-              case "up":
-                vpos.set(x-0.5,y+1,z+0.5)
-                vpos.applyMatrix4(um)
-                r[0] = vpos.x
-                r[1] = vpos.y
-                vpos.set(x+0.5,y+1,z+0.5)
-                vpos.applyMatrix4(um)
-                r[2] = vpos.x
-                r[3] = vpos.y
-                vpos.set(x+0.5,y+1,z-0.5)
-                vpos.applyMatrix4(um)
-                r[4] = vpos.x
-                r[5] = vpos.y
-                vpos.set(x-0.5,y+1,z-0.5)
-                vpos.applyMatrix4(um)
-                r[6] = vpos.x
-                r[7] = vpos.y
-              break;
-              case "down":
-                vpos.set(x-0.5,y,z-0.5)
-                vpos.applyMatrix4(dm)
-                r[0] = vpos.x
-                r[1] = vpos.y
-                vpos.set(x+0.5,y,z-0.5)
-                vpos.applyMatrix4(dm)
-                r[2] = vpos.x
-                r[3] = vpos.y
-                vpos.set(x+0.5,y,z+0.5)
-                vpos.applyMatrix4(dm)
-                r[4] = vpos.x
-                r[5] = vpos.y
-                vpos.set(x-0.5,y,z+0.5)
-                vpos.applyMatrix4(dm)
-                r[6] = vpos.x
-                r[7] = vpos.y
-              break;
-
-              case "north":
-                vpos.set(x+0.5,y,z-0.5)
-                vpos.applyMatrix4(nm)
-                r[0] = vpos.x
-                r[1] = vpos.y
-                vpos.set(x-0.5,y,z-0.5)
-                vpos.applyMatrix4(nm)
-                r[2] = vpos.x
-                r[3] = vpos.y
-                vpos.set(x-0.5,y+1,z-0.5)
-                vpos.applyMatrix4(nm)
-                r[4] = vpos.x
-                r[5] = vpos.y
-                vpos.set(x+0.5,y+1,z-0.5)
-                vpos.applyMatrix4(nm)
-                r[6] = vpos.x
-                r[7] = vpos.y
-              break;
-              case "south":
-                vpos.set(x-0.5,y,z+0.5)
-                vpos.applyMatrix4(sm)
-                r[0] = vpos.x
-                r[1] = vpos.y
-                vpos.set(x+0.5,y,z+0.5)
-                vpos.applyMatrix4(sm)
-                r[2] = vpos.x
-                r[3] = vpos.y
-                vpos.set(x+0.5,y+1,z+0.5)
-                vpos.applyMatrix4(sm)
-                r[4] = vpos.x
-                r[5] = vpos.y
-                vpos.set(x-0.5,y+1,z+0.5)
-                vpos.applyMatrix4(sm)
-                r[6] = vpos.x
-                r[7] = vpos.y
-              break;
-
-              case "east":
-                vpos.set(x+0.5,y,z+0.5)
-                vpos.applyMatrix4(em)
-                r[0] = vpos.x
-                r[1] = vpos.y
-                vpos.set(x+0.5,y,z-0.5)
-                vpos.applyMatrix4(em)
-                r[2] = vpos.x
-                r[3] = vpos.y
-                vpos.set(x+0.5,y+1,z-0.5)
-                vpos.applyMatrix4(em)
-                r[4] = vpos.x
-                r[5] = vpos.y
-                vpos.set(x+0.5,y+1,z+0.5)
-                vpos.applyMatrix4(em)
-                r[6] = vpos.x
-                r[7] = vpos.y
-              break;
-              case "west":
-                vpos.set(x-0.5,y,z-0.5)
-                vpos.applyMatrix4(wm)
-                r[0] = vpos.x
-                r[1] = vpos.y
-                vpos.set(x-0.5,y,z+0.5)
-                vpos.applyMatrix4(wm)
-                r[2] = vpos.x
-                r[3] = vpos.y
-                vpos.set(x-0.5,y+1,z+0.5)
-                vpos.applyMatrix4(wm)
-                r[4] = vpos.x
-                r[5] = vpos.y
-                vpos.set(x-0.5,y+1,z-0.5)
-                vpos.applyMatrix4(wm)
-                r[6] = vpos.x
-                r[7] = vpos.y
-              break;
-              default:
-                return Float32Array.from([ 0,0, 1,0, 1,1, 0,1 ])
-              break
-              /*
-              case "down":  mat = dm; break;
-              case "north": mat = nm; break;
-              case "east":  mat = em; break;
-              case "south": mat = sm; break;
-              case "west":  mat = wm; break;
-              */
-            }
-            return r
-          }
-        break
+        } break
       }
-    }
-    else {
-      sfc.gen_uv2 = function() {}
     }
     return sfc
   }
@@ -490,24 +352,7 @@ var BoxTerrain = function(material, uv2spec) {
       down:Object.assign( {}, down, _BoxTerrain_MeshData.down ),
     }
   }
-
-  // "8 bit" wall is a virtual texture used in conjunction with a discriminator function to texture a visually distinct & coherent square
-  //    tiles on a plane.
-  //  8 surrounding tiles are used to generate an 8-bit number representing the border of the tile
-  //  For each bit, a value of 0 indicates that the neighboring tile is of same or compatible type, and 1 indicates a border
-  //  Each bit represents a neighboring tile, in clockwise order, starting at upper-left.
-  //this.build_Sfcdef_8bit = function(id, color, mergeClass = undefined, texcoord_ul=undefined, texcoord_br=undefined, num_cols = 16) {
-  //  let texcoords = libek.gen.build_texcoordLUT(texcoord_ul, texcoord_br, num_cols, 256/num_cols)
-  //  return this.build_Sfcdef(id, color, texcoords, libek.gen.LUT_8BIT, mergeClass)
-  // }
-
-  this.build_Sfcdef_8bit = function(params) {
-    let num_cols = params.num_cols ? params.num_cols : 16
-    params.index = LUT_8BIT
-    params.texcoords = build_texcoordLUT(params.texcoord_ul, params.texcoord_br, num_cols, 256/num_cols)
-    return this.build_Sfcdef(params)// params.color, texcoords, params.index)
-  }
-
+  
   // data: a scalar field representing the terrain to draw.  The value of each entry in the field is the object/surface class
   // area: THREE.Box defining the region to scan and generate a representative surface mesh for.  The scan will extend one unit outward from
   //        the spedified area (to properly generate edges)
@@ -515,7 +360,7 @@ var BoxTerrain = function(material, uv2spec) {
   this.build = function(data, area, offset=true) {
     let builder = new MeshBuilder()
 
-    let x,y,z, terr, sfc, dir, pos, ofs
+    let x,y,z, terr, sfc, dir, pos, ofs, _8b
     let query = function(ctn) {
       if (ctn && ctn.terrain) {
         let adjsfc = ctn.terrain[dir]
@@ -551,107 +396,120 @@ var BoxTerrain = function(material, uv2spec) {
               if ( (!ctn.terr_koU) && (!adj || !adj.terrain)) {
                 dir = "up"
                 sfc = terr.up
-                switch (sfc.indextype) {
-                  case LUT_8BIT: {
-                    let nbrs = data.sample(x,y,z, query, -1,0,-1, -1,1,-1,  0,0,-1, 0,1,-1,  1,0,-1, 1,1,-1,  1,0,0, 1,1,0,  1,0,1, 1,1,1,  0,0,1, 0,1,1,  -1,0,1, -1,1,1,  -1,0,0, -1,1,0 )
-                    let tc_idx = 255 - (
-                      (!nbrs[1]&&nbrs[0]==2)    |
-                      (!nbrs[3]&&nbrs[2]==2)<<1 |
-                      (!nbrs[5]&&nbrs[4]==2)<<2 |
-                      (!nbrs[7]&&nbrs[6]==2)<<3 |
-                      (!nbrs[9]&&nbrs[8]==2)<<4 |
-                      (!nbrs[11]&&nbrs[10]==2)<<5 |
-                      (!nbrs[13]&&nbrs[12]==2)<<6 |
-                      (!nbrs[15]&&nbrs[14]==2)<<7 )
-                    sfc.uvs = sfc.texcoords[tc_idx]
-                    sfc.uv2s = sfc.gen_uv2()
-                    builder.add(pos, sfc)
-                  }
-                  break
-                  case FIXED:
-                    builder.add(pos, sfc)
-                  break
+                if (is8b) {
+                  let nbrs = data.sample(x,y,z, query, -1,0,-1, -1,1,-1,  0,0,-1, 0,1,-1,  1,0,-1, 1,1,-1,  1,0,0, 1,1,0,  1,0,1, 1,1,1,  0,0,1, 0,1,1,  -1,0,1, -1,1,1,  -1,0,0, -1,1,0 )
+                  _8b = 255 - (
+                    (!nbrs[1]&&nbrs[0]==2)    |
+                    (!nbrs[3]&&nbrs[2]==2)<<1 |
+                    (!nbrs[5]&&nbrs[4]==2)<<2 |
+                    (!nbrs[7]&&nbrs[6]==2)<<3 |
+                    (!nbrs[9]&&nbrs[8]==2)<<4 |
+                    (!nbrs[11]&&nbrs[10]==2)<<5 |
+                    (!nbrs[13]&&nbrs[12]==2)<<6 |
+                    (!nbrs[15]&&nbrs[14]==2)<<7 )
                 }
+                sfc.tcs = []
+                for (let i = 0; i < texcoordInfos.length; i++) {
+                  switch(texcoordInfos[i].type) {
+                    case TEXCOORDTYPE.TILE:
+                      sfc.tcs[i] = sfc.tci[i]
+                    break
+                    case TEXCOORDTYPE.LUT8B:
+                      sfc.tcs[i] = sfc.tci[i][_8b]
+                    break
+                  }
+                }
+                builder.add(pos, sfc)
               }
 
               adj = data.get(x,y-1,z)
               if ( (!ctn.terr_koD) && (!adj || !adj.terrain)) {
                 dir = "down"
                 sfc = terr.down
-                switch (sfc.indextype) {
-                  case LUT_8BIT: {
-                    let nbrs = data.sample(x,y,z, query, -1,0,1, -1,-1,1,  0,0,1, 0,-1,1,  1,0,1, 1,-1,1,  1,0,0, 1,-1,0,  1,0,-1, 1,-1,-1,  0,0,-1, 0,-1,-1,  -1,0,-1, -1,-1,-1,  -1,0,0, -1,-1,0 )
-                    let tc_idx = 255 - (
-                      (!nbrs[1]&&nbrs[0]==2)    |
-                      (!nbrs[3]&&nbrs[2]==2)<<1 |
-                      (!nbrs[5]&&nbrs[4]==2)<<2 |
-                      (!nbrs[7]&&nbrs[6]==2)<<3 |
-                      (!nbrs[9]&&nbrs[8]==2)<<4 |
-                      (!nbrs[11]&&nbrs[10]==2)<<5 |
-                      (!nbrs[13]&&nbrs[12]==2)<<6 |
-                      (!nbrs[15]&&nbrs[14]==2)<<7 )
-                    sfc.uvs = sfc.texcoords[tc_idx]
-                    sfc.uv2s = sfc.gen_uv2()
-                    builder.add(pos, sfc)
-                  }
-                  break
-                  case FIXED:
-                    builder.add(pos, sfc)
-                  break
+                if (is8b) {
+                  let nbrs = data.sample(x,y,z, query, -1,0,1, -1,-1,1,  0,0,1, 0,-1,1,  1,0,1, 1,-1,1,  1,0,0, 1,-1,0,  1,0,-1, 1,-1,-1,  0,0,-1, 0,-1,-1,  -1,0,-1, -1,-1,-1,  -1,0,0, -1,-1,0 )
+                  _8b = 255 - (
+                    (!nbrs[1]&&nbrs[0]==2)    |
+                    (!nbrs[3]&&nbrs[2]==2)<<1 |
+                    (!nbrs[5]&&nbrs[4]==2)<<2 |
+                    (!nbrs[7]&&nbrs[6]==2)<<3 |
+                    (!nbrs[9]&&nbrs[8]==2)<<4 |
+                    (!nbrs[11]&&nbrs[10]==2)<<5 |
+                    (!nbrs[13]&&nbrs[12]==2)<<6 |
+                    (!nbrs[15]&&nbrs[14]==2)<<7 )
                 }
+                sfc.tcs = []
+                for (let i = 0; i < texcoordInfos.length; i++) {
+                  switch(texcoordInfos[i].type) {
+                    case TEXCOORDTYPE.TILE:
+                      sfc.tcs[i] = sfc.tci[i]
+                    break
+                    case TEXCOORDTYPE.LUT8B:
+                      sfc.tcs[i] = sfc.tci[i][_8b]
+                    break
+                  }
+                }
+                builder.add(pos, sfc)
               }
 
               adj = data.get(x+1,y,z)
               if ( (!ctn.terr_koW) && (!adj || !adj.terrain)) {
                 dir = "east"
                 sfc = terr.east
-                switch (sfc.indextype) {
-                  case LUT_8BIT: {
-                    let nbrs = data.sample(x,y,z, query, 0,1,1,1,1,1,  0,1,0,1,1,0, 0,1,-1,1,1,-1, 0,0,-1,1,0,-1, 0,-1,-1,1,-1,-1, 0,-1,0,1,-1,0, 0,-1,1,1,-1,1, 0,0,1,1,0,1)
-                    let tc_idx = 255 - (
-                      (!nbrs[1]&&nbrs[0]==2)    |
-                      (!nbrs[3]&&nbrs[2]==2)<<1 |
-                      (!nbrs[5]&&nbrs[4]==2)<<2 |
-                      (!nbrs[7]&&nbrs[6]==2)<<3 |
-                      (!nbrs[9]&&nbrs[8]==2)<<4 |
-                      (!nbrs[11]&&nbrs[10]==2)<<5 |
-                      (!nbrs[13]&&nbrs[12]==2)<<6 |
-                      (!nbrs[15]&&nbrs[14]==2)<<7 )
-                    sfc.uvs = sfc.texcoords[tc_idx]
-                    sfc.uv2s = sfc.gen_uv2()
-                    builder.add(pos, sfc)
-                  }
-                  break
-                  case FIXED:
-                    builder.add(pos, sfc)
-                  break
+                if (is8b) {
+                  let nbrs = data.sample(x,y,z, query, 0,1,1,1,1,1,  0,1,0,1,1,0, 0,1,-1,1,1,-1, 0,0,-1,1,0,-1, 0,-1,-1,1,-1,-1, 0,-1,0,1,-1,0, 0,-1,1,1,-1,1, 0,0,1,1,0,1)
+                  _8b = 255 - (
+                    (!nbrs[1]&&nbrs[0]==2)    |
+                    (!nbrs[3]&&nbrs[2]==2)<<1 |
+                    (!nbrs[5]&&nbrs[4]==2)<<2 |
+                    (!nbrs[7]&&nbrs[6]==2)<<3 |
+                    (!nbrs[9]&&nbrs[8]==2)<<4 |
+                    (!nbrs[11]&&nbrs[10]==2)<<5 |
+                    (!nbrs[13]&&nbrs[12]==2)<<6 |
+                    (!nbrs[15]&&nbrs[14]==2)<<7 )
                 }
+                sfc.tcs = []
+                for (let i = 0; i < texcoordInfos.length; i++) {
+                  switch(texcoordInfos[i].type) {
+                    case TEXCOORDTYPE.TILE:
+                      sfc.tcs[i] = sfc.tci[i]
+                    break
+                    case TEXCOORDTYPE.LUT8B:
+                      sfc.tcs[i] = sfc.tci[i][_8b]
+                    break
+                  }
+                }
+                builder.add(pos, sfc)
               }
+              
               adj = data.get(x-1,y,z)
               if ( (!ctn.terr_koE) && (!adj || !adj.terrain)) {
                 dir = "west"
                 sfc = terr.west
-                switch (sfc.indextype) {
-                  case LUT_8BIT: {
-                    let nbrs = data.sample(x,y,z, query, 0,1,-1,-1,1,-1,  0,1,0,-1,1,0, 0,1,1,-1,1,1, 0,0,1,-1,0,1, 0,-1,1,-1,-1,1, 0,-1,0,-1,-1,0, 0,-1,-1,-1,-1,-1, 0,0,-1,-1,0,-1)
-                    let tc_idx = 255 - (
-                      (!nbrs[1]&&nbrs[0]==2)    |
-                      (!nbrs[3]&&nbrs[2]==2)<<1 |
-                      (!nbrs[5]&&nbrs[4]==2)<<2 |
-                      (!nbrs[7]&&nbrs[6]==2)<<3 |
-                      (!nbrs[9]&&nbrs[8]==2)<<4 |
-                      (!nbrs[11]&&nbrs[10]==2)<<5 |
-                      (!nbrs[13]&&nbrs[12]==2)<<6 |
-                      (!nbrs[15]&&nbrs[14]==2)<<7 )
-                    sfc.uvs = sfc.texcoords[tc_idx]
-                    sfc.uv2s = sfc.gen_uv2()
-                    builder.add(pos, sfc)
-                  }
-                  break
-                  case FIXED:
-                    builder.add(pos, sfc)
-                  break
+                if (is8b) {
+                  let nbrs = data.sample(x,y,z, query, 0,1,-1,-1,1,-1,  0,1,0,-1,1,0, 0,1,1,-1,1,1, 0,0,1,-1,0,1, 0,-1,1,-1,-1,1, 0,-1,0,-1,-1,0, 0,-1,-1,-1,-1,-1, 0,0,-1,-1,0,-1)
+                  _8b = 255 - (
+                    (!nbrs[1]&&nbrs[0]==2)    |
+                    (!nbrs[3]&&nbrs[2]==2)<<1 |
+                    (!nbrs[5]&&nbrs[4]==2)<<2 |
+                    (!nbrs[7]&&nbrs[6]==2)<<3 |
+                    (!nbrs[9]&&nbrs[8]==2)<<4 |
+                    (!nbrs[11]&&nbrs[10]==2)<<5 |
+                    (!nbrs[13]&&nbrs[12]==2)<<6 |
+                    (!nbrs[15]&&nbrs[14]==2)<<7 )
                 }
+                sfc.tcs = []
+                for (let i = 0; i < texcoordInfos.length; i++) {
+                  switch(texcoordInfos[i].type) {
+                    case TEXCOORDTYPE.TILE:
+                      sfc.tcs[i] = sfc.tci[i]
+                    break
+                    case TEXCOORDTYPE.LUT8B:
+                      sfc.tcs[i] = sfc.tci[i][_8b]
+                    break
+                  }
+                }
+                builder.add(pos, sfc)
               }
 
 
@@ -660,61 +518,67 @@ var BoxTerrain = function(material, uv2spec) {
               if ( (!ctn.terr_koS) && (!adj || !adj.terrain)) {
                 dir = "north"
                 sfc = terr.north
-                switch (sfc.indextype) {
-                  case LUT_8BIT: {
-                    let nbrs = data.sample(x,y,z, query, 1,1,0,1,1,-1, 0,1,0,0,1,-1, -1,1,0,-1,1,-1, -1,0,0,-1,0,-1, -1,-1,0,-1,-1,-1, 0,-1,0,0,-1,-1, 1,-1,0,1,-1,-1, 1,0,0,1,0,-1)
-                    let tc_idx = 255 - (
-                      (!nbrs[1]&&nbrs[0]==2)    |
-                      (!nbrs[3]&&nbrs[2]==2)<<1 |
-                      (!nbrs[5]&&nbrs[4]==2)<<2 |
-                      (!nbrs[7]&&nbrs[6]==2)<<3 |
-                      (!nbrs[9]&&nbrs[8]==2)<<4 |
-                      (!nbrs[11]&&nbrs[10]==2)<<5 |
-                      (!nbrs[13]&&nbrs[12]==2)<<6 |
-                      (!nbrs[15]&&nbrs[14]==2)<<7 )
-                    sfc.uvs = sfc.texcoords[tc_idx]
-                    sfc.uv2s = sfc.gen_uv2()
-                    builder.add(pos, sfc)
-                  }
-                  break
-                  case FIXED:
-                    builder.add(pos, sfc)
-                  break
+                if (is8b) {
+                  let nbrs = data.sample(x,y,z, query, 1,1,0,1,1,-1, 0,1,0,0,1,-1, -1,1,0,-1,1,-1, -1,0,0,-1,0,-1, -1,-1,0,-1,-1,-1, 0,-1,0,0,-1,-1, 1,-1,0,1,-1,-1, 1,0,0,1,0,-1)
+                  _8b = 255 - (
+                    (!nbrs[1]&&nbrs[0]==2)    |
+                    (!nbrs[3]&&nbrs[2]==2)<<1 |
+                    (!nbrs[5]&&nbrs[4]==2)<<2 |
+                    (!nbrs[7]&&nbrs[6]==2)<<3 |
+                    (!nbrs[9]&&nbrs[8]==2)<<4 |
+                    (!nbrs[11]&&nbrs[10]==2)<<5 |
+                    (!nbrs[13]&&nbrs[12]==2)<<6 |
+                    (!nbrs[15]&&nbrs[14]==2)<<7 )
                 }
+                sfc.tcs = []
+                for (let i = 0; i < texcoordInfos.length; i++) {
+                  switch(texcoordInfos[i].type) {
+                    case TEXCOORDTYPE.TILE:
+                      sfc.tcs[i] = sfc.tci[i]
+                    break
+                    case TEXCOORDTYPE.LUT8B:
+                      sfc.tcs[i] = sfc.tci[i][_8b]
+                    break
+                  }
+                }
+                builder.add(pos, sfc)
               }
 
               adj = data.get(x,y,z+1)
               if ( (!ctn.terr_koN) && (!adj || !adj.terrain)) {
                 dir = "south"
                 sfc = terr.south
-                switch (sfc.indextype) {
-                  case LUT_8BIT: {
-                    let nbrs = data.sample(x,y,z, query, -1,1,0,-1,1,1, 0,1,0,0,1,1, 1,1,0,1,1,1, 1,0,0,1,0,1, 1,-1,0,1,-1,1, 0,-1,0,0,-1,1, -1,-1,0,-1,-1,1, -1,0,0,-1,0,1)
-                    let tc_idx = 255 - (
-                      (!nbrs[1]&&nbrs[0]==2)    |
-                      (!nbrs[3]&&nbrs[2]==2)<<1 |
-                      (!nbrs[5]&&nbrs[4]==2)<<2 |
-                      (!nbrs[7]&&nbrs[6]==2)<<3 |
-                      (!nbrs[9]&&nbrs[8]==2)<<4 |
-                      (!nbrs[11]&&nbrs[10]==2)<<5 |
-                      (!nbrs[13]&&nbrs[12]==2)<<6 |
-                      (!nbrs[15]&&nbrs[14]==2)<<7 )
-                    sfc.uvs = sfc.texcoords[tc_idx]
-                    sfc.uv2s = sfc.gen_uv2()
-                    builder.add(pos, sfc)
-                  }
-                  break
-                  case FIXED:
-                    builder.add(pos, sfc)
-                  break
+                if (is8b) {
+                  let nbrs = data.sample(x,y,z, query, -1,1,0,-1,1,1, 0,1,0,0,1,1, 1,1,0,1,1,1, 1,0,0,1,0,1, 1,-1,0,1,-1,1, 0,-1,0,0,-1,1, -1,-1,0,-1,-1,1, -1,0,0,-1,0,1)
+                  _8b = 255 - (
+                    (!nbrs[1]&&nbrs[0]==2)    |
+                    (!nbrs[3]&&nbrs[2]==2)<<1 |
+                    (!nbrs[5]&&nbrs[4]==2)<<2 |
+                    (!nbrs[7]&&nbrs[6]==2)<<3 |
+                    (!nbrs[9]&&nbrs[8]==2)<<4 |
+                    (!nbrs[11]&&nbrs[10]==2)<<5 |
+                    (!nbrs[13]&&nbrs[12]==2)<<6 |
+                    (!nbrs[15]&&nbrs[14]==2)<<7 )
                 }
+                sfc.tcs = []
+                for (let i = 0; i < texcoordInfos.length; i++) {
+                  switch(texcoordInfos[i].type) {
+                    case TEXCOORDTYPE.TILE:
+                      sfc.tcs[i] = sfc.tci[i]
+                    break
+                    case TEXCOORDTYPE.LUT8B:
+                      sfc.tcs[i] = sfc.tci[i][_8b]
+                    break
+                  }
+                }
+                builder.add(pos, sfc)
               }
             }
           }
         }
       }
     }
-    let obj = builder.build(material, false, true, true, uv2spec)
+    let obj = builder.build(material, false, true, true, uv2spec, texcoordInfos)
     ofs.multiplyScalar(-1)
     obj.position.copy(ofs)
     return obj
@@ -752,8 +616,7 @@ var MeshBuilder = function() {
       indices:template.indices,
       vertices:_vertices,
       normals:template.normals,
-      uvs:template.uvs,
-      uv2s:template.uv2s,
+      uvs:template.tcs,
       colors:template.colors
     }
 
@@ -772,7 +635,7 @@ var MeshBuilder = function() {
   //perform post-processing (if applicable), flag any dynamic THREE.Mesh object(s) for updates
   this.update = function() {}
 
-  this.build = function(mat, offset, use_colors, use_uvs, uv2spec) {
+  this.build = function(mat, offset, use_colors, use_uvs, uv2spec, texcoordInfos) {
 
     num_indices = 0
     num_verts = 0
@@ -820,35 +683,18 @@ var MeshBuilder = function() {
       }
       geom.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
     }
-    if (use_uvs) {
-      uvs = new Float32Array(num_verts)
-      let j = 0
-      for (let sm of submeshes) {
-        uvs.set(sm.uvs, j)
-        j += sm.uvs.length
+    
+    {
+      for (let i = 0; i < texcoordInfos.length; i++) {
+        uvs = new Float32Array(num_verts)
+        let j = 0
+        for (let sm of submeshes) {
+          uvs.set(sm.uvs[i], j)
+          j += sm.uvs[i].length
+        }
+        geom.addAttribute( texcoordInfos[i].attrname, new THREE.BufferAttribute( uvs, 2 ) )
       }
-      geom.addAttribute( 'uv', new THREE.BufferAttribute( uvs, 2 ) );
     }
-
-    if (uv2spec) {
-
-      let attrname
-      if (uv2spec.isUVspec) {
-        attrname = uv2spec.attrname
-      }
-      else {
-        attrname = UV_ATTRIBUTE_PREFIX + uv2spec
-      }
-
-      uvs = new Float32Array(num_verts)
-      let j = 0
-      for (let sm of submeshes) {
-        uvs.set(sm.uv2s, j)
-        j += sm.uv2s.length
-      }
-      geom.addAttribute( attrname, new THREE.BufferAttribute( uvs, 2 ) );
-    }
-
     return new THREE.Mesh(geom, mat)
   }
 }

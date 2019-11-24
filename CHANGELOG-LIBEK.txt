@@ -1,6 +1,10 @@
-20 Nov 2019
-  Simplify BoxTerrain
+20-23 Nov 2019
+  Internal adjustments to BoxTerrain
     Remove IDs from Terrain and Surface data
+    Rework the texture coordinate handling:
+      Simplify the arguments that need to get passed to BoxTerrain to define a surface
+      Turn texture coordinate specification into an array of texture coordinate specifcations (future-proofing / adjustments for planned multitexturing revision)
+      Removed the "8bit" surface specification function (this is now "generic" to BoxTerrain)
   rename gen.js to boxterrain.js
 
 16 Nov 2019

@@ -1749,18 +1749,18 @@ $(async function MAIN() {
     if (typeof(cfg) == "string") {
       cfg = JSON.parse(cfg)
     }
-    let appname = cfg.AppName
-    if (!appname) {
-      appname = "SomeoneDidntAssignThe_AppName"
+    let dformat = cfg.DataFormat
+    if (!dformat) {
+      dformat = "Unspecified-data-format"
     }
     
-    edCTL.AppName = appname
+    edCTL.DataFormat = dformat
     edCTL.DataVersion = cfg.DataVersion
     
     let rscver = cfg.EdrscVersion|0
-    let prev_ver = 0|parseInt(window.localStorage[appname+"EDVER"])
+    let prev_ver = 0|parseInt(window.localStorage[dformat+"EDVER"])
     let reloadOPT = (rscver > prev_ver) ? {cache:"reload"} : undefined
-    window.localStorage[appname+"EDVER"] = rscver
+    window.localStorage[dformat+"EDVER"] = rscver
     
     if (cfg.Resources) {
       try {
@@ -1782,7 +1782,7 @@ $(async function MAIN() {
           }
           else if (data.type == "archive") {
             promises.push(
-              update(appname, (fetchOPTS)=>{
+              update(dformat, (fetchOPTS)=>{
                 return loadZIP(edCTL.assets, false, data.src, reloadOPT)
               })
             )
@@ -1790,7 +1790,7 @@ $(async function MAIN() {
         }
         if (textureRefs.length > 0) {
           promises.push(
-            update(appname, (fetchOPTS)=>{
+            update(dformat, (fetchOPTS)=>{
               return loadMuch( edCTL.assets, false, reloadOPT, textureRefs )
             }),
           )
@@ -1841,16 +1841,19 @@ $(async function MAIN() {
   
   let serialize = function() {
     let o = {
-      surfaceDefs:surfaceDefs,
-      terrainDefs:terrainDefs,
-      templates:templates,
-      objects:[],
+      EKVX2:true,
+      Format:edCTL.DataFormat,
+      Version:edCTL.DataVersion,
+      Templates:templates,
+      Surfaces:surfaceDefs,
+      Terrains:terrainDefs,
+      Objects:[],
     }
     vxc.forAll((ctn)=>{
       if (ctn.contents && ctn.contents.length > 0) {
         for (let obj of (ctn.contents)) {
           if (obj.data) {
-            o.objects.push(obj.data)
+            o.Objects.push(obj.data)
           }
         }
       }

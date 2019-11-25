@@ -1571,11 +1571,13 @@ $(async function MAIN() {
       spec.template = {type:spec.type}
     }
     
-    tool.templateID = next_templateID
-    fixedtemplates[next_templateID] = spec.template
-    templates[next_templateID] = spec.template
-    next_templateID++
-    
+    if (!spec.editorOnly) {
+      tool.templateID = next_templateID
+      fixedtemplates[next_templateID] = spec.template
+      templates[next_templateID] = spec.template
+      next_templateID++
+    }
+      
     //store the tool
     tools[spec.name] = tool
   
@@ -1826,6 +1828,7 @@ $(async function MAIN() {
   defineTool({
     type:"erase",
     name:"Erase",
+    editorOnly:true,
     pickModes:["xz", "xy", "yz", "pick"],
     alignMode:"none",
     pickIn:true,

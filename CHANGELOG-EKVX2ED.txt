@@ -2,6 +2,7 @@
   Extended the use of templates to store arbitrary objects
   Compacted surface definitions in serizlized data (use templates to store the complete "area8b" and "tile" properties)
   Make the serialized data a more self-descriptive, adjust the top-level names
+  Add a flag to mark a tool as an editor-only device (preenting it from adding an entry to the template table)
 
 20-23 Nov 2019
   Adjustments for changes to BoxTerrain

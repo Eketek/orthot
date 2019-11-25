@@ -933,7 +933,9 @@ $(async function MAIN() {
   // Templates are fixed lists of properties which are to be copied into the data (often this will be just be an Object type identifier).
   // Each generated object references one template
   let next_templateID = 1
+  let fixedtemplates = {}
   let templates = {}
+  let templateIDs = {}
   
   // All defined tools
   let tools = {}
@@ -1005,6 +1007,8 @@ $(async function MAIN() {
     cursor3d.mdl.add(cursorMDL)
     cursor3d._mdl = cursorMDL
     put(cursor3d,0,0,0)
+    
+    let templates = Object.assign({}, fixedtemplates)
     
     UniqueObjects = {}
     next_terrainid = 1
@@ -1466,6 +1470,21 @@ $(async function MAIN() {
     }
   }
   
+  // Store an arbitrary object in the templates table [if not already present] and return a template ID.  
+  // This is somewhat outside the original intent of templates, but not by far (was originally intended only to be used for base objects
+  //  and only taken directly from tool specifications.
+  //  But, it was determined that it would be reasonable to also use it to compress Surface & terrain specifications.
+  let templatize = function(obj) {
+    let key = JSON.stringify(obj)
+    let id = templateIDs[key]
+    if (id == undefined) {
+      id = next_templateID
+      templateIDs[key] = id
+      next_templateID++
+      templates[id] = obj
+    }
+    return id
+  }
   
   //Scan an Object for "target" objects with a property named "ref" or "copy".
   //  When "ref" or "copy" is encountered, retrieve the referenced object by following names from the top-level object, then
@@ -1553,6 +1572,7 @@ $(async function MAIN() {
     }
     
     tool.templateID = next_templateID
+    fixedtemplates[next_templateID] = spec.template
     templates[next_templateID] = spec.template
     next_templateID++
     
@@ -1705,9 +1725,12 @@ $(async function MAIN() {
           continue
         }
         else {
+          let tfdef = Object.assign({}, fdef)
+          tfdef.area8b = templatize(tfdef.area8b)
+          tfdef.tile = templatize(tfdef.tile)
+          surfaceDefs[next_sfcid] = tfdef
           let sfc = bxtbldr.build_Sfcdef(fdef)
           surfaceDefs_bterr[next_sfcid] = sfc
-          surfaceDefs[next_sfcid] = fdef
           sfcdefids[i] = next_sfcid
           sfcIDs[k] = next_sfcid
           sfcdefs[i] = sfc
@@ -1826,13 +1849,13 @@ $(async function MAIN() {
     vxc.forAll((ctn)=>{
       if (ctn.contents && ctn.contents.length > 0) {
         for (let obj of (ctn.contents)) {
-          console.log(obj)
           if (obj.data) {
             o.objects.push(obj.data)
           }
         }
       }
     })
+    //return JSON.stringify(o, undefined, 2)
     return JSON.stringify(o)
   }
 

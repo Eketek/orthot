@@ -1,6 +1,7 @@
 0.3.0:
   25 Nov 2019
     Removed an extraneous property from the Orthot Editor specification
+    Add a point of entry for accepting test data from the Puzzle Editor
     
   20-23 Nov 2019
     Adjustments for changes to BoxTerrain

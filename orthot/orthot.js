@@ -33,7 +33,7 @@ var inputCTL = window.ictl = {}
 var sviewCTL
 
 //Level data, high-level state, and "Orthot" functions
-var orthotCTL = window.octl = {
+var orthotCTL = window.octl = window.appCTL = {
   assets:{},
   tiles:{},
   version:"0.3.0",
@@ -433,7 +433,20 @@ $(async function MAIN() {
   }
 
   loadDataPack("MainGdataPack", "MainArea", MAIN_ZONES, MAIN_TEXTS)
+  
+  if (window.StagedTestData) {
+    //orthotCTL.loadScene(stagedTestData)
+    console.log("TODO: ekvx2 loader", StagedTestData)
+  }
+  else {
+    //orthotCTL.loadScene("MainArea")
+  }
   orthotCTL.loadScene("MainArea")
+  
+  orthotCTL.runTest = function(data) {
+    //orthotCTL.loadScene(data)
+    console.log("TODO: ekvx2 loader", data)
+  }
 
   orthotCTL.forceReloadMainData = async function() {
     let zones = {}

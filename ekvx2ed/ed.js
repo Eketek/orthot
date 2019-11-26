@@ -1758,6 +1758,29 @@ $(async function MAIN() {
     
     edCTL.DataFormat = dformat
     edCTL.DataVersion = cfg.DataVersion
+    edCTL.AppLink = cfg.AppLink
+    
+    if (edCTL.AppLink) {
+      let testBTN = $("<div>").addClass("btn_active").text("Test").click(()=>{
+        if (edCTL.AppWindow && !edCTL.AppWindow.closed) {
+          edCTL.AppWindow.focus()
+        }
+        else {
+          edCTL.AppWindow = window.open(edCTL.AppLink)
+        }
+        
+        if (edCTL.AppWindow) {
+          let data = serialize()
+          if (edCTL.AppWindow.appCTL) {
+            edCTL.AppWindow.appCTL.runTest(data)
+          }
+          else {
+            edCTL.AppWindow.StagedTestData = data
+          }
+        }
+      })[0]
+      $("#controls").append(testBTN)
+    }
     
     let rscver = cfg.EdrscVersion|0
     let prev_ver = 0|parseInt(window.localStorage[dformat+"EDVER"])

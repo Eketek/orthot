@@ -9,21 +9,21 @@ import { renderCTL, sviewCTL, inputCTL, orthotCTL } from './orthot.js'
 import { parseO2Orientation } from './util.js'
 import { Container } from './container.js'
 import { direction, rotateDirection_bydirections } from '../libek/direction.js'
-import { Wall, ScenePortal, InfoBlock, Stair, PushBlock, Crate, IceBlock, Key, Lock, Flag, Exit } from './simpleobjects.js'
-import { Ladder, Portal, Button, Icefloor } from './attachments.js'
-import { Gate, GateGroup } from './gate.js'
+import { Wall, InfoBlock } from './simpleobjects.js'
 import { Player } from './player.js'
 import { Collision, ObjectState } from './enums.js'
-import { Mouse, Moose } from './creatures.js'
 import { deactivateTextDisplay } from './textdisplay.js'
+import { Ekvx1Interpreter } from './ekvx1interpreter.js'
 
 var Zone = function(ekvx, override_startloc, name) {
   this.isZone = true
   let isGeomValid = true
   this.name = name
+  
+  let ekvxinterp = ekvx.EKVX1 ? Ekvx1Interpreter : undefined
 
-  let bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
-  let vxc = new VxScene({
+  let bxtbldr = this.bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
+  let vxc = this.vxc = new VxScene({
     boxterrain:bxtbldr,
     chunks_per_tick:4
   })
@@ -34,11 +34,10 @@ var Zone = function(ekvx, override_startloc, name) {
 
 
   let rawdata = {}
-  let flipWorld = (ekvx.data_version <= 5)
 
   let walltemplates = {}
   let walldefs = {}
-  let targets = {}
+  this.targets = {}
 
   // For now, lighting is simplified to global ambient + global directional light + player-held lantern + maybe one light-bearing object
   //  ANd...  just because there otherwise isn't much interesting about lighting, the global directional light rotates very slowly as time passes
@@ -76,8 +75,8 @@ var Zone = function(ekvx, override_startloc, name) {
   let deferredActions = []
 
   //set up "reticles" that can show which keys will work with which locks
-  let keys = []
-  let locks = []
+  this.keys = []
+  this.locks = []
   let reticlemat
   let activeReticle
   let baseReticleOBJ = orthotCTL.assets.cubereticle
@@ -119,10 +118,10 @@ var Zone = function(ekvx, override_startloc, name) {
   }
 
   this.showKeys = function(code, color="green") {
-    setReticle(keyReticle, keys, code, color)
+    setReticle(keyReticle, this.keys, code, color)
   }
   this.showLocks = function(code, color="green") {
-    setReticle(lockReticle, locks, code, color)
+    setReticle(lockReticle, this.locks, code, color)
   }
 
   let sigReceivers = {}
@@ -1418,59 +1417,6 @@ var Zone = function(ekvx, override_startloc, name) {
     moves_by_source = {}
   }).bind(this);
 
-
-  let defineWallTerrain = function(id, color) {
-    let sfc_v = bxtbldr.build_Sfcdef({
-      color:color,
-      tile:{
-        rows:8,
-        cols:8,
-        x:Math.floor(Math.random()*4),
-        y:4
-      }
-    })
-    
-    let sfc_h = bxtbldr.build_Sfcdef({
-      color:color,
-      tile:{
-        rows:8,
-        cols:8,
-        x:Math.floor(Math.random()*5),
-        y:0
-      }
-    })
-    walldefs[id] = bxtbldr.build_Terraindef( sfc_v,sfc_v,sfc_v,sfc_v, sfc_h,sfc_h )
-  }
-  
-  ekvx.loadConfig( (id, rawtemplate) => {
-    let template = properties_fromstring(rawtemplate.data)
-
-    if (!template.type) {
-      return undefined
-    }
-
-    switch(template.type) {
-      case undefined:
-        return undefined
-      case 'wall': {
-        template.id = id
-        if (!template.color) {
-          template.color = "rgba,1,1,1,1"
-        }
-        if (walltemplates[template.color]) {
-          return walltemplates[template.color]
-        }
-        defineWallTerrain(id, template.color)
-        walltemplates[template.color] = template
-      }
-        break
-      default:
-        //console.log(template)
-        break
-    }
-    return template
-  })
-
   let _min = {
     x:Number.MAX_VALUE,
     y:Number.MAX_VALUE,
@@ -1481,9 +1427,23 @@ var Zone = function(ekvx, override_startloc, name) {
     y:Number.MIN_VALUE,
     z:Number.MIN_VALUE,
   }
+  
+  ekvxinterp.configure(this, ekvx)
 
   let loadData = (function() {
-
+  
+    let ldstate = {
+      gategroups:[],
+      targetted_portals:[],
+      portals_byname:{},
+      portals_byclass:{},
+      loaded_objects:[],
+      start_align:undefined,
+      start_fpmode:false,
+      min:_min,
+      max:_max
+    }
+    /*
     let gategroups = []
     let targetted_portals = []
     let portals_byname = {}
@@ -1492,289 +1452,11 @@ var Zone = function(ekvx, override_startloc, name) {
     let loaded_objects = []
     let ldstage = 1
     let start_align, start_fpmode
-    ekvx.loadData( (x,y,z, template, data) => {
-      if (flipWorld) {
-        z *= -1
-      }
-
-      if (x<_min.x) _min.x=x
-      if (y<_min.y) _min.y=y
-      if (z<_min.z) _min.z=z
-
-      if (x>_max.x) _max.x=x
-      if (y>_max.y) _max.y=y
-      if (z>_max.z) _max.z=z
-
-      if (data) {
-        data = properties_fromstring(data)
-      }
-
-      let datas = [template, data]
-
-      let loc = vxc.get(x,y,z)
-      let gobj
-      let align, color
-      let adjctn
-
-
-      // If an object has an enable or disable code, it gets enabled or disabled based on codes persisted Progress Codes.
-      //  But, gates are a special case - A code specified on a gate is applied to the entire gategroup which the gate is a member of
-      if (template.type != "gate") {
-        let enableInfo = property("if", datas)
-        let disableInfo = property("ifnot", datas)
-
-        if (enableInfo && enableInfo != "") {
-          if (!orthotCTL.matchCode(enableInfo)) {
-            return false
-          }
-        }
-        if (disableInfo && disableInfo != "") {
-          if (orthotCTL.matchCode(disableInfo)) {
-            return false
-          }
-        }
-      }
-
-      if (ldstage == 1) {
-        switch(template.type) {
-
-          // return "true" to defer side-attached objects to a 2nd pass (need to make sure that the carrying objects are instantiated first)
-          default:
-            return true
-            break
-
-          case 'wall':
-            vxc.loadTerrain(x,y,z, walldefs[template.id])
-            this.putGameobject(loc, new Wall(this))
-            break
-          case 'stairs': {
-              color = property("color", datas, "white", parseColor)
-              align = property("align", datas, undefined, parseO2Orientation)
-              gobj = new Stair(this,  color, align)
-              adjctn = this.getAdjacentCTN(loc, direction.invert[align.up])
-              vxc.setTerrainKnockout(adjctn, align.up)
-              adjctn = this.getAdjacentCTN(loc, direction.invert[align.forward])
-              vxc.setTerrainKnockout(adjctn, align.forward)
-
-            }
-            break
-          case 'key': {
-              color = property("color", datas, "white")
-              let code = property("code", datas)
-              gobj = new Key(this, color, code)
-              keys.push(gobj)
-            }
-            break
-          case 'lock': {
-              color = property("color", datas, "white")
-              let code = property("code", datas)
-              gobj = new Lock(this, color, code)
-              locks.push(gobj)
-            }
-            break
-          case 'target': {
-            let campos = property("camPos", datas, undefined, parseVec3)
-            if (flipWorld) {
-              campos.z *= -1
-            }
-            campos.x = campos.x - x
-            campos.y = campos.y - y + 0.5
-            campos.z = campos.z - z
-            targets[property("name", datas)] = {
-              loc:loc,
-              campos:campos
-            }
-          }
-            break
-          case 'pblock':
-            color = property("color", datas, "red", parseColor)
-            gobj = new PushBlock(this, color)
-            break
-          case 'crate':
-            gobj = new Crate(this)
-            break
-          case 'iceblock':
-            gobj = new IceBlock(this)
-            break
-          case 'sceneportal': {
-            let dest = property("dest", datas)
-            let target = property("target", datas)
-            gobj = new ScenePortal(this, dest, target)
-          }
-          break
-
-          case 'space_light':
-          case 'face_light':
-          //  ...  Will have to re-think lighting.  Previous version used unrestricted dynamic lighting, computed it directly and baked it in as VertexColors,
-          //        and had lights only affect dynamic objects (for which Unity would base decisions off of proximity between objects and lights)
-          //
-          //  For now, going with a global directional light
-            /*
-            let light = new THREE.PointLight(
-              property( "color", 16, libek.util.color.toBinary, data, template),
-              property( "intensity", 1, Number.parseFloat, data, template),
-              property( "range", 16, Number.parseFloat, data, template)/5,
-              1
-            )
-            light.position.set( x,y,z );
-            this.scene.add( light );
-
-            console.log(light)
-            */
-            break
-          case "start": {
-              let campos = property("camPos", datas, undefined, parseVec3)
-              if (flipWorld) {
-                campos.z *= -1
-              }
-              start_align = property("align", datas, undefined, parseO2Orientation)
-              start_fpmode = property("camPos", datas) == "fp"
-              campos.x = campos.x - x
-              campos.y = campos.y - y + 0.5
-              campos.z = campos.z - z
-              targets.__STARTLOC = {
-                loc:loc,
-                campos:campos
-              }
-              let tipMSG = property("tip", datas)
-              let defeatMSG
-              if (this.resetCause == "defeated") {
-                defeatMSG = property("defeat", datas)
-                if (!defeatMSG) {
-                  defeatMSG = property("death", datas)
-                }
-              }
-              
-              // If the startblock data has a message specified, set up am invisible InfoBlock for it
-              if ( (tipMSG != undefined) | (defeatMSG != undefined) ) {
-                let info_obj = new InfoBlock(this, false, tipMSG, defeatMSG)
-                loaded_objects.push(info_obj)
-                this.putGameobject(x,y,z, info_obj)
-              }
-              
-            }
-            break
-          case "info":
-            gobj = new InfoBlock(this, true, property("tip", datas))
-            console.log(datas)
-            break
-          case "cammode":
-            //console.log(datas)
-          break
-          case "gate": {
-            color = property("color", datas, "white", parseColor)
-            align = property("align", datas, undefined, parseO2Orientation)
-            let mprops = mergeObjects(datas)
-            let gate = new Gate(this, loc, color, align, mprops)
-            gategroups.push(new GateGroup(this, gate))
-          }
-          break
-          case "moose": {
-            align = property("align", datas, undefined, parseO2Orientation)
-            gobj = new Moose(this, align)
-          }
-          break
-          case "mouse": {
-            align = property("align", datas, undefined, parseO2Orientation)
-            gobj = new Mouse(this, align)
-          }
-          break
-          case "flag": {
-            let mprops = mergeObjects(datas)
-            align = property("align", datas, undefined, parseO2Orientation)
-            let code = property("code", datas)
-            //console.log("FLAG", mprops)
-            gobj = new Flag(this, align, code)
-          }
-          break
-          case "exit": {
-            let mprops = mergeObjects(datas)
-            align = property("align", datas, undefined, parseO2Orientation)
-            //let code = property("code", datas)
-            let dest = property("dest", datas)
-            let target = property("target", datas)
-            gobj = new Exit(this, align, dest, target)
-          }
-          break
-        }
-      }
-      else {
-        switch(template.type) {
-          case "paneportal": {
-              let p_class = property("class", datas)
-              let p_name = property("name", datas)
-              let p_target = property("target", datas)
-
-              align = property("align", datas, undefined, parseO2Orientation)
-              vxc.setTerrainKnockout(loc, align.up)
-              let portal = new Portal(
-                align,
-                property("color", datas, "white", parseColor),
-                p_class, p_name, p_target
-              )
-              this.attach(x,y,z, portal)
-
-              if (p_target && p_class) {
-                console.log("WARNING:  portal defines both single-target and class-based multitargeting (can't do both):", portal)
-              }
-
-              if (p_name) {
-                portals_byname[pname] = portal
-              }
-              if (p_target) {
-                targetted_portals.push(portal)
-              }
-              if (p_class) {
-                let clist = portals_byclass[p_class]
-                if (!clist) {
-                  clist = portals_byclass[p_class] = []
-                }
-                clist.push(portal)
-              }
-            }
-            break
-          case "icefloor":
-            //console.log("icefloor", datas)
-            align = property("align", datas, undefined, parseO2Orientation)
-            vxc.setTerrainKnockout(loc, align.up)
-            let icf = new Icefloor( align )
-            this.attach(x,y,z, icf)
-            break
-          case "ladder":
-            let ldr = new Ladder(
-              property("align", datas, undefined, parseO2Orientation),
-              property("color", datas, "white", parseColor)
-            )
-            this.attach(x,y,z, ldr)
-            break
-          case "button":
-            let btn = new Button( this,
-              property("align", datas, undefined, parseO2Orientation),
-              property("color", datas, "white", parseColor),
-              property("size", datas, "small"),
-              property("press", datas),
-              property("release", datas)
-            )
-            this.attach(x,y,z, btn)
-            break
-          default:
-            console.log(datas)
-            break
-        }
-      }
-
-      if (gobj) {loadData
-        loaded_objects.push(gobj)
-        this.putGameobject(x,y,z, gobj)
-      }
-      return false
-    },
-    function() {
-      ldstage=2
-    })
+    */
+    ekvxinterp.load(this, ldstate, ekvx)
 
     // graphics & insertion is deferred until after data loading to allow for attached objects
-    for (let ld_gobj of loaded_objects) {
+    for (let ld_gobj of ldstate.loaded_objects) {
       if (ld_gobj.initGraphics()) {
         this.scene.add(ld_gobj.obj)
         if (!ld_gobj.worldpos) {
@@ -1796,17 +1478,17 @@ var Zone = function(ekvx, override_startloc, name) {
     }
     
 
-    let start_target = targets[override_startloc]
+    let start_target = this.targets[override_startloc]
     if (!start_target) {
-      start_target = targets.__STARTLOC
+      start_target = this.targets.__STARTLOC
     }
     // Fallback for an undefined starting position:  invent one.
     if (!start_target) {
-      start_align = {
+      ldstate.start_align = {
         up:direction.code.UP,
         forward:direction.code.NORTH,
       }
-      start_fpmode = false
+      ldstate.start_fpmode = false
       
       let x = Math.floor((_min.x+_max.x)/2)
       let y = Math.floor((_min.y+_max.y)/2)
@@ -1836,15 +1518,15 @@ var Zone = function(ekvx, override_startloc, name) {
       }
       
       let info_obj = new InfoBlock(this, false, msg)
-      loaded_objects.push(info_obj)
+      ldstate.loaded_objects.push(info_obj)
       this.putGameobject(x,y,z, info_obj)
       
-      let id = 99999999
-      defineWallTerrain( id, "rgba,0,0,0,1")
+      //let id = "blackwall"
+      //defineWallTerrain( id, "rgba,0,0,0,1")
       
       let buildWall = (function(x,y,z) {
         let loc = vxc.get(x,y,z)
-        vxc.loadTerrain(x,y,z, id)
+        vxc.loadTerrain(x,y,z, this.blackwall)
         this.putGameobject(loc, new Wall(this))
       }).bind(this)
       for (let _x = x-4; _x <= x+4; _x++) {
@@ -1861,13 +1543,13 @@ var Zone = function(ekvx, override_startloc, name) {
     sviewCTL.updateCamera(true)
 
     let pl_align
-    if (start_align) {
+    if (ldstate.start_align) {
       pl_align = {
-        forward:direction.invert[start_align.forward],
-        up:start_align.up
+        forward:direction.invert[ldstate.start_align.forward],
+        up:ldstate.start_align.up
       }
     }
-    player = new Player(this, pl_align, start_fpmode)
+    player = new Player(this, pl_align, ldstate.start_fpmode)
     
     player.initGraphics()
     this.putGameobject(start_target.loc, player)
@@ -1875,8 +1557,8 @@ var Zone = function(ekvx, override_startloc, name) {
     player.ready()
 
     //process multi-targetted portals
-    for (let k in portals_byclass) {
-      let plist = portals_byclass[k]
+    for (let k in ldstate.portals_byclass) {
+      let plist = ldstate.portals_byclass[k]
 
       //If only a two-entry multitarget spec, simplify it to a pair of one-way links
       if (plist.length == 2) {
@@ -1897,8 +1579,8 @@ var Zone = function(ekvx, override_startloc, name) {
     }
 
     //process single-targetted portals
-    for (let psrc of targetted_portals) {
-      psrc.target = portals_byname[psrc.target]
+    for (let psrc of ldstate.targetted_portals) {
+      psrc.target = ldstate.portals_byname[psrc.target]
       psrc.target.sources.push(psrc)
     }
 
@@ -1907,14 +1589,14 @@ var Zone = function(ekvx, override_startloc, name) {
     let merged_any = true
     while (merged_any) {
       merged_any = false
-      for (let i = 0; i < gategroups.length; i++) {
-        for (let j = 0; j < gategroups.length; j++) {
+      for (let i = 0; i < ldstate.gategroups.length; i++) {
+        for (let j = 0; j < ldstate.gategroups.length; j++) {
           if (i != j) {
 
             //try a merge and, if successful, drop the merged-in group.
-            if (gategroups[i].merge(gategroups[j])) {
+            if (ldstate.gategroups[i].merge(ldstate.gategroups[j])) {
               merged_any = true
-              gategroups.splice(j,1)
+              ldstate.gategroups.splice(j,1)
 
               // decrement indices
               if (i >= j) {
@@ -1927,18 +1609,9 @@ var Zone = function(ekvx, override_startloc, name) {
       }
     }
 
-    for (let ggroup of gategroups) {
+    for (let ggroup of ldstate.gategroups) {
       ggroup.init()
-      /*
-      for (let gate of ggroup.gates) {
-        // For the time being, I want gates which unlock by progress to be visible, but non-obstructing.
-        if (ggroup.code) {
-          delete gate.SpatialClass
-        }
-      }
-      */
     }
-    //console.log(gategroups)
   }).bind(this)
   loadData()
 
@@ -1952,8 +1625,8 @@ var Zone = function(ekvx, override_startloc, name) {
 
   }
   this.destroyObjects = function() {
-    keys = []
-    locks = []
+    this.keys = []
+    this.locks = []
     keyReticle.clear()
     lockReticle.clear()
     vxc.forAll(ctn => {

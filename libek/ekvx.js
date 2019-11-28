@@ -32,7 +32,7 @@ var EkvxLoaderLoader = {
 
 var EkvxLoader = function (data_ab) {
   let data = new DataReader(new DataView(data_ab), true)
-
+  this.EKVX1 = true
   //let ekvx = {ekvx:true, importedSwatches:{}}
 
   let raw_templates = {}

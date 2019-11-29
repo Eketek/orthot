@@ -1,6 +1,6 @@
 export { Model }
 
-import { releaseAsset, getAsset } from './libek.js'
+import { releaseAsset, getAsset, assignMaterials } from './libek.js'
 
 /*
   Yet another attempt at extending the concept of a 3D Object to include:
@@ -26,7 +26,8 @@ var Model = function(assets, params={}) {
   this.nmap = params.nmap ? params.nmap : {}
   this.default = params.default
   this.ctl = {}
-
+  
+  let materials = params.materials
   let model = this
 
   this.destroy = function() {
@@ -96,6 +97,10 @@ var Model = function(assets, params={}) {
         else {
           obj = getAsset(assets, model.default)
         }
+        if (materials) {
+          assignMaterials(obj, materials)
+        }
+        
         this.obj.add(obj)
         this.content[objname] = obj
 

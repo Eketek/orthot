@@ -10,6 +10,29 @@ import { Gate, GateGroup } from './gate.js'
 import { Mouse, Moose } from './creatures.js'
 import { direction } from '../libek/direction.js'
 
+let materials = {
+  man:["hsl(25, 80%, 60%)", "blue", "hsl(15, 100%, 15%)", "black", {color:"black", metalness:1}, {color:"white", emissive:"yellow", emissiveIntensity:1}],
+  flag:["brown", "white"],
+  portal:[{color:"yellow", emissive:"yellow", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5}],
+  paneportal:["white", "yellow", {color:"blue", transparent:true, opacity:0.25}, "white"],
+  pushblock:["white", "red", "black"],
+  lock:["white", "black"],
+  key:["white"],
+  crate:["hsl(20, 100%, 50%)", "black", "hsl(25, 90%, 25%)", "hsl(22, 100%, 55%)" ],
+  iceblock:[{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}],
+  icefloor:[{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}, "black"],
+  mouse:["hsl(20, 100%, 50%)", "hsl(0, 100%, 70%)", {color:"green", emissive:"green", emissiveIntensity:1}, "hsl(30, 100%, 20%)"],
+  moose:["hsl(20, 100%, 50%)", "black", "hsl(30, 100%, 20%)", {color:"red", emissive:"red", emissiveIntensity:1}],
+  InfoBlockBase:["green", "yellow"],
+  InfoQMark:["yellow"],
+  markmats:[{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}],
+  cursormats:[{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}],
+  stairs:["white"],
+  gate:["white"],
+  button:["red"],
+  ladder:["brown"],
+}
+
 let walldefs, bxtbldr, walltemplates
 let defineWallTerrain = function(id, color) {
   let sfc_v = bxtbldr.build_Sfcdef({
@@ -37,6 +60,7 @@ let defineWallTerrain = function(id, color) {
 
 var Ekvx1Interpreter = {
   configure:function(zone, ekvx) {
+    zone.playerMaterials = materials.man
     walldefs = {}
     bxtbldr = zone.bxtbldr
     walltemplates = {}
@@ -92,7 +116,7 @@ var Ekvx1Interpreter = {
 
       let loc = vxc.get(x,y,z)
       let gobj
-      let align, color
+      let align, color, mats
       let adjctn
 
 
@@ -126,31 +150,32 @@ var Ekvx1Interpreter = {
             vxc.loadTerrain(x,y,z, walldefs[template.id])
             zone.putGameobject(loc, new Wall(zone))
             break
-          case 'stairs': {
-              color = property("color", datas, "white", parseColor)
-              align = property("align", datas, undefined, parseO2Orientation)
-              gobj = new Stair(zone,  color, align)
-              adjctn = zone.getAdjacentCTN(loc, direction.invert[align.up])
-              vxc.setTerrainKnockout(adjctn, align.up)
-              adjctn = zone.getAdjacentCTN(loc, direction.invert[align.forward])
-              vxc.setTerrainKnockout(adjctn, align.forward)
-
+          case 'stairs':
+            color = property("color", datas, "white", parseColor)
+            mats = materials.stairs
+            if (color) {
+              mats = mats.slice()
+              mats[0] = color
             }
-            break
+            align = property("align", datas, undefined, parseO2Orientation)
+            gobj = new Stair(zone, mats, align)
+            adjctn = zone.getAdjacentCTN(loc, direction.invert[align.up])
+            vxc.setTerrainKnockout(adjctn, align.up)
+            adjctn = zone.getAdjacentCTN(loc, direction.invert[align.forward])
+            vxc.setTerrainKnockout(adjctn, align.forward)
+          break
           case 'key': {
-              color = property("color", datas, "white")
-              let code = property("code", datas)
-              gobj = new Key(zone, color, code)
-              zone.keys.push(gobj)
-            }
-            break
+            color = property("color", datas, "white")
+            let code = property("code", datas)
+            gobj = new Key(zone, color, code, materials.key)
+            zone.keys.push(gobj)
+          } break
           case 'lock': {
-              color = property("color", datas, "white")
-              let code = property("code", datas)
-              gobj = new Lock(zone, color, code)
-              zone.locks.push(gobj)
-            }
-            break
+            color = property("color", datas, "white")
+            let code = property("code", datas)
+            gobj = new Lock(zone, color, code, materials.lock)
+            zone.locks.push(gobj)
+          } break
           case 'target': {
             let campos = property("camPos", datas, undefined, parseVec3)
             campos.z *= -1
@@ -161,22 +186,26 @@ var Ekvx1Interpreter = {
               loc:loc,
               campos:campos
             }
-          }
-            break
+          } break
           case 'pblock':
             color = property("color", datas, "red", parseColor)
-            gobj = new PushBlock(zone, color)
+            mats = materials.pushblock
+            if (color) {
+              mats = mats.slice()
+              mats[1] = color
+            }
+            gobj = new PushBlock(zone, mats)
             break
           case 'crate':
-            gobj = new Crate(zone)
+            gobj = new Crate(zone, materials.crate)
             break
           case 'iceblock':
-            gobj = new IceBlock(zone)
+            gobj = new IceBlock(zone, materials.iceblock)
             break
           case 'sceneportal': {
             let dest = property("dest", datas)
             let target = property("target", datas)
-            gobj = new ScenePortal(zone, dest, target)
+            gobj = new ScenePortal(zone, dest, target, materials.portal)
           }
           break
 
@@ -230,7 +259,7 @@ var Ekvx1Interpreter = {
             }
             break
           case "info":
-            gobj = new InfoBlock(zone, true, property("tip", datas))
+            gobj = new InfoBlock(zone, true, property("tip", datas), undefined, materials.InfoBlockBase, materials.InfoQMark)
             console.log(datas)
             break
           case "cammode":
@@ -238,20 +267,25 @@ var Ekvx1Interpreter = {
           break
           case "gate": {
             color = property("color", datas, "white", parseColor)
+            mats = materials.gate
+            if (color) {
+              mats = mats.slice()
+              mats[0] = color
+            }
             align = property("align", datas, undefined, parseO2Orientation)
             let mprops = mergeObjects(datas)
-            let gate = new Gate(zone, loc, color, align, mprops)
+            let gate = new Gate(zone, loc, mats, align, mprops)
             ldstate.gategroups.push(new GateGroup(zone, gate))
           }
           break
           case "moose": {
             align = property("align", datas, undefined, parseO2Orientation)
-            gobj = new Moose(zone, align)
+            gobj = new Moose(zone, align, materials.moose)
           }
           break
           case "mouse": {
             align = property("align", datas, undefined, parseO2Orientation)
-            gobj = new Mouse(zone, align)
+            gobj = new Mouse(zone, align, materials.mouse)
           }
           break
           case "flag": {
@@ -259,7 +293,7 @@ var Ekvx1Interpreter = {
             align = property("align", datas, undefined, parseO2Orientation)
             let code = property("code", datas)
             //console.log("FLAG", mprops)
-            gobj = new Flag(zone, align, code)
+            gobj = new Flag(zone, align, code, materials.flag)
           }
           break
           case "exit": {
@@ -268,7 +302,7 @@ var Ekvx1Interpreter = {
             //let code = property("code", datas)
             let dest = property("dest", datas)
             let target = property("target", datas)
-            gobj = new Exit(zone, align, dest, target)
+            gobj = new Exit(zone, align, dest, target, materials.portal)
           }
           break
         }
@@ -282,9 +316,17 @@ var Ekvx1Interpreter = {
 
               align = property("align", datas, undefined, parseO2Orientation)
               vxc.setTerrainKnockout(loc, align.up)
+              
+              color = property("color", datas, "white", parseColor)
+              mats = materials.paneportal
+              if (color) {
+                mats = mats.slice()
+                mats[0] = color
+              }
+              
               let portal = new Portal(
                 align,
-                property("color", datas, "white", parseColor),
+                mats,
                 p_class, p_name, p_target
               )
               zone.attach(x,y,z, portal)
@@ -313,20 +355,31 @@ var Ekvx1Interpreter = {
             //console.log("icefloor", datas)
             align = property("align", datas, undefined, parseO2Orientation)
             vxc.setTerrainKnockout(loc, align.up)
-            let icf = new Icefloor( align )
+            let icf = new Icefloor( align, materials.icefloor )
             zone.attach(x,y,z, icf)
             break
           case "ladder":
+            color = property("color", datas, "white", parseColor)
+            mats = materials.ladder
+            if (color) {
+              mats[0] = color
+            } 
             let ldr = new Ladder(
               property("align", datas, undefined, parseO2Orientation),
-              property("color", datas, "white", parseColor)
+              mats
             )
             zone.attach(x,y,z, ldr)
             break
           case "button":
+            color = property("color", datas, "white", parseColor)
+            mats = materials.ladder
+            if (color) {
+              mats[0] = color
+            }
+            
             let btn = new Button( zone,
               property("align", datas, undefined, parseO2Orientation),
-              property("color", datas, "white", parseColor),
+              mats,
               property("size", datas, "small"),
               property("press", datas),
               property("release", datas)

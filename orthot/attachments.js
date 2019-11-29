@@ -11,21 +11,19 @@ import { Strength } from './enums.js'
       (rather than proper objects which handle their own stated functions)
 */
 
-var Ladder = function(align, color) {
+var Ladder = function(align, materials) {
   this.type = "ladder"
   this.surfacetype = Surface.type.SMOOTH
   this.mdlgen = function() {
-    let r = getAsset(orthotCTL.assets, "ladder")
-    if (color) {
-      assignMaterials(r, color)
-    }
-    return r
+    let mdl = getAsset(orthotCTL.assets, "ladder")
+    assignMaterials(mdl, materials)
+    return mdl
   }
 
   Object.assign(this, align)
 }
 
-var Portal = function(align, color, pclass, pname, ptarget) {
+var Portal = function(align, materials, pclass, pname, ptarget) {
   this.pclass = pclass
   this.pname = name
   this.ptarget = ptarget
@@ -33,22 +31,22 @@ var Portal = function(align, color, pclass, pname, ptarget) {
   this.sources = []
   this.surfacetype = Surface.type.FRICTIONLESS
   this.mdlgen = function() {
-    let r = getAsset(orthotCTL.assets, "portal_pane")
-    if (color) {
-      assignMaterials(r, color)
-    }
-    return r
+    let mdl = getAsset(orthotCTL.assets, "portal_pane")
+    assignMaterials(mdl, materials)
+    return mdl
   }
 
   Object.assign(this, align)
 }
 
-var Icefloor = function(align) {
+var Icefloor = function(align, materials) {
   this.type = "icefloor"
   this.sources = []
   this.surfacetype = Surface.type.SLICK
   this.mdlgen = function() {
-    return getAsset(orthotCTL.assets, "icefloor")
+    let mdl = getAsset(orthotCTL.assets, "icefloor")
+    assignMaterials(mdl, materials)
+    return mdl
   }
   Object.assign(this, align)
 }
@@ -58,7 +56,7 @@ var Icefloor = function(align) {
 
    Button "animation" is a lazy hack because buttons are the only planned side-attached puzzle element that needs to be animated.
 */
-var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
+var Button = function(zone, align, materials, size, pressSIG, releaseSIG) {
   this.type = "button"
   let mdlname
   let models = []
@@ -140,9 +138,7 @@ var Button = function(zone, align, color, size, pressSIG, releaseSIG) {
   this.mdlgen = function() {
     let mdl = getAsset(orthotCTL.assets, mdlname)
     mdl.position.y = 0
-    if (color) {
-      assignMaterials(mdl, color)
-    }
+    assignMaterials(mdl, materials)
     models.push(mdl)
     let r = new THREE.Object3D()
     r.add(mdl)

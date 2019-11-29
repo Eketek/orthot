@@ -32,6 +32,8 @@ var Player = function(zone, align, init_fpmode) {
   }
   let orientation = {}
   setOrientation(orientation, this.forward, this.up)
+  
+  this.materials = zone.playerMaterials
 
   let dir_rad = [
     0,0,0,

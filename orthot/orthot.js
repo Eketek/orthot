@@ -187,51 +187,19 @@ $(async function MAIN() {
       sample = vec4(fgColor * mc.a + bgColor*(1.0-mc.a), 1.0);
     `
   })
-
-  let manmats = ["hsl(25, 80%, 60%)", "blue", "hsl(15, 100%, 15%)", "black", {color:"black", metalness:1}, {color:"white", emissive:"yellow", emissiveIntensity:1}]
-
-  assignMaterials(orthotCTL.assets.man, manmats)
-  assignMaterials(orthotCTL.assets.man2, manmats)
-  assignMaterials(orthotCTL.assets.man_walk, manmats)
-  assignMaterials(orthotCTL.assets.man_push, manmats)
-  assignMaterials(orthotCTL.assets.man_pushwalk, manmats)
-  assignMaterials(orthotCTL.assets.man_climb, manmats)
-  assignMaterials(orthotCTL.assets.man_leap, manmats)
-  assignMaterials(orthotCTL.assets.man_pushleap, manmats)
-  assignMaterials(orthotCTL.assets.man_slide1, manmats)
-  assignMaterials(orthotCTL.assets.man_slide2, manmats)
-  assignMaterials(orthotCTL.assets.man_slide3, manmats)
-  assignMaterials(orthotCTL.assets.man_slide4, manmats)
-  assignMaterials(orthotCTL.assets.man_slide5, manmats)
-
+  
   let flag = getAsset(orthotCTL.assets, "FlagPlain")
   storeAsset(orthotCTL.assets, "flag", flag)
-  assignMaterials(flag, ["brown", "white"])
-
-  assignMaterials(orthotCTL.assets.scene_portal, {color:"yellow", emissive:"yellow", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
-  assignMaterials(orthotCTL.assets.EndBlock, {color:"yellow", emissive:"yellow", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
   orthotCTL.assets.EndBlock.children[0].scale.x *= -1
-
-  assignMaterials(orthotCTL.assets.portal_pane, "white", "yellow", {color:"blue", transparent:true, opacity:0.25}, "white" )
-  assignMaterials(orthotCTL.assets.pushblock, ["white", "red", "black"])
-  assignMaterials(orthotCTL.assets.lock, ["white", "black"])
-  assignMaterials(orthotCTL.assets.crate, ["hsl(20, 100%, 50%)", "black", "hsl(25, 90%, 25%)", "hsl(22, 100%, 55%)" ])
-  assignMaterials(orthotCTL.assets.iceblock, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}])
-  assignMaterials(orthotCTL.assets.icefloor, [{color:"white", metalness:0.25, roughness:1 }, "blue", "cyan", "hsl(175, 100%, 75%)", {color:"blue", transparent:true, opacity:0.25, metalness:1, roughness:0.5}, "black"])
-  assignMaterials(orthotCTL.assets.mouse, ["hsl(20, 100%, 50%)", "hsl(0, 100%, 70%)", {color:"green", emissive:"green", emissiveIntensity:1}, "hsl(30, 100%, 20%)"])
-  assignMaterials(orthotCTL.assets.moose, ["hsl(20, 100%, 50%)", "black", "hsl(30, 100%, 20%)", {color:"red", emissive:"red", emissiveIntensity:1}])
   
-  assignMaterials(orthotCTL.assets.InfoBlockBase, ["green", "yellow"])
-  assignMaterials(orthotCTL.assets.InfoQMark, ["yellow"])
-
   let markmats = [{color:"green", emissive:"green", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
   let cursormats = [{color:"white", emissive:"white", emissiveIntensity:0.333}, {color:"black", transparent:true, opacity:0.4}]
-
+  
   assignMaterials(orthotCTL.assets.CubeMark, markmats)
   assignMaterials(orthotCTL.assets.FaceMark, markmats)
   assignMaterials(orthotCTL.assets.CubeCursor, cursormats)
   assignMaterials(orthotCTL.assets.FaceCursor, cursormats)
-
+  
   inputCTL.keystate = new QueryTriggeredButtonControl({
     buttons:".wasd arrows space",
     onInputAvailable:function() {

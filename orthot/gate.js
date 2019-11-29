@@ -1,6 +1,6 @@
 export { Gate, GateGroup }
 
-import { trit, getAsset, Material } from '../libek/libek.js'
+import { trit, getAsset, Material, assignMaterials } from '../libek/libek.js'
 import { direction, crossDirections, setOrientation } from '../libek/direction.js'
 import { parseColor } from '../libek/util.js'
 
@@ -234,7 +234,7 @@ var GateGroup = function(zone, _gate) {
   }).bind(this)
 }
 
-var Gate = function(zone, ctn, color, align, data) {
+var Gate = function(zone, ctn, materials, align, data) {
   StandardObject.call(this, zone)
   this.ctn = ctn
 
@@ -278,16 +278,9 @@ var Gate = function(zone, ctn, color, align, data) {
   ss[direction.invert[this.behind]] = Strength.HARD
   this.shearStrength = ss
 
-  if (!color) {
-    color = "white"
-  }
-  if (!color.isColor) {
-    color = parseColor(color)
-  }
-
   this.mdlgen = function() {
     let mdl = getAsset(orthotCTL.assets, "gate")
-    mdl.children[0].material = Material(color)
+    assignMaterials(mdl, materials)
     return mdl
   }
 

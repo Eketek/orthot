@@ -1,6 +1,6 @@
 export { Wall, ScenePortal, InfoBlock, Stair, PushBlock, Crate, IceBlock, Key, Lock, Flag, Exit }
 
-import { getAsset, releaseAsset, Material } from '../libek/libek.js'
+import { getAsset, releaseAsset, Material, assignMaterials } from '../libek/libek.js'
 import { direction, setOrientation } from '../libek/direction.js'
 import { parseColor } from '../libek/util.js'
 
@@ -39,10 +39,11 @@ var Wall = function(zone) {
   }
 }
 
-var ScenePortal = function(zone, dest, target) {
+var ScenePortal = function(zone, dest, target, materials) {
   OrthotObject.call(this, zone)
   this.initGraphics = (function() {
     this.obj = getAsset(orthotCTL.assets, "scene_portal")
+    assignMaterials(this.obj, materials)
     return true
   }).bind(this)
   this.intruded = function(other) {
@@ -53,7 +54,7 @@ var ScenePortal = function(zone, dest, target) {
   }
 }
 
-var Exit = function(zone, align, dest, target) {
+var Exit = function(zone, align, dest, target, materials) {
   OrthotObject.call(this, zone)
   if ((dest == "") || (dest == undefined)) {
     dest = orthotCTL.gdatapack.mainAreaname
@@ -61,6 +62,7 @@ var Exit = function(zone, align, dest, target) {
 
   this.initGraphics = function() {
     this.obj = getAsset(orthotCTL.assets, "EndBlock")
+    assignMaterials(this.obj, materials)
     let orientation = {}
     setOrientation(orientation, direction.invert[align.forward], align.up)
     this.obj.position.set(orientation.position)
@@ -81,7 +83,7 @@ var Exit = function(zone, align, dest, target) {
 /*  Object that allows movement up and down along a diagonal vector.
     Stairs are regarded as "ramps" for every purpose other than graphical representation
 */
-var Stair = function(zone, color, align) {
+var Stair = function(zone, materials, align) {
   OrthotObject.call(this, zone)
   this.SpatialClass = "ramp"
   this.setBaseSurface(Surface.type.SMOOTH)
@@ -94,7 +96,7 @@ var Stair = function(zone, color, align) {
 
   this.initGraphics = function() {
     this.obj = getAsset(orthotCTL.assets, "stair_ramp")
-    this.obj.children[0].material = Material(color)
+    assignMaterials(this.obj, materials)
     let orientation = {}
     setOrientation(orientation, direction.invert[align.forward], align.up)
     this.obj.position.set(orientation.position)
@@ -105,7 +107,7 @@ var Stair = function(zone, color, align) {
   this.ascendDIR = align.forward
   this.descendDIR = direction.invert[align.forward]
 }
-var InfoBlock = function(zone, visible, normMSG, defeatMSG) {
+var InfoBlock = function(zone, visible, normMSG, defeatMSG, materials_base, materials_qmark) {
   OrthotObject.call(this, zone)
 
   let msg = normMSG
@@ -150,6 +152,7 @@ var InfoBlock = function(zone, visible, normMSG, defeatMSG) {
   
   if (visible) {
     let baseOBJ = getAsset(orthotCTL.assets, "InfoBlockBase")
+    assignMaterials(baseOBJ, materials_base)
     this.staticObjects = [baseOBJ]
   
     let orientation = {}
@@ -178,12 +181,13 @@ var InfoBlock = function(zone, visible, normMSG, defeatMSG) {
 
     this.mdlgen = function() {
       let mdl = getAsset(orthotCTL.assets, "InfoQMark")
+      assignMaterials(mdl, materials_qmark)
       return mdl
     }
   }
 }
 
-var Flag = function(zone, align, code) {
+var Flag = function(zone, align, code, materials) {
   OrthotObject.call(this, zone)
 
   if ( code == undefined ) {
@@ -210,6 +214,7 @@ var Flag = function(zone, align, code) {
 
   this.mdlgen = function() {
     let mdl = getAsset(orthotCTL.assets, "flag")
+    assignMaterials(mdl, materials)
     if (orthotCTL.gdatapack.progress[code]) {
     //assignMaterials(orthotCTL.assets.scene_portal, {color:"white", emissive:"white", emissiveIntensity:0.4 }, {color:"cyan", transparent:true, opacity:0.5})
       mdl.children[1].material = Material({color:"green", emissive:"green", emissiveIntensity:0.3 })
@@ -224,7 +229,7 @@ var Flag = function(zone, align, code) {
 
 // I still don't know what to call a pushblock.  A pushblock is a pushblock.
 // Please don't upload this comment somewhere embarassing, such as the Internet.
-var PushBlock = function(zone, color) {
+var PushBlock = function(zone, materials) {
   MovableObject.call(this, zone)
   this.hasSides = true
   this.AutoGravity = true
@@ -243,14 +248,12 @@ var PushBlock = function(zone, color) {
 
   this.mdlgen = function() {
     let mdl = getAsset(orthotCTL.assets, "pushblock")
-    if (color) {
-      mdl.children[1].material = Material(color)
-    }
+    assignMaterials(mdl, materials)
     return mdl
   }
 }
 
-var Crate = function(zone) {
+var Crate = function(zone, materials) {
   MovableObject.call(this, zone)
   this.hasSides = true
   this.AutoGravity = true
@@ -268,11 +271,12 @@ var Crate = function(zone) {
 
   this.mdlgen = function() {
     let mdl = getAsset(orthotCTL.assets, "crate")
+    assignMaterials(mdl, materials)
     return mdl
   }
 }
 
-var IceBlock = function(zone) {
+var IceBlock = function(zone, materials) {
   MovableObject.call(this, zone)
   this.hasSides = true
   this.AutoGravity = true
@@ -290,11 +294,12 @@ var IceBlock = function(zone) {
 
   this.mdlgen = function() {
     let mdl = getAsset(orthotCTL.assets, "iceblock")
+    assignMaterials(mdl, materials)
     return mdl
   }
 }
 
-var Key = function(zone, color, code) {
+var Key = function(zone, color, code, materials) {
   MovableObject.call(this, zone)
   this.AutoGravity = true
   this.state = ObjectState.IDLE
@@ -359,6 +364,7 @@ var Key = function(zone, color, code) {
 
   this.mdlgen = function() {
     let mdl = getAsset(orthotCTL.assets, "key")
+    assignMaterials(mdl, materials)
     mdl.children[0].material = Material(color)
     return mdl
   }
@@ -375,7 +381,7 @@ var Key = function(zone, color, code) {
   }
 }
 
-var Lock = function(zone, color, code) {
+var Lock = function(zone, color, code, materials) {
   StandardObject.call(this, zone)
   this.hasSides = true
   this.setBaseSurface(Surface.type.SMOOTH)
@@ -399,6 +405,7 @@ var Lock = function(zone, color, code) {
 
   this.mdlgen = function() {
     let mdl = getAsset(orthotCTL.assets, "lock")
+    assignMaterials(mdl, materials)
     mdl.children[0].material = Material(color)
     return mdl
   }

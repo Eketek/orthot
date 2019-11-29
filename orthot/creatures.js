@@ -43,7 +43,7 @@ import { scan_simple, scan_ramp } from './topology.js'
 import { Surface, getSurfaceInteraction } from './surface.js'
 
 
-var Creature = function(zone, align, mdlName, victoryStatement) {
+var Creature = function(zone, align, mdlName, materials, victoryStatement) {
   StandardObject.call(this, zone)
   this.UID = getUID()
   this.isCreature = true
@@ -60,6 +60,8 @@ var Creature = function(zone, align, mdlName, victoryStatement) {
 
   this.forward = direction.code.SOUTH
   this.up = direction.code.UP
+  
+  this.materials = materials
 
   this.hasMovementPriority = function(this_force, other_force, collisiontype) {
     if (other_force.OBJ.isCreature) {
@@ -426,16 +428,17 @@ var solveMaze = function(hand, allow_wrongwallstart=false) {
   }
 }
 
-var Mouse = function(zone, align) {
-  Creature.call(this, zone, align, "mouse", "You were defeated by a clicktacular beast.")
+var Mouse = function(zone, align, materials) {
+  Creature.call(this, zone, align, "mouse", materials, "You were defeated by a clicktacular beast.")
   this.isMouse = true
   let mazer = solveMaze("right").bind(this)
   this.actions[ObjectState.IDLE] = mazer
   this.actions[ObjectState.WALKING] = mazer
 }
 
-var Moose = function(zone, align) {
-  Creature.call(this, zone, align, "moose", "You were defeated by a ferocious beast.")
+var Moose = function(zone, align, materials) {
+  this.materials = materials
+  Creature.call(this, zone, align, "moose", materials, "You were defeated by a ferocious beast.")
   this.isMoose = true
   let mazer = solveMaze("left").bind(this)
   this.actions[ObjectState.IDLE] = mazer

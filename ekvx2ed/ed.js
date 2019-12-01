@@ -938,9 +938,12 @@ $(async function MAIN() {
   // Templates are fixed lists of properties which are to be copied into the data (often this will be just be an Object type identifier).
   // Each generated object references one template
   let next_templateID = 1
-  let fixedtemplates = {}
   let templates = {}
-  let templateIDs = {}
+  
+  // "memos" common objects which are referenced by ID in serialized data.  These are used to compact some of the more "verbose" aspects of ekvx2.
+  let next_memoID = 1
+  let memos = {}
+  let memoIDs = {}
   
   // All defined tools
   let tools = {}
@@ -1013,14 +1016,15 @@ $(async function MAIN() {
     cursor3d._mdl = cursorMDL
     put(cursor3d,0,0,0)
     
-    let templates = Object.assign({}, fixedtemplates)
-    
     UniqueObjects = {}
     next_terrainid = 1
     next_sfcid = 1
+    next_memoID = 1
     terrainIDs = {}
     terrains = {}
     sfcIDs = {}
+    memos = {}
+    memoIDs = {}
     surfaceDefs = {}
     terrainDefs = {}
     patternDefs = {}
@@ -1468,18 +1472,15 @@ $(async function MAIN() {
     }
   }
   
-  // Store an arbitrary object in the templates table [if not already present] and return a template ID.  
-  // This is somewhat outside the original intent of templates, but not by far (was originally intended only to be used for base objects
-  //  and only taken directly from tool specifications.
-  //  But, it was determined that it would be reasonable to also use it to compress Surface & terrain specifications.
-  let templatize = function(obj) {
+  // Store an arbitrary object in the memos table [if not already present] and return a memo ID.  
+  let memoize = function(obj) {
     let key = JSON.stringify(obj)
-    let id = templateIDs[key]
+    let id = memoIDs[key]
     if (id == undefined) {
-      id = next_templateID
-      templateIDs[key] = id
-      next_templateID++
-      templates[id] = obj
+      id = next_memoID
+      memoIDs[key] = id
+      next_memoID++
+      memos[id] = obj
     }
     return id
   }
@@ -1572,7 +1573,6 @@ $(async function MAIN() {
     if (!spec.editorOnly) {
       spec.template.toolname = spec.name
       tool.templateID = next_templateID
-      fixedtemplates[next_templateID] = spec.template
       templates[next_templateID] = spec.template
       next_templateID++
     }
@@ -1729,8 +1729,8 @@ $(async function MAIN() {
         }
         else {
           let tfdef = Object.assign({}, fdef)
-          tfdef.area8b = templatize(tfdef.area8b)
-          tfdef.tile = templatize(tfdef.tile)
+          tfdef.area8b = memoize(tfdef.area8b)
+          tfdef.tile = memoize(tfdef.tile)
           surfaceDefs[next_sfcid] = tfdef
           let sfc = bxtbldr.build_Sfcdef(fdef)
           surfaceDefs_bterr[next_sfcid] = sfc
@@ -1872,6 +1872,7 @@ $(async function MAIN() {
       DataType:edCTL.DataFormat,
       Version:edCTL.DataVersion,
       Templates:templates,
+      Memos:memos,
       Surfaces:surfaceDefs,
       Terrains:terrainDefs,
       Objects:[],
@@ -1920,9 +1921,16 @@ $(async function MAIN() {
     
     // copy data off the parsed object
     templates = data.Templates
-    Object.assign(templates, fixedtemplates)
     surfaceDefs = data.Surfaces
     terrainDefs = data.Terrains
+    memos = data.Memos
+    
+    for (let memoid in memos) {
+      if (memoid >= next_memoID) {
+        next_memoID = memoid+1
+      }
+      memoIDs[JSON.stringify(memos[memoid])] = memoid
+    }
     
     for (let sfcdefid in surfaceDefs) {
     
@@ -1932,12 +1940,12 @@ $(async function MAIN() {
       if (sfcdefid >= next_sfcid) {
         next_sfcid = sfcdefid+1
       }
-      // de-templatize the surface definition
+      // de-memoize the surface definition
       if (typeof(sfcdef.tile) == "number") {
-        sfcdef.tile = templates[sfcdef.tile]
+        sfcdef.tile = memos[sfcdef.tile]
       }
       if (typeof(sfcdef.area8b) == "number") {
-        sfcdef.area8b = templates[sfcdef.area8b]
+        sfcdef.area8b = memos[sfcdef.area8b]
       }
       
       // prepare BoxTerrain params / surface definition state data

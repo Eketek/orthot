@@ -1,6 +1,10 @@
 30 Nov 2019
   Added an ekvx2 importer (can now reload exported data)
   ekvx2 "Format" property renamed to "DataType"
+  Memoization fix
+    Revert templates back to the earlier fixed table of params objects 
+    Added a proper memoization scheme and put the aformentioned "area8b" and "tile" properties into the memos table instead
+    (this is a pre-emptive correction to avoid backward- and forward- compatibility complexity with ekvx2 data)
 
 25 Nov 2019
   Extended the use of templates to store arbitrary objects

@@ -1,3 +1,7 @@
+30 Nov 2019
+  Added an ekvx2 importer (can now reload exported data)
+  ekvx2 "Format" property renamed to "DataType"
+
 25 Nov 2019
   Extended the use of templates to store arbitrary objects
   Compacted surface definitions in serizlized data (use templates to store the complete "area8b" and "tile" properties)

@@ -392,6 +392,12 @@ $(async function MAIN() {
     }
   }
   portuiBTN = $("<div>").addClass("btn_active").text("Export/Import").click(togglePortUI)[0]
+  on($("#import"), "click", ()=>{
+    importData($("#exportTarget")[0].value)
+    $("#port").hide()
+    portuiVisible = false
+  })
+  
   $("#controls").append(portuiBTN)
   
   on($("#foldrecentBTN"), "click", ()=>{ $("#recentColors").toggle()})
@@ -753,7 +759,6 @@ $(async function MAIN() {
   btnfunc("commands", "reset", ()=>{
     if (confirm("Editor Reset Confirmation\n* * * *\nClick 'OK' to confirm the reset and delete everything.\nClick 'Cancel' to cancel the reset.")) {
       reset()
-      initialize()
    }
   })
   
@@ -985,7 +990,7 @@ $(async function MAIN() {
     })
     vxc.dispose()
     renderCTL.display.scene.remove(vxc.scene)
-    
+    initialize()
   }
   let initialize = function() {
     bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
@@ -1290,37 +1295,37 @@ $(async function MAIN() {
       }
     }
     evict(up) 
+    _build(activeTool, cursor3d.x, cursor3d.y, cursor3d.z, up, forward, activeTool.components, activeTool.terrain, activeTool.terrainID)
+  }
+  
+  let _build = function(tool, x,y,z, up, forward, components, terrain, terrainID) {
     let obj = {}
-    let uprop = activeTool.spec.unique
+    let uprop = tool.spec.unique
     if (uprop) {
       if (typeof(uprop) != "string") {
         uprop = "type"
       }
-      let other = UniqueObjects[activeTool.spec[uprop]]
+      let other = UniqueObjects[tool.spec[uprop]]
       if (other) {
         remove(other, other.x, other.y, other.z)
       }
-      UniqueObjects[activeTool.spec[uprop]] = obj
+      UniqueObjects[tool.spec[uprop]] = obj
     }
     controlActive = true
     obj.data = {}
-    for (let k in activeTool.spec.params) {
-      if (obj[k] == undefined) {
-        obj[k] = activeTool.spec.params[k]
-      }
+    
+    obj.spec = tool.spec
+    obj.data.$ = [tool.templateID, x, y, z]
+    if (terrain) {
+      obj.terrain = terrain
+      obj.data.$.push(terrainID)
     }
-    obj.spec = activeTool.spec
-    obj.data.$ = [activeTool.templateID, cursor3d.x, cursor3d.y, cursor3d.z]
-    if (activeTool.terrain) {
-      obj.terrain = activeTool.terrain
-      obj.data.$.push(activeTool.terrainID)
-    }
-    else if (activeTool.spec.model) {
-      let mdl = getAsset(edCTL.assets, activeTool.spec.model)
+    else if (tool.spec.model) {
+      let mdl = getAsset(edCTL.assets, tool.spec.model)
       obj.mdl = new THREE.Object3D()
       obj.mdl.add(mdl)
-      if (activeTool.components) {
-        for (let compName in activeTool.components) {
+      if (components) {
+        for (let compName in components) {
           switch(compName) {
             //bypass "virtual" components (mainly these are used for terrain properties)
             case "up":
@@ -1334,19 +1339,19 @@ $(async function MAIN() {
             case "vert":
               break
             case "materials":
-              let mats = deepcopy(activeTool.components[compName])
+              let mats = deepcopy(components[compName])
               assignMaterials(mdl, mats)
-              obj.data[compName] = deepcopy(activeTool.components[compName])
+              obj.data[compName] = deepcopy(components[compName])
               break
             //every other component
             default:
-              obj.data[compName] = deepcopy(activeTool.components[compName])
+              obj.data[compName] = deepcopy(components[compName])
               break
           }
         }
       }
       
-      if ((activeTool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
+      if ((tool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
         obj.data.$.push(up)
         obj.data.$.push(forward)
         let orientation = {}
@@ -1355,14 +1360,7 @@ $(async function MAIN() {
         mdl.setRotationFromEuler(orientation.rotation)
       }
     }
-    if (mrayDragPOSs) {
-      let strpos = `${cursor3d.x},${cursor3d.y},${cursor3d.z}`
-      mrayDragPOSs.push(strpos)
-      if (mrayDragPOSs.length > MrayDragLimit) {
-        mrayDragPOSs.shift(1)
-      }
-    }
-    put(obj, cursor3d.x, cursor3d.y, cursor3d.z)
+    put(obj, x, y, z)
   }
   
   let erase = function() {
@@ -1572,6 +1570,7 @@ $(async function MAIN() {
     }
     
     if (!spec.editorOnly) {
+      spec.template.toolname = spec.name
       tool.templateID = next_templateID
       fixedtemplates[next_templateID] = spec.template
       templates[next_templateID] = spec.template
@@ -1596,17 +1595,19 @@ $(async function MAIN() {
   let setTool = function(name) {
     edCTL.event.dispatchEvent(new Event("cancel"))
     activeTool = tools[name]
-    let opspec = opSpecs[activeTool.spec.routine]
-    handleInput(opspec)
-    
-    buildComponentEditor()
-    updateTerrainProperties()
-    
-    cursor3d.mdl.remove(cursorMDL)
-    releaseAsset(edCTL.assets, cursorMDL)
-    cursorMDL = getAsset(edCTL.assets, activeTool.spec.cursorModel)
-    cursor3d._mdl = cursorMDL
-    cursor3d.mdl.add(cursorMDL)
+    if (activeTool) {
+      let opspec = opSpecs[activeTool.spec.routine]
+      handleInput(opspec)
+      
+      buildComponentEditor()
+      updateTerrainProperties()
+      
+      cursor3d.mdl.remove(cursorMDL)
+      releaseAsset(edCTL.assets, cursorMDL)
+      cursorMDL = getAsset(edCTL.assets, activeTool.spec.cursorModel)
+      cursor3d._mdl = cursorMDL
+      cursor3d.mdl.add(cursorMDL)
+    }
   }
   
   // BoxTerrain configuration section
@@ -1655,12 +1656,12 @@ $(async function MAIN() {
     let baseK = JSON.stringify(terrspec)+"|"
     
     boxterrainDefiners[terrspec.name] = function config_bxt() {
-      let k = baseK + JSON.stringify(activeTool.components)
-      if (terrains[k]) {
-        return [terrains[k], terrainIDs[k]]
+      let tk = baseK + JSON.stringify(activeTool.components)
+      if (terrains[tk]) {
+        return [terrains[tk], terrainIDs[tk]]
       }
-      for (let k in activeTool.components) {
-        activeTool.components[k].color = toRGBstring(activeTool.components[k].color)
+      for (let ck in activeTool.components) {
+        activeTool.components[ck].color = toRGBstring(activeTool.components[ck].color)
       }
       
       let comps = []
@@ -1710,7 +1711,7 @@ $(async function MAIN() {
     
       //Configure the box terrain for each surface [with the corresponding color & pattern parameters]
       let tid = next_terrainid
-      terrainIDs[k] = tid
+      terrainIDs[tk] = tid
       let sfcdefs = []
       let sfcdefids = []
       next_terrainid++
@@ -1719,8 +1720,8 @@ $(async function MAIN() {
         fdef.tile = comps[i].pattern
         fdef.mergeClass = comps[i].mergeClass
         fdef.color = comps[i].color
-        let k = JSON.stringify(fdef)
-        let sfcid = sfcIDs[k]
+        let sk = JSON.stringify(fdef)
+        let sfcid = sfcIDs[sk]
         if (sfcid) {
           sfcdefs[i] = surfaceDefs_bterr[sfcid]
           sfcdefids[i] = sfcid
@@ -1734,12 +1735,12 @@ $(async function MAIN() {
           let sfc = bxtbldr.build_Sfcdef(fdef)
           surfaceDefs_bterr[next_sfcid] = sfc
           sfcdefids[i] = next_sfcid
-          sfcIDs[k] = next_sfcid
+          sfcIDs[sk] = next_sfcid
           sfcdefs[i] = sfc
           next_sfcid++
         }
       }
-      let terrain = terrains[k] = bxtbldr.build_Terraindef.apply(bxtbldr, sfcdefs)
+      let terrain = terrains[tk] = bxtbldr.build_Terraindef.apply(bxtbldr, sfcdefs)
       terrainDefs[tid] = sfcdefids
       return [terrain, tid]
     }
@@ -1868,7 +1869,7 @@ $(async function MAIN() {
   let serialize = function() {
     let o = {
       EKVX2:true,
-      Format:edCTL.DataFormat,
+      DataType:edCTL.DataFormat,
       Version:edCTL.DataVersion,
       Templates:templates,
       Surfaces:surfaceDefs,
@@ -1903,6 +1904,132 @@ $(async function MAIN() {
     }
   }
   run()
+  
+  //load ekvx2 data from a JSON string and supposedly reconstruct all relevant editor state from the time of its serialization.
+  var importData = function(src) {
+    let data = JSON.parse(src)
+    if (!data || !data.EKVX2) {
+      console.log("ERROR: input data is not a valid EKVX2 data", src)
+      return
+    }
+    if (data.DataType != edCTL.DataFormat) {
+      console.log(`ERROR: Ekvxed2 is not configured to load/edit data type "${data.DataType}"`)
+      return
+    }
+    reset()
+    
+    // copy data off the parsed object
+    templates = data.Templates
+    Object.assign(templates, fixedtemplates)
+    surfaceDefs = data.Surfaces
+    terrainDefs = data.Terrains
+    
+    for (let sfcdefid in surfaceDefs) {
+    
+      let sfcdef = surfaceDefs[sfcdefid]
+    
+      //ensure unique surface identifiers can be generated after the import
+      if (sfcdefid >= next_sfcid) {
+        next_sfcid = sfcdefid+1
+      }
+      // de-templatize the surface definition
+      if (typeof(sfcdef.tile) == "number") {
+        sfcdef.tile = templates[sfcdef.tile]
+      }
+      if (typeof(sfcdef.area8b) == "number") {
+        sfcdef.area8b = templates[sfcdef.area8b]
+      }
+      
+      // prepare BoxTerrain params / surface definition state data
+      let fdef = Object.assign({}, sfcdef)
+      let sfc = bxtbldr.build_Sfcdef(fdef)
+      surfaceDefs_bterr[sfcdefid] = sfc
+      let sk = JSON.stringify(sfcdef)
+      sfcIDs[sk] = sfcdefid
+    }
+    
+    
+    for (let obj of data.Objects) {
+    
+      let [templateID, x,y,z] = obj.$
+      let template = templates[templateID]
+      let tool = tools[template.toolname]
+      
+      if (tool.terrain) {
+        let terrainID = obj.$[4]
+        let terr = terrains[terrainID]
+
+        // if the terrain is not yet reconstructed, build terrain data structures
+        //    (abbreviated version of defineTerrain())
+        if (!terr) {
+          if (terrainID >= next_terrainid) {
+            next_terrainid = terrainID+1
+          }
+          let sfcdefids = terrainDefs[terrainID]
+          let comps = {}
+          
+          if (tool.components.all) {
+            comps.all = surfaceDefs[sfcdefids[0]]
+          }
+          if (activeTool.components.horiz) {
+            comps.horiz = surfaceDefs[sfcdefids[4]]
+          }
+          if (activeTool.components.vert) {
+            comps.vert = surfaceDefs[sfcdefids[0]]
+          }
+          if (activeTool.components.up) {
+            comps.up = surfaceDefs[sfcdefids[4]]
+          }
+          if (activeTool.components.north) {
+            comps.north = surfaceDefs[sfcdefids[0]]
+          }
+          if (activeTool.components.east) {
+            comps.east = surfaceDefs[sfcdefids[1]]
+          }
+          if (activeTool.components.south) {
+            comps.south = surfaceDefs[sfcdefids[2]]
+          }
+          if (activeTool.components.west) {
+            comps.west = surfaceDefs[sfcdefids[3]]
+          }
+          if (activeTool.components.down) {
+            comps.down = surfaceDefs[sfcdefids[5]]
+          }
+          
+          let sfcdefs = [
+            surfaceDefs_bterr[sfcdefids[0]],
+            surfaceDefs_bterr[sfcdefids[1]],
+            surfaceDefs_bterr[sfcdefids[2]],
+            surfaceDefs_bterr[sfcdefids[3]],
+            surfaceDefs_bterr[sfcdefids[4]],
+            surfaceDefs_bterr[sfcdefids[5]]
+          ]
+          
+          let tk = JSON.stringify(tool.spec.terrain) + "|" + JSON.stringify(comps)
+          terr = terrains[terrainID] = terrains[tk] = bxtbldr.build_Terraindef.apply(bxtbldr, sfcdefs)
+          
+        }
+        // use the internal _build() to make the new editor object
+        //    (the parsed JSON object could be recycled, but that was determined to not be worth the effort)
+        _build(tool, x, y, z, 0,0,0, terr, terrainID)
+      }
+      else {
+        let up, forward
+        if ((tool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
+          up = obj.$[4]
+          forward = obj.$[5]
+        }
+        let components = {}
+        for (let k in obj) {
+          if (k != '$') {
+            components[k] = deepcopy(obj[k])
+          }
+        }
+        // use the internal _build() to make the new editor object
+        _build(tool, x,y,z, up, forward, components)
+      }
+    }
+  }
 })
 
 

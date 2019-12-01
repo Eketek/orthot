@@ -1,8 +1,10 @@
 0.3.0:
-  28 Nov 2019
-    Move ekvx1 interpretation out of Zone
-      (This is preparation for Ekvx2-based loading)
-    Fixed a couple defects in ekvx1 interpretation (the defects only affected unused/unfinished content and ekvx1 is getting superseded, but it still bugs me)
+  28-29 Nov 2019
+    Preparations for ekvx2 loading
+      Move ekvx1 interpretation out of Zone
+      Fixed a couple defects in ekvx1 interpretation (the defects only affected unused/unfinished content and ekvx1 is getting superseded, but it still bugs me)
+      Move material properties [for everything except terrain] to the ekvx interpreter
+      Apply materials to individual objects instead of to templates
 
   25 Nov 2019
     Removed an extraneous property from the Orthot Editor specification

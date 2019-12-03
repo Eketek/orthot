@@ -1,3 +1,9 @@
+3 Dec 2019
+  Added a build routine which only operates on mouse click (no dragging)
+  Use tool.editorMaterials for a mesh if no materials component is provided
+  Add a "view" icon & model.  
+    For this, the "eye" concept was selected [in defiance of convention] to represent the concept of view, because the "camera" concept seems way too distant.
+
 30 Nov 2019
   Added an ekvx2 importer (can now reload exported data)
   ekvx2 "Format" property renamed to "DataType"

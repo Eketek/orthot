@@ -38,7 +38,7 @@ var Ekvx2Interpreter = {
   configure:function(zone, ekvx) {
     bxtbldr = zone.bxtbldr
     zone.blackwall = defineWallTerrain( "blackwall", "rgba,0,0,0,1")
-    
+    zone.viewpoints = []
     // If the ekvx has not been prepared, expand, link, and process terrain data structures
     //  (for simplicity, this directly replaces objects on the ekvx data structure (which itself is a product of JSON parsing))
     if (!ekvx.expanded) {
@@ -96,12 +96,15 @@ var Ekvx2Interpreter = {
           vxc.loadTerrain(x,y,z, ekvx.Terrains[obj.$[4]])
           zone.putGameobject(loc, new Wall(zone))
           break
+        case "view":
+          zone.viewpoints.push(new THREE.Vector3(x,y,z))
+          break
         case "start": {
           zone.playerMaterials = obj.materials
           let campos = new THREE.Vector3(x+5,y+3.5,z+1)
           zone.targets.__STARTLOC = {
             loc:loc,
-            campos:campos
+            campos:new THREE.Vector3(campos.x, campos.y, campos.z)
           }
           // ekvx1 used Player/start as an easy place to put "zone" attributes 
           // ekvx2 might do the same thing, or it might get reconsidered.

@@ -46,6 +46,7 @@ var Zone = function(ekvx, override_startloc, name, yieldsProgressCode) {
   let walltemplates = {}
   let walldefs = {}
   this.targets = {}
+  this.viewpoints = undefined
 
   // For now, lighting is simplified to global ambient + global directional light + player-held lantern + maybe one light-bearing object
   //  ANd...  just because there otherwise isn't much interesting about lighting, the global directional light rotates very slowly as time passes
@@ -1522,7 +1523,7 @@ var Zone = function(ekvx, override_startloc, name, yieldsProgressCode) {
       }
       start_target = {
         loc:{ x:x, y:y, z:z },
-        campos:{ x:x-3, y:y+4, z:z-5 }
+        campos:new THREE.Vector3(x-3, y+4, z-5)
       }
       
       let info_obj = new InfoBlock(this, false, msg)
@@ -1543,11 +1544,30 @@ var Zone = function(ekvx, override_startloc, name, yieldsProgressCode) {
         }
       }
     }
+    
     startloc = start_target.loc
+    let start_campos = start_target.campos
+    
+    //if viewpoints is defined [and contains any entries], compute the nearest viewpoint and use it as the camera starting position
+    if (this.viewpoints) {
+      let min_dist = 9999999
+      let closept
+      for (let vp of this.viewpoints) {
+        let dist = vp.distanceTo(startloc)
+        if (dist <= min_dist) {
+          min_dist = dist
+          closept = vp
+        }
+      }
+      if (closept) {
+        start_campos = new THREE.Vector3(closept.x-startloc.x, closept.y-startloc.y, closept.z-startloc.z)
+      }
+    }
+    
     sviewCTL.setFPmode(false)
     sviewCTL.pickplane.constant = start_target.loc.y+0.5
     sviewCTL.camtarget.set(start_target.loc.x,start_target.loc.y+0.5,start_target.loc.z)
-    sviewCTL.setCamposFromCartisian(start_target.campos)
+    sviewCTL.setCamposFromCartisian(start_campos)
     sviewCTL.updateCamera(true)
 
     let pl_align

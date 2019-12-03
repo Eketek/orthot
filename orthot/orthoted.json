@@ -73,9 +73,40 @@
       "spclassCoexist":[],
       "planarPick":true,
       "routine":"buildcube"
+    },
+    "UnalignedObject":{
+      "pickModes":["xz", "xy", "yz", "mray"],
+      "alignMode":"none",
+      "volumetric":true,
+      "pickOut":true,
+      "cursorModel":"CubeCursor",
+      "spatialClass":"solid",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "planarPick":true,
+      "routine":"buildcube"
     }
   },
   "Tools":[
+    {
+      "extend":"UnalignedObject",
+      "type":"view",
+      "name":"View", 
+      "shortname":"View",
+      "model":"View",
+      "editorMaterials":[
+        {"color":"white", "emissive":"white", "emissiveIntensity":0.25}, 
+        {"color":"green", "emissive":"white", "emissiveIntensity":0.25}, 
+        "blue", 
+        {"color":"cyan", "transparent":true, "opacity":0.33, "emissive":"white", "emissiveIntensity":0.25 } 
+      ],
+      "icon":{
+        "sheet":"editoricons",
+        "row":2,
+        "col":0
+      },      
+      "routine":"buildcube_clickonly"
+    },
     {
       "name":"Wall-OneColor",
       "extend":"Wall",
@@ -211,7 +242,6 @@
       "name":"Player-Start", 
       "shortname":"Start",
       "model":"man",
-      "modelMaterials":{ "ref":"components.materials" },
       "unique":"type",
       "mutablecolors":true,
       "icon":{

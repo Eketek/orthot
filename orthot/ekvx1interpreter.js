@@ -184,7 +184,7 @@ var Ekvx1Interpreter = {
             campos.z = campos.z - z
             zone.targets[property("name", datas)] = {
               loc:loc,
-              campos:campos
+              campos:new THREE.Vector3(campos.x, campos.y, campos.z)
             }
           } break
           case 'pblock':
@@ -238,7 +238,7 @@ var Ekvx1Interpreter = {
               campos.z = campos.z - z
               zone.targets.__STARTLOC = {
                 loc:loc,
-                campos:campos
+                campos:new THREE.Vector3(campos.x, campos.y, campos.z)
               }
               let tipMSG = property("tip", datas)
               let defeatMSG

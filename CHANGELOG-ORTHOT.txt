@@ -1,4 +1,10 @@
 0.3.0:
+  3 Dec 2019
+    Added a View/camera Object for use with ekvx2 zones.
+      These define the initial camera position(s) to use when spawning or teleporting into a zone.
+      If multiple points are defined, the view-point which is nearest to the spawn point will be used.
+        (behavior from Orthot II / ekvx1 was to use a coordinate-bearing property on the entry point object for camera position)
+    
   2 Dec 2019
     Completed ekvx2 import from editor
     Added core functionality of ekvx2 interpreter (Enough to load walls+player [with customized terrain and player-mesh materials] and complete a basic walkaround test)

@@ -1354,6 +1354,9 @@ $(async function MAIN() {
           }
         }
       }
+      if ((!components || !components.materials) && tool.spec.editorMaterials) {
+        assignMaterials(mdl, tool.spec.editorMaterials)
+      }
       
       if ((tool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
         obj.data.$.push(up)
@@ -1413,6 +1416,9 @@ $(async function MAIN() {
       click:build, 
       drag:build,
       drag_evttype:"mousemove_cube" 
+    },
+    buildcube_clickonly:{ 
+      click:build
     },
     erase:{
       click:erase, 
@@ -1535,6 +1541,9 @@ $(async function MAIN() {
     let tool = {
       spec:spec,
       components:deepcopy(spec.components)
+    }
+    if (!tool.components) {
+      tool.components = {}
     }
     // If pickModes is specified as a string, expand it to an array.
     if (typeof(spec.pickModes) == "string") {

@@ -14,13 +14,21 @@ import { Player } from './player.js'
 import { Collision, ObjectState } from './enums.js'
 import { deactivateTextDisplay } from './textdisplay.js'
 import { Ekvx1Interpreter } from './ekvx1interpreter.js'
+import { Ekvx2Interpreter } from './ekvx2interpreter.js'
 
-var Zone = function(ekvx, override_startloc, name) {
+var Zone = function(ekvx, override_startloc, name, yieldsProgressCode) {
   this.isZone = true
   let isGeomValid = true
   this.name = name
+  this.yieldsProgressCode = yieldsProgressCode
   
-  let ekvxinterp = ekvx.EKVX1 ? Ekvx1Interpreter : undefined
+  let ekvxinterp
+  if (ekvx.EKVX1) {
+    ekvxinterp = Ekvx1Interpreter
+  }
+  else if (ekvx.EKVX2) {
+    ekvxinterp = Ekvx2Interpreter
+  }
 
   let bxtbldr = this.bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)
   let vxc = this.vxc = new VxScene({

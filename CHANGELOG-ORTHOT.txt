@@ -1,4 +1,9 @@
 0.3.0:
+  2 Dec 2019
+    Completed ekvx2 import from editor
+    Added core functionality of ekvx2 interpreter (Enough to load walls+player [with customized terrain and player-mesh materials] and complete a basic walkaround test)
+    Prevent progress codes from being stored when running a zone imported from the editor.
+    
   28-29 Nov 2019
     Preparations for ekvx2 loading
       Move ekvx1 interpretation out of Zone

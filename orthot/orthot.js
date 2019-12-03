@@ -249,6 +249,7 @@ $(async function MAIN() {
 
   orthotCTL.loadScene = function(arg, loc) {
     let ekvx = arg
+    let yieldProgressCode = true
     if (typeof(arg) == "string") {
       ekvx = orthotCTL.gdatapack.zones[arg]
       if (ekvx == undefined) {
@@ -256,6 +257,11 @@ $(async function MAIN() {
         arg = orthotCTL.gdatapack.mainAreaname
         ekvx = orthotCTL.gdatapack.zones[arg]
       }
+    }
+    else if ( (typeof(arg) == "object") && (arg.EKVX1 || arg.EKVX2) ) {
+      ekvx = arg
+      arg = "<< Test Zone >>"
+      yieldProgressCode = false
     }
     else if (!arg) {
       arg = orthotCTL.gdatapack.mainAreaname
@@ -265,7 +271,7 @@ $(async function MAIN() {
       renderCTL.display.scene.remove(orthotCTL.ActiveZone.scene)
       orthotCTL.ActiveZone.unload()
     }
-    orthotCTL.ActiveZone = new Zone(ekvx, loc, arg)
+    orthotCTL.ActiveZone = new Zone(ekvx, loc, arg, yieldProgressCode)
     renderCTL.display.scene.add(orthotCTL.ActiveZone.scene)
 
     for (let i = 0; i < levelSelector.length; i++) {
@@ -291,6 +297,9 @@ $(async function MAIN() {
     window.localStorage["progress."+orthotCTL.gdatapack.name] = JSON.stringify(orthotCTL.gdatapack.progress)
   }
   orthotCTL.addProgress = function(code) {
+    if (code == "!!TESTZONE") {
+      return
+    }
     orthotCTL.gdatapack.progress[code] = true
     storeProgress()
   }
@@ -403,17 +412,16 @@ $(async function MAIN() {
   loadDataPack("MainGdataPack", "MainArea", MAIN_ZONES, MAIN_TEXTS)
   
   if (window.StagedTestData) {
-    //orthotCTL.loadScene(stagedTestData)
-    console.log("TODO: ekvx2 loader", StagedTestData)
+    orthotCTL.loadScene(JSON.parse(window.StagedTestData))
+    //console.log("TODO: ekvx2 loader", JSON.parse(StagedTestData))
   }
   else {
-    //orthotCTL.loadScene("MainArea")
+    orthotCTL.loadScene("MainArea")
   }
-  orthotCTL.loadScene("MainArea")
   
   orthotCTL.runTest = function(data) {
-    //orthotCTL.loadScene(data)
-    console.log("TODO: ekvx2 loader", data)
+    orthotCTL.loadScene(JSON.parse(data))
+    //console.log("TODO: ekvx2 loader", JSON.parse(data))
   }
 
   orthotCTL.forceReloadMainData = async function() {

@@ -1,3 +1,8 @@
+4 Dec 2019 
+  Fixed broken mouse-ray pickmode limiter (was inadvertently disabled by a recent change)
+  Set default behavior of mouse-ray pickmode limiter to not release locked positions until the mouse is released
+    (due to counterintuitive behavior - uncertainty about which locked position gets released when the limit is exceeded)
+  
 3 Dec 2019
   Added a build routine which only operates on mouse click (no dragging)
   Use tool.editorMaterials for a mesh if no materials component is provided

@@ -212,12 +212,14 @@ $(async function MAIN() {
   })
   sviewCTL.run()
   
-  // mrayDragPOSs is used by mouse-ray pickmode controller to avoid picking against objects placed during the current click & drag operation
+  // mrayDragPositions is used by mouse-ray pickmode controller to avoid picking against objects placed during the current click & drag operation
   // The list is initalized when LMB is pressed and reset when LMB is released or if click & drag is cancelled
   //  (This makes click & drag useful for building things more interesting than a chain of blocks pointing directly at the camera)
-  let mrayDragPOSs
+  let mrayDragPositions
+  
   //Maximum amount of objects to avoid picking against (if limit is reached, it starts removing the holdest objects in the list)
-  let MrayDragLimit = 4
+  // Limit set by default to a high level due to counterintuitiveness
+  let MrayDragLimit = 9999
   
   let PICKRAY_LENGTH = 50
   let recentPos = new THREE.Vector3(0,0,0)
@@ -1146,7 +1148,7 @@ $(async function MAIN() {
             if (ctn.contents) {
               let strpos = `${coord.x},${coord.y},${coord.z}`
               for (let obj of ctn.contents) {
-                if (mrayDragPOSs && (mrayDragPOSs.indexOf(strpos) != -1)) {
+                if (mrayDragPositions && (mrayDragPositions.indexOf(strpos) != -1)) {
                   continue
                 }
                 if ((!obj.isEditorUI) && ((spclasses == "*") || (obj.spec && (spclasses.indexOf(obj.spec.spatialClass) != -1)))) {
@@ -1298,7 +1300,13 @@ $(async function MAIN() {
           break
       }
     }
-    evict(up) 
+    evict(up)
+    if (mrayDragPositions) {
+      mrayDragPositions.push(`${cursor3d.x},${cursor3d.y},${cursor3d.z}`)
+      if (mrayDragPositions.length >= MrayDragLimit) {
+        mrayDragPositions.shift(1)
+      }
+    }
     _build(activeTool, cursor3d.x, cursor3d.y, cursor3d.z, up, forward, activeTool.components, activeTool.terrain, activeTool.terrainID)
   }
   
@@ -1438,15 +1446,15 @@ $(async function MAIN() {
       }
       if (pickmode == "mray") {
         //draw_debugline = true
-        if (!mrayDragPOSs || mrayDragPOSs.length != 0) {
-          mrayDragPOSs = []
+        if (!mrayDragPositions || mrayDragPositions.length != 0) {
+          mrayDragPositions = []
         }
       }
       else {
         recentPos.x = cursor3d.x
         recentPos.y = cursor3d.y
         recentPos.z = cursor3d.z
-        mrayDragPOSs = undefined
+        mrayDragPositions = undefined
       }
       if (opspec.click) { opspec.click() }
       if (opspec.drag_evttype) {
@@ -1458,8 +1466,8 @@ $(async function MAIN() {
               if (opspec.cancel) { opspec.cancel() }
               return
             case "lmb_up":
-              if (!mrayDragPOSs || mrayDragPOSs.length != 0) {
-                mrayDragPOSs = []
+              if (!mrayDragPositions || mrayDragPositions.length != 0) {
+                mrayDragPositions = []
               }
               if (opspec.release) { opspec.release() }
               edCTL.event.dispatchEvent( new Event("refresh"))

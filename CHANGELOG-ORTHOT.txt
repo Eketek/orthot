@@ -1,4 +1,8 @@
 0.3.0:
+  6-7 Dec 2019
+    Apply starting position alignment
+    Add info block to ekvx2 loader
+    
   3 Dec 2019
     Added a View/camera Object for use with ekvx2 zones.
       These define the initial camera position(s) to use when spawning or teleporting into a zone.

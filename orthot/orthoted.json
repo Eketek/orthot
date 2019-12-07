@@ -262,6 +262,23 @@
           {"color":"white", "emissive":"yellow", "emissiveIntensity":1}
         ]
       }
+    },
+    {
+      "extend":"UnalignedObject",
+      "type":"infoblock",
+      "name":"InfoBlock", 
+      "shortname":"Info",
+      "model":"InfoBlockFull",
+      "icon":{
+        "sheet":"AppIcons",
+        "row":0,
+        "col":2
+      },      
+      "routine":"buildcube_clickonly",
+      "components":{
+        "materials":[ "green", "yellow" ],
+        "message":""
+      }
     }
   ]
 }

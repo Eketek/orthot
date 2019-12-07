@@ -140,8 +140,8 @@ $(async function MAIN() {
   })
 
   let markmats = [
-    {color:"green", emissive:"green", emissiveIntensity:0.333}, 
-    {color:"black", transparent:true, opacity:0.4}]
+    {color:"green", emissive:"green", emissiveIntensity:0.667}, 
+    {color:"black", transparent:true, opacity:0.6}]
   let cursormats = [
     {color:"white", emissive:"white", emissiveIntensity:0.333}, 
     {color:"black", transparent:true, opacity:0.4}]
@@ -344,21 +344,33 @@ $(async function MAIN() {
   }
   let setMraypickmode = function() {
     pickmode = "mray"
+    if (activeTool) {
+      updateCursor()
+    }
   }
   let setXZpickmode = function() {
     pickmode = "xz"
     pickplane.setFromNormalAndCoplanarPoint(direction.vector.UP, recentPos)
     pickplane.constant *= -1
+    if (activeTool) {
+      updateCursor()
+    }
   }
   let setXYpickmode = function() {
     pickmode = "xy"
     pickplane.setFromNormalAndCoplanarPoint(direction.vector.NORTH, recentPos)
     pickplane.constant *= -1
+    if (activeTool) {
+      updateCursor()
+    }
   }
   let setYZpickmode = function() {
     pickmode = "yz"
     pickplane.setFromNormalAndCoplanarPoint(direction.vector.WEST, recentPos)
     pickplane.constant *= -1
+    if (activeTool) {
+      updateCursor()
+    }
   }
   
   addEditorBTN("MRAY", "Pick against object under mouse cursor", setMraypickmode, false, "optionButtons", "pickmode", "editoricons", 0, 0, 40, 5)
@@ -764,9 +776,72 @@ $(async function MAIN() {
    }
   })
   
-  let buildComponentEditor = function(target) {
-    if (!target) {
-      target = activeTool.components
+  // Prepare the object selector.
+  // The object selector is a drop-down menu which appears when the edit-tool selects more than one object.
+  // This drop-down menu shows a listing obj valid editable objects at the selected position
+  // When something is selected on that drop-down menu, the object properties editor is then re-configured to edit the corresponding object.
+  // if there are only 0 or 1 editable objects, the object selector will be/remain hidden (this is expected to be the case most of the time).
+  let populateObjectSelector = function(ctn, up, activeObj) {
+    if (ctn.contents) {
+      let count = 0
+      for (let obj of ctn.contents) {
+        if (!obj.isEditorUI) {
+          if ((up == undefined) || (obj.up == undefined) || (obj.up == up)) {
+            count++
+          }
+        }
+      }
+      if (count > 1) {
+        let $objsel = $("#objSelector")
+        $objsel.show()
+        let objsel = $objsel[0]
+        let amt = objsel.length
+        for (let i = 0; i < amt; i++) {
+          objsel.remove(0)
+        }
+        for (let obj of ctn.contents) {
+          if (!obj.isEditorUI) {
+            if ((up == undefined) || (obj.up == undefined) || (obj.up == up)) {
+              let optelem = document.createElement("option")
+              optelem.__obj = obj
+              if (obj == activeObj) {
+                optelem.selected = true
+              }
+              if (obj.up == undefined) {
+                optelem.text = obj.spec.name
+              }
+              else {
+                optelem.text = direction.name[obj.up][0] + " " + obj.spec.name
+              }
+              objsel.add(optelem)
+            }
+          }
+        }
+      }
+    }
+  }
+  on($("#objSelector"), "input", (asdf)=>{
+    let objsel = $("#objSelector")[0]
+    if (objsel.selectedIndex != -1) {
+      let obj = objsel.selectedOptions[0].__obj
+      buildComponentEditor(obj)
+    }
+  })
+  
+  let clearComponentEditor = function() {
+    $("#objProperties").empty()
+    $("#objSelector").hide()
+  }
+  let buildComponentEditor = function(obj) {
+    //for now, spec & target distinction is not significant.
+    //  but when more sophistication is needed, "spec" will provide additional attributes to help govern the properties editor
+    let spec, target
+    if (obj) {
+      target = obj.data
+      spec = obj.spec.components
+    }
+    else {
+      spec = target = activeTool.components
     }
     
     let $compelem = $("#objProperties")
@@ -801,10 +876,16 @@ $(async function MAIN() {
       }
     }
     
-    for (let [name, comp] of Object.entries(activeTool.components)) {
+    let generalProperties = []
+    for (let name in spec) {
+      let def = spec[name]
+      let comp = target[name]
+      if (!comp) {  // if the component is undefined, it is a virtual component and shoudl be ignored (object properties - mainly terrain)
+        continue
+      }
       let proped = name
-      if (comp.proped) {
-        proped = comp.proped
+      if (comp.type) {
+        proped = comp.type
       }
       switch(proped) {
         // surface editor
@@ -821,45 +902,61 @@ $(async function MAIN() {
           //color selector
           //pattern selector
           //mergeclass textarea
-          addRow("color", "Color", propEditor_color(comp, "color"))
-          addRow("pattern", "Pattern", propEditor_pattern(comp, "pattern"))
-          addRow("merge", "Merge Class", propEditor_textarea(comp, "mergeClass", "auto"))
+          addRow("color", "Color", propEditor_color(obj, comp, "color"))
+          addRow("pattern", "Pattern", propEditor_pattern(obj, comp, "pattern"))
+          addRow("merge", "Merge Class", propEditor_textarea(obj, comp, "mergeClass", "auto"))
           break
         case "materials":
           addRow(name)
           for (let i = 0; i < comp.length; i++) {
             if (typeof(comp[i]) == "string") {
-              addRow(`m${i}-col`, `Material #${i} Main Color`, propEditor_color(comp, i))
+              addRow(`m${i}-col`, `Material #${i} Main Color`, propEditor_color(obj, comp, i))
             }
             else {
-              addRow(`m${i}-col`, `Material #${i} Main Color`, propEditor_color(comp[i], "color"))
+              addRow(`m${i}-col`, `Material #${i} Main Color`, propEditor_color(obj, comp[i], "color"))
             }
           }
           break
+        case "$":
+          break
+        default:
+          generalProperties.push(name)
+          break
+      }
+    }
+    if (generalProperties.length > 0) {
+      addRow("General Properties")
+      for (let name of generalProperties) {
+        addRow(name, name, propEditor_textarea(obj, target, name, "", false))
       }
     }
   }
   
-  let propEditor_color = function(obj, name) {
+  let propEditor_color = function(obj, component, name) {
     let btn = $("<div>")[0]
     btn.style.width = 18
     btn.style.height = 18
     btn.style.border = "thin solid black"
-    btn.style.backgroundColor = obj[name]
+    btn.style.backgroundColor = component[name]
     on(btn, "click", ()=>{
       activateCpicker(btn, (color)=>{
-        obj[name] = color
+        component[name] = color
         btn.style.backgroundColor = color
-        updateTerrainProperties()
+        if (obj) {
+          updateObject(obj)
+        }
+        else {
+          updateTerrainProperties()
+        }
       })
     })
     return btn
   }
   
-  let propEditor_textarea = function(obj, name, nullVal="None", deleteIfnull=true) {
+  let propEditor_textarea = function(obj, component, name, nullVal="None", deleteIfnull=true) {
     let ta = $("<textarea>")[0]
-    ta.value = obj[name]
-    if (obj[name] == undefined) {
+    ta.value = component[name]
+    if (component[name] == undefined) {
       ta.value = nullVal
     }
     ta.rows = 1
@@ -867,16 +964,21 @@ $(async function MAIN() {
     ta.style.height = 16
     ta.style.resize = "none"
     on(ta, "input", ()=>{
-      obj[name] = ta.value
+      component[name] = ta.value
       if (deleteIfnull && ((ta.value == nullVal) || (ta.value == "")) ) {
-        delete obj[name]
+        delete component[name]
       }
-      updateTerrainProperties()
+      if (obj) {
+        updateObject(obj)
+      }
+      else {
+        updateTerrainProperties()
+      }
     })
     return ta
   }
   
-  let propEditor_pattern = function(obj, k) {
+  let propEditor_pattern = function(obj, component, k) {
     let $btn = $('<canvas width=32 height=32>')
     let cnv = $btn[0]
     let ctx = cnv.getContext('2d')
@@ -888,10 +990,10 @@ $(async function MAIN() {
     let abs_tx, abs_ty, abs_w, abs_h
 
     let update = function() {
-      let rows = obj[k].rows
-      let cols = obj[k].cols
-      let x = obj[k].x
-      let y = obj[k].y
+      let rows = component[k].rows
+      let cols = component[k].cols
+      let x = component[k].x
+      let y = component[k].y
       abs_w = 512/rows
       abs_h = 512/cols
       abs_tx = x*abs_w+4
@@ -904,9 +1006,14 @@ $(async function MAIN() {
     ctx.textBaseline = "bottom"
     
     on($btn, "click", ()=>{
-      activatePatternPicker($btn[0], obj[k], ()=>{
+      activatePatternPicker($btn[0], component[k], ()=>{
         update()
-        updateTerrainProperties()
+        if (obj) {
+          updateObject(obj)
+        }
+        else {
+          updateTerrainProperties()
+        }
       })
     })
     
@@ -934,8 +1041,8 @@ $(async function MAIN() {
   // scene + data storage
   let vxc, UniqueObjects
   
-  // 3d mouse cursor
-  let cursor3d, cursorMDL
+  // 3d position indicators
+  let cursor3d, cursorMDL, mark, markMDL
   
   // Templates are fixed lists of properties which are to be copied into the data (often this will be just be an Object type identifier).
   // Each generated object references one template
@@ -987,8 +1094,8 @@ $(async function MAIN() {
     vxc.forAll((ctn)=>{
       if (ctn.contents && ctn.contents.length > 0) {
         for (let obj of (ctn.contents)) {
-          if (obj.mdl) {
-            releaseAsset(edCTL.assets, obj.mdl)
+          if (obj.gx) {
+            releaseAsset(edCTL.assets, obj.gx)
           }
         }
       }
@@ -1010,13 +1117,25 @@ $(async function MAIN() {
       up:direction.code.UP,
       forward:direction.code.NORTH,
       isEditorUI:true,
-      mdl:new THREE.Object3D()
+      gx:new THREE.Object3D()
+    }
+    mark = {
+      x:0,y:0,z:0,
+      up:direction.code.UP,
+      forward:direction.code.NORTH,
+      isEditorUI:true,
+      gx:new THREE.Object3D()
     }
     
     cursorMDL = getAsset(edCTL.assets, "CubeCursor")
-    cursor3d.mdl.add(cursorMDL)
-    cursor3d._mdl = cursorMDL
+    cursor3d.gx.add(cursorMDL)
+    cursor3d.mdl = cursorMDL
     put(cursor3d,0,0,0)
+    
+    markMDL = getAsset(edCTL.assets, "CubeMark")
+    mark.gx.add(markMDL)
+    mark.mdl = markMDL
+    //put(mark,0,0,0)
     
     UniqueObjects = {}
     next_terrainid = 1
@@ -1034,9 +1153,9 @@ $(async function MAIN() {
     updateTerrainProperties()
   }
     
-  let put = function(obj, x,y,z, ld=false) {
-    let ctn = vxc.get(obj.x,obj.y,obj.z)
-    if (ctn.contents) {
+  let put = function(obj, x,y,z, ld=false, ofsX=0, ofsY=0, ofsZ=0) {
+    let ctn = obj.ctn
+    if (ctn && ctn.contents) {
       let idx = ctn.contents.indexOf(obj)
       if (idx != -1) {
         ctn.contents.splice(idx,1)
@@ -1046,7 +1165,8 @@ $(async function MAIN() {
     obj.y = y
     obj.z = z
     
-    ctn = vxc.get(x,y,z)
+    ctn = vxc.get(x, y, z)
+    obj.ctn = ctn
     if (!ctn.contents) {
       ctn.contents = []
     }
@@ -1060,32 +1180,41 @@ $(async function MAIN() {
       }
       return
     }
-    else if (obj.mdl) {
-      if (!obj.mdl.parent) {
-        vxc.scene.add(obj.mdl)
+    else if (obj.gx) {
+      if (!obj.gx.parent) {
+        vxc.scene.add(obj.gx)
       }
-      obj.mdl.position.set(x,y,z)
+      obj.gx.position.set(x+ofsX, y+ofsY, z+ofsZ)
     }
   }
   
-  let remove = function(obj, x,y,z) {
+  let remove = function(obj, release=true) {
+    let ctn = obj.ctn
+    if (!ctn) {
+      return
+    }
+    let x = ctn.x
+    let y = ctn.y
+    let z = ctn.z
     if (obj.terrain) {
       vxc.setTerrain(x,y,z)
       //return
     }
-    let ctn = vxc.get(x,y,z)
     if (ctn.contents) {
       let idx = ctn.contents.indexOf(obj)
       if (idx != -1) {
         ctn.contents.splice(idx,1)
       }
     }
-    if (obj.mdl) {
-      if (obj.mdl.parent) {
-        obj.mdl.parent.remove(obj)
+    if (obj.gx) {
+      if (obj.gx.parent) {
+        obj.gx.parent.remove(obj.gx)
       }
-      releaseAsset(edCTL.assets, obj.mdl)
+      if (release) {
+        releaseAsset(edCTL.assets, obj.gx)
+      }
     }
+    obj.ctn = undefined
   }
   
   
@@ -1216,8 +1345,8 @@ $(async function MAIN() {
         cursor3d.forward = forward
         let orientation = {}
         setOrientation(orientation, direction.invert[forward], up)
-        cursor3d._mdl.position.copy(orientation.position)
-        cursor3d._mdl.setRotationFromEuler(orientation.rotation)
+        cursor3d.mdl.position.copy(orientation.position)
+        cursor3d.mdl.setRotationFromEuler(orientation.rotation)
         controlActive = true
       }
       
@@ -1230,15 +1359,53 @@ $(async function MAIN() {
         let y = Math.floor(mp3d.y+0.001) //hack to keep XZ picking consistant - no formal means has yet been defined to fix coordinates in one dimension
         let z = Math.round(mp3d.z)       //everything else can be as jittery as it wants
         
-        //cube
+        //if the position changes, reposition the cursor
         if ( (x != cursor3d.x) | (y != cursor3d.y) | (z != cursor3d.z)) {
-          put(cursor3d, x,y,z)
+          positionIndicator(cursor3d, x,y,z)
           controlActive = true
           edCTL.event.dispatchEvent(new Event("mousemove_cube"))
+        }
+        
+        //If its a side-cursor, force a reposition to ensure it gets offset into the correct location
+        else if (isSideCursor && controlActive) {
+          positionIndicator(cursor3d, x,y,z)
         }
       }
     }
   })()}
+  
+  let positionIndicator = function(indicator, x,y,z) {
+    if (isSideCursor) {
+      switch(indicator.up) {
+        case direction.code.UP:
+          put(indicator, x,y,z, false, 0,1,0)
+          break
+        case direction.code.DOWN:
+          put(indicator, x,y,z, false, 0,-1,0)
+          break
+        case direction.code.NORTH:
+          put(indicator, x,y,z, false, 0,0,1)
+          break
+        case direction.code.EAST:
+          put(indicator, x,y,z, false, -1,0,0)
+          break
+        case direction.code.SOUTH:
+          put(indicator, x,y,z, false, 0,0,-1)
+          break
+        case direction.code.WEST:
+          put(indicator, x,y,z, false, 1,0,0)
+          break
+      }
+    }
+    else {
+      put(indicator, x,y,z)
+      
+      // If the [selection] mark indicator and cursor are positioned on top of each other, hide the cursor
+      if (mark.ctn == cursor3d.ctn) {
+        remove(cursor3d, false)
+      }
+    }
+  }
   
   // If any object(s) that conflict with the active tool are present at the cursor position, delete them
   let evict = function(up) {  
@@ -1267,7 +1434,7 @@ $(async function MAIN() {
           
           // If the object's spatial class is not present in the coexist list, it conflicts with the tool and should be removed
           if (coexistWith.indexOf(obj.spec.spatialClass) == -1) {
-            remove(obj, cursor3d.x, cursor3d.y, cursor3d.z)
+            remove(obj)
           }
         }
       }
@@ -1311,6 +1478,7 @@ $(async function MAIN() {
   }
   
   let _build = function(tool, x,y,z, up, forward, components, terrain, terrainID) {
+    let mdl
     let obj = {}
     let uprop = tool.spec.unique
     if (uprop) {
@@ -1319,7 +1487,7 @@ $(async function MAIN() {
       }
       let other = UniqueObjects[tool.spec[uprop]]
       if (other) {
-        remove(other, other.x, other.y, other.z)
+        remove(other)
       }
       UniqueObjects[tool.spec[uprop]] = obj
     }
@@ -1333,40 +1501,13 @@ $(async function MAIN() {
       obj.data.$.push(terrainID)
     }
     else if (tool.spec.model) {
-      let mdl = getAsset(edCTL.assets, tool.spec.model)
-      obj.mdl = new THREE.Object3D()
-      obj.mdl.add(mdl)
-      if (components) {
-        for (let compName in components) {
-          switch(compName) {
-            //bypass "virtual" components (mainly these are used for terrain properties)
-            case "up":
-            case "down":
-            case "north":
-            case "east":
-            case "south":
-            case "west":
-            case "all":
-            case "horiz":
-            case "vert":
-              break
-            case "materials":
-              let mats = deepcopy(components[compName])
-              assignMaterials(mdl, mats)
-              obj.data[compName] = deepcopy(components[compName])
-              break
-            //every other component
-            default:
-              obj.data[compName] = deepcopy(components[compName])
-              break
-          }
-        }
-      }
-      if ((!components || !components.materials) && tool.spec.editorMaterials) {
-        assignMaterials(mdl, tool.spec.editorMaterials)
-      }
+      mdl = getAsset(edCTL.assets, tool.spec.model)
+      obj.mdl = mdl
+      obj.gx = new THREE.Object3D()
+      obj.gx.add(mdl)
       
       if ((tool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
+        obj.up = up
         obj.data.$.push(up)
         obj.data.$.push(forward)
         let orientation = {}
@@ -1375,7 +1516,52 @@ $(async function MAIN() {
         mdl.setRotationFromEuler(orientation.rotation)
       }
     }
+    if (components) {
+      for (let compName in components) {
+        switch(compName) {
+          //bypass "virtual" components (mainly these are used for terrain properties)
+          case "up":
+          case "down":
+          case "north":
+          case "east":
+          case "south":
+          case "west":
+          case "all":
+          case "horiz":
+          case "vert":
+            break
+          case "materials":
+            let mats = deepcopy(components[compName])
+            assignMaterials(mdl, mats)
+            obj.data[compName] = deepcopy(components[compName])
+            break
+          //every other component
+          default:
+            obj.data[compName] = deepcopy(components[compName])
+            break
+        }
+      }
+    }
+    if ((!components || !components.materials) && tool.spec.editorMaterials) {
+      assignMaterials(mdl, tool.spec.editorMaterials)
+    }
     put(obj, x, y, z)
+  }
+  
+  let updateObject = function(obj) {
+    if (obj.terrain) {
+      
+    }
+    if (obj.data) {
+      for (let compName in obj.data) {
+        switch(compName) {
+          case "materials":
+            assignMaterials(obj.mdl, obj.data.materials)
+            controlActive = true
+            break
+        }
+      }
+    }
   }
   
   let erase = function() {
@@ -1399,6 +1585,29 @@ $(async function MAIN() {
       }
     }
   }
+  
+  let edit = function() {
+    let ctn = vxc.get( cursor3d.x, cursor3d.y, cursor3d.z)
+    if (ctn.contents) {
+      for (let obj of ctn.contents) {
+        if (!obj.isEditorUI && obj.data) {
+          mark.up = cursor3d.up
+          mark.forward = cursor3d.forward
+          mark.mdl.position.copy(cursor3d.mdl.position)
+          mark.mdl.rotation.copy(cursor3d.mdl.rotation)
+          positionIndicator(mark, cursor3d.x, cursor3d.y, cursor3d.z)
+          buildComponentEditor(obj)
+          populateObjectSelector(ctn, (pickmode == "mray" ? cursor3d.up : undefined), obj)
+          return
+        }
+      }
+    }
+    clearComponentEditor()
+    remove(mark, false)
+    positionIndicator(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
+    controlActive = true
+  }
+  
   let finishErase = function() {
     erase()
     removeObjects()
@@ -1413,7 +1622,7 @@ $(async function MAIN() {
       for (let j = ctn.contents.length-1; j >= 0; j--) {
         let obj = ctn.contents[j]
         if (!obj.isEditorUI) {
-          remove(ctn.contents[j], ctn.x, ctn.y, ctn.z)
+          remove(ctn.contents[j])
         }
       }
     }
@@ -1433,6 +1642,9 @@ $(async function MAIN() {
       drag:erase,
       release:finishErase,
       drag_evttype:"mousemove_cube"
+    },
+    edit:{
+      click:edit
     }
   }
   
@@ -1619,12 +1831,50 @@ $(async function MAIN() {
       buildComponentEditor()
       updateTerrainProperties()
       
-      cursor3d.mdl.remove(cursorMDL)
-      releaseAsset(edCTL.assets, cursorMDL)
-      cursorMDL = getAsset(edCTL.assets, activeTool.spec.cursorModel)
-      cursor3d._mdl = cursorMDL
-      cursor3d.mdl.add(cursorMDL)
+      updateCursor()
     }
+    remove(mark)
+    positionIndicator(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
+    controlActive = true
+  }
+  
+  // Special flag to offset the cursor 1 unit along its normal vector, so that it is drawn "above" the selected position
+  //  (this is used for side-attached objects and the edit tool)
+  let isSideCursor = false
+  
+  let updateCursor = function() {
+    let mdlname = activeTool.spec.cursorModel
+    if (pickmode == "mray") {
+      if (activeTool.spec.cursorModel_mray) {
+        mdlname = activeTool.spec.cursorModel_mray
+      }
+      isSideCursor = activeTool.spec.sideCursor_mray
+    }
+    else {
+      isSideCursor = activeTool.spec.sideCursor
+    }
+    cursor3d.gx.remove(cursorMDL)
+    releaseAsset(edCTL.assets, cursorMDL)
+    
+    cursorMDL = getAsset(edCTL.assets, mdlname)
+    cursor3d.mdl = cursorMDL
+    cursor3d.gx.add(cursorMDL)
+    controlActive = true
+    
+    mdlname = activeTool.spec.markModel
+    if (mdlname) {
+      if (isSideCursor && activeTool.spec.markModel_mray) {
+        mdlname = activeTool.spec.markModel_mray
+      }
+      mark.gx.remove(markMDL)
+      releaseAsset(edCTL.assets, markMDL)
+      
+      markMDL = getAsset(edCTL.assets, mdlname)
+      mark.mdl = markMDL
+      mark.gx.add(markMDL)
+    }
+    
+    positionIndicator(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
   }
   
   // BoxTerrain configuration section
@@ -1879,6 +2129,27 @@ $(async function MAIN() {
     icon:{
       sheet:"editoricons",
       row:1,
+      col:1
+    },
+  })
+  
+  defineTool({
+    type:"edit",
+    name:"Edit",
+    editorOnly:true,
+    pickModes:["xz", "xy", "yz", "pick"],
+    alignMode:"none",
+    pickIn:true,
+    spclassPick:"*",
+    routine:"edit",
+    cursorModel:"CubeCursor",
+    cursorModel_mray:"FaceCursor",
+    markModel:"CubeMark",
+    markModel_mray:"FaceMark",
+    sideCursor_mray:true,
+    icon:{
+      sheet:"editoricons",
+      row:2,
       col:1
     },
   })

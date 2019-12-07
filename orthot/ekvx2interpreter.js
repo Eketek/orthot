@@ -84,7 +84,7 @@ var Ekvx2Interpreter = {
     }
     // stage 1
     for (let obj of ekvx.Objects) {
-      let [templateID, x,y,z] = obj.$
+      let [templateID, x,y,z, up, forward] = obj.$
       let template = ekvx.Templates[templateID]
       updBounds(x,y,z)
       let loc = vxc.get(x,y,z)
@@ -104,6 +104,7 @@ var Ekvx2Interpreter = {
           let campos = new THREE.Vector3(x+5,y+3.5,z+1)
           zone.targets.__STARTLOC = {
             loc:loc,
+            align:{ up:up, forward:forward },
             campos:new THREE.Vector3(campos.x, campos.y, campos.z)
           }
           // ekvx1 used Player/start as an easy place to put "zone" attributes 
@@ -131,6 +132,14 @@ var Ekvx2Interpreter = {
           }
           */
         } break
+        case "infoblock": {
+          gobj = new InfoBlock(zone, true, obj.message, undefined, obj.materials, [obj.materials[1]])
+          break
+        }
+      }
+      if (gobj) {
+        ldstate.loaded_objects.push(gobj)
+        zone.putGameobject(x,y,z, gobj)
       }
     }
     

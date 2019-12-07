@@ -1577,6 +1577,9 @@ var Zone = function(ekvx, override_startloc, name, yieldsProgressCode) {
         up:ldstate.start_align.up
       }
     }
+    else if (start_target.align) {
+      pl_align = start_target.align
+    }
     player = new Player(this, pl_align, ldstate.start_fpmode)
     
     player.initGraphics()

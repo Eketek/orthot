@@ -19,7 +19,7 @@ var deepcopy = function(obj) {
     r = Object.assign({}, obj)
   }
   else {
-    return r
+    return obj
   }
   for (let [k, v] of Object.entries(obj)) {
     if (typeof(v) == "object") {

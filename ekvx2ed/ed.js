@@ -781,12 +781,12 @@ $(async function MAIN() {
   // This drop-down menu shows a listing obj valid editable objects at the selected position
   // When something is selected on that drop-down menu, the object properties editor is then re-configured to edit the corresponding object.
   // if there are only 0 or 1 editable objects, the object selector will be/remain hidden (this is expected to be the case most of the time).
-  let populateObjectSelector = function(ctn, up, activeObj) {
+  let populateObjectSelector = function(ctn, side, activeObj) {
     if (ctn.contents) {
       let count = 0
       for (let obj of ctn.contents) {
         if (!obj.isEditorUI) {
-          if ((up == undefined) || (obj.up == undefined) || (obj.up == up)) {
+          if ((side == undefined) || (obj.side == undefined) || (obj.side == side)) {
             count++
           }
         }
@@ -801,17 +801,17 @@ $(async function MAIN() {
         }
         for (let obj of ctn.contents) {
           if (!obj.isEditorUI) {
-            if ((up == undefined) || (obj.up == undefined) || (obj.up == up)) {
+            if ((side == undefined) || (obj.side == undefined) || (obj.side == side)) {
               let optelem = document.createElement("option")
               optelem.__obj = obj
               if (obj == activeObj) {
                 optelem.selected = true
               }
-              if (obj.up == undefined) {
+              if (obj.side == undefined) {
                 optelem.text = obj.spec.name
               }
               else {
-                optelem.text = direction.name[obj.up][0] + " " + obj.spec.name
+                optelem.text = direction.name[obj.side][0] + " " + obj.spec.name
               }
               objsel.add(optelem)
             }
@@ -880,7 +880,7 @@ $(async function MAIN() {
     for (let name in spec) {
       let def = spec[name]
       let comp = target[name]
-      if (!comp) {  // if the component is undefined, it is a virtual component and shoudl be ignored (object properties - mainly terrain)
+      if (comp == undefined) {  // if the component is undefined, it is a virtual component and shoudl be ignored (object properties - mainly terrain)
         continue
       }
       let proped = name
@@ -1507,7 +1507,9 @@ $(async function MAIN() {
       obj.gx.add(mdl)
       
       if ((tool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
-        obj.up = up
+        if (tool.spec.attachment) {
+          obj.side = up
+        }
         obj.data.$.push(up)
         obj.data.$.push(forward)
         let orientation = {}

@@ -260,7 +260,10 @@
           "black", 
           {"color":"black", "metalness":1}, 
           {"color":"white", "emissive":"yellow", "emissiveIntensity":1}
-        ]
+        ],
+        "startMSG":"",
+        "defeatMSG":"",
+        "fpview":false
       }
     },
     {

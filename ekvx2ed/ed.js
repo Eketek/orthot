@@ -927,9 +927,25 @@ $(async function MAIN() {
     if (generalProperties.length > 0) {
       addRow("General Properties")
       for (let name of generalProperties) {
-        addRow(name, name, propEditor_textarea(obj, target, name, "", false))
+        switch(typeof(spec[name])) {
+          case "string":
+            addRow(name, name, propEditor_textarea(obj, target, name))
+            break
+          case "boolean":
+            addRow(name, name, propEditor_checkbox(obj, target, name))
+            break
+        }
       }
     }
+  }
+  let propEditor_checkbox = function(obj, component, name) {
+    let chkb = $('<input type="checkbox">')[0]
+    chkb.value = Boolean(component[name])
+    on(chkb, "input", ()=>{
+      console.log("chkb-changed?")
+      component[name] = chkb.checked
+    })
+    return chkb
   }
   
   let propEditor_color = function(obj, component, name) {

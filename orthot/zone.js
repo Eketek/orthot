@@ -1580,7 +1580,12 @@ var Zone = function(ekvx, override_startloc, name, yieldsProgressCode) {
     else if (start_target.align) {
       pl_align = start_target.align
     }
-    player = new Player(this, pl_align, ldstate.start_fpmode)
+    let fpmode = ldstate.start_fpmode
+    if (start_target.fpview != undefined) {
+      fpmode = start_target.fpview
+    }
+      
+    player = new Player(this, pl_align, fpmode)
     
     player.initGraphics()
     this.putGameobject(start_target.loc, player)

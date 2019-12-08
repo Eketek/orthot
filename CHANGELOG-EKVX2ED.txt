@@ -3,6 +3,7 @@
   Added a selection-mark object to the editor (to indicate a selected object/position)
   Extend the tool properties editor to also manipulate object properties (can now use it for either a prototype or a generated object).
   Added a drop-down menu to the UI to select an object to edit when there are multiple objects available to edit in the space the edit tool has marked.
+  Added a boolean property editor
 
 4 Dec 2019 
   Fixed broken mouse-ray pickmode limiter (was inadvertently disabled by a recent change)

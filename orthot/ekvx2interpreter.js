@@ -105,23 +105,25 @@ var Ekvx2Interpreter = {
           zone.targets.__STARTLOC = {
             loc:loc,
             align:{ up:up, forward:forward },
-            campos:new THREE.Vector3(campos.x, campos.y, campos.z)
+            campos:new THREE.Vector3(campos.x, campos.y, campos.z),
+            fpview:obj.fpview
           }
-          // ekvx1 used Player/start as an easy place to put "zone" attributes 
-          // ekvx2 might do the same thing, or it might get reconsidered.
+          if (obj.fpview) {
+            zone.targets.__STARTLOC.fpview = true
+            zone.targets.__STARTLOC.campos.y = y
+          }
           
-          
-          //let campos = property("camPos", datas, undefined, parseVec3)
-          //ldstate.start_align = property("align", datas, undefined, parseO2Orientation)
-          //ldstate.start_fpmode = property("camPos", datas) == "fp"
-          /*
-          let tipMSG = property("tip", datas)
+          let tipMSG = obj.startMSG
           let defeatMSG
           if (zone.resetCause == "defeated") {
-            defeatMSG = property("defeat", datas)
-            if (!defeatMSG) {
-              defeatMSG = property("death", datas)
-            }
+            defeatMSG = obj.defeatMSG
+          }
+          
+          if (tipMSG == "") {
+            tipMSG = undefined
+          }
+          if (defeatMSG == "") {
+            defeatMSG = undefined
           }
           
           // If the startblock data has a message specified, set up am invisible InfoBlock for it
@@ -130,7 +132,7 @@ var Ekvx2Interpreter = {
             ldstate.loaded_objects.push(info_obj)
             zone.putGameobject(x,y,z, info_obj)
           }
-          */
+          
         } break
         case "infoblock": {
           gobj = new InfoBlock(zone, true, obj.message, undefined, obj.materials, [obj.materials[1]])

@@ -342,6 +342,7 @@ $(async function MAIN() {
     })
     return $btn
   }
+  
   let setMraypickmode = function() {
     pickmode = "mray"
     if (activeTool) {
@@ -373,10 +374,12 @@ $(async function MAIN() {
     }
   }
   
-  addEditorBTN("MRAY", "Pick against object under mouse cursor", setMraypickmode, false, "optionButtons", "pickmode", "editoricons", 0, 0, 40, 5)
-  addEditorBTN("XZ", "Pick against an XZ plane", setXZpickmode, true, "optionButtons", "pickmode", "editoricons", 0, 1, 40, 5)
-  addEditorBTN("XY", "Pick against an XY plane", setXYpickmode, false, "optionButtons", "pickmode", "editoricons", 0, 2, 40, 5)
-  addEditorBTN("YZ", "Pick against an YZ plane", setYZpickmode, false, "optionButtons", "pickmode", "editoricons", 0, 3, 40, 5)
+  let pickmodeButtons = {
+    mray:addEditorBTN("MRAY", "Pick against object under mouse cursor", setMraypickmode, false, "optionButtons", "pickmode", "editoricons", 0, 0, 40, 5),
+    xz:addEditorBTN("XZ", "Pick against an XZ plane", setXZpickmode, true, "optionButtons", "pickmode", "editoricons", 0, 1, 40, 5),
+    xy:addEditorBTN("XY", "Pick against an XY plane", setXYpickmode, false, "optionButtons", "pickmode", "editoricons", 0, 2, 40, 5),
+    yz:addEditorBTN("YZ", "Pick against an YZ plane", setYZpickmode, false, "optionButtons", "pickmode", "editoricons", 0, 3, 40, 5)
+  }
 
   on($("#foldcommandsBTN"), "click", ()=>{ $("#commands").toggle()})
   on($("#foldtoolsBTN"), "click", ()=>{ $("#tools").toggle()})
@@ -817,9 +820,12 @@ $(async function MAIN() {
             }
           }
         }
+        return
       }
     }
+    $("#objSelector").hide()
   }
+  
   on($("#objSelector"), "input", (asdf)=>{
     let objsel = $("#objSelector")[0]
     if (objsel.selectedIndex != -1) {
@@ -842,6 +848,7 @@ $(async function MAIN() {
     }
     else {
       spec = target = activeTool.components
+      $("#objSelector").hide()
     }
     
     let $compelem = $("#objProperties")
@@ -1245,6 +1252,8 @@ $(async function MAIN() {
       let mp3d, up, forward, _
       mp3d = sviewCTL.mpos3d
       
+      cursor3d.raycastHit = false
+      
       switch(pickmode) {
         case "xz":
           if (sviewCTL.campos.phi/Math.PI < 0.5) {
@@ -1297,6 +1306,7 @@ $(async function MAIN() {
                   continue
                 }
                 if ((!obj.isEditorUI) && ((spclasses == "*") || (obj.spec && (spclasses.indexOf(obj.spec.spatialClass) != -1)))) {
+                  cursor3d.raycastHit = true
                   up = coord.up
                   forward = coord.forward
                   mp3d = coord
@@ -1377,22 +1387,30 @@ $(async function MAIN() {
         
         //if the position changes, reposition the cursor
         if ( (x != cursor3d.x) | (y != cursor3d.y) | (z != cursor3d.z)) {
-          positionIndicator(cursor3d, x,y,z)
+          positionObject(cursor3d, x,y,z)
           controlActive = true
           edCTL.event.dispatchEvent(new Event("mousemove_cube"))
         }
         
         //If its a side-cursor, force a reposition to ensure it gets offset into the correct location
         else if (isSideCursor && controlActive) {
-          positionIndicator(cursor3d, x,y,z)
+          positionObject(cursor3d, x,y,z)
+        }
+      }
+      if (activeTool && (pickmode == "mray") && activeTool.spec.requireRaycastHit) {
+        if (!cursor3d.raycastHit) {
+          remove(cursor3d, false)
         }
       }
     }
   })()}
   
-  let positionIndicator = function(indicator, x,y,z) {
-    if (isSideCursor) {
-      switch(indicator.up) {
+  let positionObject = function(indicator, x,y,z, side) {
+    if (isSideCursor || (side != undefined)) {
+      if (side == undefined) {
+        side = indicator.up
+      }
+      switch(side) {
         case direction.code.UP:
           put(indicator, x,y,z, false, 0,1,0)
           break
@@ -1424,7 +1442,7 @@ $(async function MAIN() {
   }
   
   // If any object(s) that conflict with the active tool are present at the cursor position, delete them
-  let evict = function(up) {  
+  let evict = function(side) {  
     let ctn = vxc.get(cursor3d.x, cursor3d.y, cursor3d.z)
     if (ctn.contents) {
       let coexistWith = activeTool.spec.spclassCoexist
@@ -1443,7 +1461,7 @@ $(async function MAIN() {
           }
           // If an attachment tool, but the object is not at the expected position, ignore it
           else {
-            if (up != obj.up) {
+            if (side != obj.side) {
               continue
             }
           }
@@ -1476,6 +1494,16 @@ $(async function MAIN() {
             forward = cursor3d.up
           }
           break
+        case "vert":
+        case "vertical":
+          if ( (cursor3d.up == direction.code.UP) || (cursor3d.up == direction.code.DOWN) ) {
+            return
+          }
+          else {
+            up = cursor3d.up
+            forward = direction.code.UP
+          }
+          break
         case "any":
         case "*":
           up = cursor3d.up
@@ -1490,7 +1518,9 @@ $(async function MAIN() {
         mrayDragPositions.shift(1)
       }
     }
-    _build(activeTool, cursor3d.x, cursor3d.y, cursor3d.z, up, forward, activeTool.components, activeTool.terrain, activeTool.terrainID)
+    if (!activeTool.spec.requireRaycastHit || (pickmode != "mray") || cursor3d.raycastHit) {
+      _build(activeTool, cursor3d.x, cursor3d.y, cursor3d.z, up, forward, activeTool.components, activeTool.terrain, activeTool.terrainID)
+    }
   }
   
   let _build = function(tool, x,y,z, up, forward, components, terrain, terrainID) {
@@ -1563,7 +1593,13 @@ $(async function MAIN() {
     if ((!components || !components.materials) && tool.spec.editorMaterials) {
       assignMaterials(mdl, tool.spec.editorMaterials)
     }
-    put(obj, x, y, z)
+    if (tool.spec.attachment) {
+      obj.side = up
+      positionObject(obj, x,y,z, up)
+    }
+    else {
+      put(obj, x, y, z)
+    }
   }
   
   let updateObject = function(obj) {
@@ -1583,47 +1619,51 @@ $(async function MAIN() {
   }
   
   let erase = function() {
-    let ctn = vxc.get(cursor3d.x, cursor3d.y, cursor3d.z)
-    if (ctn && ctn.contents) {
-      remLocs.push(ctn)
-      if (pickmode == "mray") {
-      
-        let shadeOBJ = {
-          x:cursor3d.x,y:cursor3d.y,z:cursor3d.z,
-          mdl:getAsset(edCTL.assets, "ShadeCube")
-        }
-        put(shadeOBJ,cursor3d.x, cursor3d.y, cursor3d.z)
+    if (!activeTool.spec.requireRaycastHit || (pickmode != "mray") || cursor3d.raycastHit) {
+      let ctn = vxc.get(cursor3d.x, cursor3d.y, cursor3d.z)
+      if (ctn && ctn.contents) {
+        remLocs.push(ctn)
+        if (pickmode == "mray") {
         
-        if (remLocs.length > MrayDragLimit) {
-          removeObjects(1)
+          let shadeOBJ = {
+            x:cursor3d.x,y:cursor3d.y,z:cursor3d.z,
+            mdl:getAsset(edCTL.assets, "ShadeCube")
+          }
+          put(shadeOBJ,cursor3d.x, cursor3d.y, cursor3d.z)
+          
+          if (remLocs.length > MrayDragLimit) {
+            removeObjects(1)
+          }
         }
-      }
-      else {
-        removeObjects()
+        else {
+          removeObjects()
+        }
       }
     }
   }
   
   let edit = function() {
-    let ctn = vxc.get( cursor3d.x, cursor3d.y, cursor3d.z)
-    if (ctn.contents) {
-      for (let obj of ctn.contents) {
-        if (!obj.isEditorUI && obj.data) {
-          mark.up = cursor3d.up
-          mark.forward = cursor3d.forward
-          mark.mdl.position.copy(cursor3d.mdl.position)
-          mark.mdl.rotation.copy(cursor3d.mdl.rotation)
-          positionIndicator(mark, cursor3d.x, cursor3d.y, cursor3d.z)
-          buildComponentEditor(obj)
-          populateObjectSelector(ctn, (pickmode == "mray" ? cursor3d.up : undefined), obj)
-          return
+    if (!activeTool.spec.requireRaycastHit || (pickmode != "mray") || cursor3d.raycastHit) {
+      let ctn = vxc.get( cursor3d.x, cursor3d.y, cursor3d.z)
+      if (ctn.contents) {
+        for (let obj of ctn.contents) {
+          if (!obj.isEditorUI && obj.data) {
+            mark.up = cursor3d.up
+            mark.forward = cursor3d.forward
+            mark.mdl.position.copy(cursor3d.mdl.position)
+            mark.mdl.rotation.copy(cursor3d.mdl.rotation)
+            positionObject(mark, cursor3d.x, cursor3d.y, cursor3d.z)
+            buildComponentEditor(obj)
+            populateObjectSelector(ctn, (pickmode == "mray" ? cursor3d.up : undefined), obj)
+            return
+          }
         }
       }
+      clearComponentEditor()
+      remove(mark, false)
+      positionObject(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
+      controlActive = true
     }
-    clearComponentEditor()
-    remove(mark, false)
-    positionIndicator(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
-    controlActive = true
   }
   
   let finishErase = function() {
@@ -1663,6 +1703,11 @@ $(async function MAIN() {
     },
     edit:{
       click:edit
+    },
+    attach:{
+      click:build,
+      drag:build,
+      drag_evttype:"mousemove_cube"
     }
   }
   
@@ -1842,6 +1887,20 @@ $(async function MAIN() {
   let setTool = function(name) {
     edCTL.event.dispatchEvent(new Event("cancel"))
     activeTool = tools[name]
+    if (activeTool.spec.pickModes.indexOf(pickmode) == -1) {
+      pickmodeButtons[activeTool.spec.pickModes[0]][0].dispatchEvent( new Event("mousedown"))
+      pickmodeButtons[activeTool.spec.pickModes[0]][0].dispatchEvent( new Event("mouseup"))
+    }
+    for (let name in pickmodeButtons) {    
+      let $btn = pickmodeButtons[name]
+      if (activeTool.spec.pickModes.indexOf(name) == -1) {
+        $btn.hide()
+      } 
+      else {
+        $btn.show()
+      }
+    }
+    
     if (activeTool) {
       let opspec = opSpecs[activeTool.spec.routine]
       handleInput(opspec)
@@ -1852,7 +1911,7 @@ $(async function MAIN() {
       updateCursor()
     }
     remove(mark)
-    positionIndicator(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
+    positionObject(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
     controlActive = true
   }
   
@@ -1870,6 +1929,9 @@ $(async function MAIN() {
     }
     else {
       isSideCursor = activeTool.spec.sideCursor
+    }
+    if (activeTool.spec.attachment) {
+      isSideCursor = true
     }
     cursor3d.gx.remove(cursorMDL)
     releaseAsset(edCTL.assets, cursorMDL)
@@ -1892,7 +1954,7 @@ $(async function MAIN() {
       mark.gx.add(markMDL)
     }
     
-    positionIndicator(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
+    positionObject(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
   }
   
   // BoxTerrain configuration section
@@ -2138,7 +2200,7 @@ $(async function MAIN() {
     type:"erase",
     name:"Erase",
     editorOnly:true,
-    pickModes:["xz", "xy", "yz", "pick"],
+    pickModes:["xz", "xy", "yz", "mray"],
     alignMode:"none",
     pickIn:true,
     spclassPick:"*",
@@ -2155,7 +2217,7 @@ $(async function MAIN() {
     type:"edit",
     name:"Edit",
     editorOnly:true,
-    pickModes:["xz", "xy", "yz", "pick"],
+    pickModes:["xz", "xy", "yz", "mray"],
     alignMode:"none",
     pickIn:true,
     spclassPick:"*",
@@ -2165,6 +2227,7 @@ $(async function MAIN() {
     markModel:"CubeMark",
     markModel_mray:"FaceMark",
     sideCursor_mray:true,
+    requireRaycastHit:true,
     icon:{
       sheet:"editoricons",
       row:2,

@@ -1,8 +1,9 @@
 0.3.0:
   6-7 Dec 2019
     Apply starting position alignment
-    Add info block to ekvx2 loader
+    Add InfoBlocks to ekvx2 loader
     Add start message, defeat message, and first-person view properties to the starting position handler in ekvx2 loader
+    Add Ladders to ekvx2 loader
     
   3 Dec 2019
     Added a View/camera Object for use with ekvx2 zones.

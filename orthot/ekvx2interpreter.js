@@ -154,7 +154,12 @@ var Ekvx2Interpreter = {
       let gobj
       let align, color, mats
       let adjctn
-      
+      switch(template.type) {
+        case "ladder":
+          let ldr = new Ladder( { up:obj.$[4], forward:obj.$[5] }, obj.materials)
+          zone.attach(x,y,z, ldr)
+          break
+      }
     }
   }
 }

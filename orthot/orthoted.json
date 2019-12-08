@@ -85,6 +85,18 @@
       "spclassCoexist":[],
       "planarPick":true,
       "routine":"buildcube"
+    },
+    "Attachment":{
+      "pickModes":["mray"],
+      "alignMode":"any",
+      "attachment":true,
+      "requireRaycastHit":true,
+      "pickIn":true,
+      "cursorModel":"DirCursor",
+      "spatialClass":"solid",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "routine":"attach"
     }
   },
   "Tools":[
@@ -237,20 +249,36 @@
       }
     },
     {
+      "extend":"Attachment",
+      "type":"ladder",
+      "name":"Ladder",
+      "shortname":"Ladder",
+      "cursorModel":"FaceCursor",
+      "model":"ladder",
+      "icon":{
+        "sheet":"AppIcons",
+        "row":2,
+        "col":1
+      },
+      "alignMode":"vertical",
+      "components":{
+        "materials":["hsl(15,75%,40%)"]
+      }
+    },
+    {
       "extend":"HorizObject",
       "type":"start",
       "name":"Player-Start", 
       "shortname":"Start",
       "model":"man",
       "unique":"type",
-      "mutablecolors":true,
+      "spatialClass":"creature",
+      "spclassPick":["solid", "creature"],
+      "spclassCoexist":["scenery"],
       "icon":{
         "sheet":"AppIcons",
         "row":0,
         "col":0
-      },
-      "main":{
-        "material":1
       },
       "components":{
         "materials":[
@@ -272,6 +300,9 @@
       "name":"InfoBlock", 
       "shortname":"Info",
       "model":"InfoBlockFull",
+      "spatialClass":"scenery",
+      "spclassPick":"*",
+      "spclassCoexist":["creature"],
       "icon":{
         "sheet":"AppIcons",
         "row":0,

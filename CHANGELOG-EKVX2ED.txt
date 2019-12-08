@@ -4,6 +4,9 @@
   Extend the tool properties editor to also manipulate object properties (can now use it for either a prototype or a generated object).
   Added a drop-down menu to the UI to select an object to edit when there are multiple objects available to edit in the space the edit tool has marked.
   Added a boolean property editor
+  Completed support for attachment-type objects
+  If activating a tool that does not support the current pick-mode, set the pick-mode to the mode specified by the first entry in the tool specification.
+  Add option to require a successful raycast in mouse-ray pickmode (this also hides the cursor while raycasts fail)
 
 4 Dec 2019 
   Fixed broken mouse-ray pickmode limiter (was inadvertently disabled by a recent change)

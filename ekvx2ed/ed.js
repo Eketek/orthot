@@ -903,6 +903,7 @@ $(async function MAIN() {
         case "south":
         case "west":
         case "all":
+        case "surface":
         case "horiz":
         case "vert":
           addRow(name)
@@ -1174,6 +1175,9 @@ $(async function MAIN() {
     patternDefs = {}
     remLocs = []
     updateTerrainProperties()
+    if (activeTool) {
+      setTool(activeTool.spec.name)
+    }
   }
     
   let put = function(obj, x,y,z, ld=false, ofsX=0, ofsY=0, ofsZ=0) {
@@ -1555,6 +1559,7 @@ $(async function MAIN() {
           case "south":
           case "west":
           case "all":
+          case "surface":
           case "horiz":
           case "vert":
             break
@@ -1593,6 +1598,86 @@ $(async function MAIN() {
             assignMaterials(obj.mdl, obj.data.materials)
             controlActive = true
             break
+        }
+      }
+    }
+  }
+  
+  let editTerrain = function() {
+    if (cursor3d.raycastHit) {
+      let ctn = vxc.get(cursor3d.x, cursor3d.y, cursor3d.z)
+      if (ctn && ctn.contents) {
+        for (let obj of ctn.contents) {
+          if (obj.terrain) {
+            let sfcIDX
+            switch(cursor3d.up) {
+              case direction.code.NORTH:
+                sfcIDX = 2
+                break
+              case direction.code.EAST:
+                sfcIDX = 3
+                break
+              case direction.code.SOUTH:
+                sfcIDX = 0
+                break
+              case direction.code.WEST:
+                sfcIDX = 1
+                break
+              case direction.code.UP:
+                sfcIDX = 4
+                break
+              case direction.code.DOWN:
+                sfcIDX = 5
+                break
+            }
+            let sfcdefs = Array.from(obj.terrain.sfcdefs)
+            let sfcdefids = Array.from(obj.terrain.sfcdefids)
+            
+            activeTool.components.surface.color = toRGBstring(activeTool.components.surface.color)
+            let fdef = {
+              area8b:activeTool.spec.area8b,
+              tile:activeTool.components.surface.pattern,
+              mergeClass:activeTool.components.surface.mergeClass,
+              color:activeTool.components.surface.color,
+            }
+            let sk = JSON.stringify(fdef)
+            let sfcid = sfcIDs[sk]
+            if (sfcid) {
+              sfcdefs[sfcIDX] = surfaceDefs_bterr[sfcid]
+              sfcdefids[sfcIDX] = sfcid
+            }
+            else {
+              let tfdef = Object.assign({}, fdef)
+              tfdef.area8b = memoize(tfdef.area8b)
+              tfdef.tile = memoize(tfdef.tile)
+              surfaceDefs[next_sfcid] = tfdef
+              let sfc = bxtbldr.build_Sfcdef(fdef)
+              surfaceDefs_bterr[next_sfcid] = sfc
+              sfcdefids[sfcIDX] = next_sfcid
+              sfcIDs[sk] = next_sfcid
+              sfcdefs[sfcIDX] = sfc
+              next_sfcid++
+            }
+            let tk = JSON.stringify(sfcdefs)
+            let terrain = terrains[tk]
+            let tid = terrainIDs[tk]
+            
+            if (!terrain) {
+              tid = next_terrainid
+              terrainIDs[tk] = tid
+              next_terrainid++
+              terrain = terrains[tk] = bxtbldr.build_Terraindef.apply(bxtbldr, sfcdefs)
+              terrain.sfcdefs = sfcdefs
+              terrain.sfcdefids = sfcdefids
+              terrainDefs[tid] = sfcdefids
+            }
+            if (terrain != obj.terrain) {
+              obj.terrain = terrain
+              obj.data.$[4] = tid
+              put(obj, cursor3d.x, cursor3d.y, cursor3d.z)
+            }
+            return
+          }
         }
       }
     }
@@ -1706,6 +1791,11 @@ $(async function MAIN() {
     attach:{
       click:build,
       drag:build,
+      drag_evttype:"mousemove_cube"
+    },
+    editterrain:{
+      click:editTerrain,
+      drag:editTerrain,
       drag_evttype:"mousemove_cube"
     }
   }
@@ -2086,6 +2176,8 @@ $(async function MAIN() {
         }
       }
       let terrain = terrains[tk] = bxtbldr.build_Terraindef.apply(bxtbldr, sfcdefs)
+      terrain.sfcdefs = sfcdefs
+      terrain.sfcdefids = sfcdefids
       terrainDefs[tid] = sfcdefids
       return [terrain, tid]
     }
@@ -2311,6 +2403,8 @@ $(async function MAIN() {
     memos = data.Memos
     
     for (let memoid in memos) {
+      memoid = Number.parseInt(memoid)
+      
       if (memoid >= next_memoID) {
         next_memoID = memoid+1
       }
@@ -2318,7 +2412,8 @@ $(async function MAIN() {
     }
     
     for (let sfcdefid in surfaceDefs) {
-    
+      sfcdefid = Number.parseInt(sfcdefid)
+      
       let sfcdef = surfaceDefs[sfcdefid]
     
       //ensure unique surface identifiers can be generated after the import
@@ -2401,6 +2496,8 @@ $(async function MAIN() {
           let tk = JSON.stringify(tool.spec.terrain) + "|" + JSON.stringify(comps)
           terr = terrains[terrainID] = terrains[tk] = bxtbldr.build_Terraindef.apply(bxtbldr, sfcdefs)
           
+          terr.sfcdefs = sfcdefs
+          terr.sfcdefids = sfcdefids
         }
         // use the internal _build() to make the new editor object
         //    (the parsed JSON object could be recycled, but that was determined to not be worth the effort)

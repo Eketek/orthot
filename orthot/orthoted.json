@@ -249,6 +249,45 @@
       }
     },
     {
+      "type":"editterrain",
+      "name":"PaintWall",
+      "shortname":"paint-Wl",
+      "pickModes":["mray"],
+      "alignMode":"any",
+      "volumetric":true,
+      "pickIn":true,
+      "cursorModel":"FaceCursor",
+      "spatialClass":"solid",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "routine":"editterrain",
+      "editorOnly":true,
+      "requireRaycastHit":true,
+      "attachment":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":1,
+        "col":3
+      },
+      "area8b":{
+        "ul":{"x":0,"y":0},
+        "br":{"x":1,"y":1},
+        "rows":16,
+        "cols":16
+      },
+      "components":{
+        "surface":{
+          "color":"white",
+          "pattern":{
+            "rows":8,
+            "cols":8,
+            "x":0,
+            "y":0
+          }
+        }
+      }
+    },
+    {
       "extend":"Attachment",
       "type":"ladder",
       "name":"Ladder",

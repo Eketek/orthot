@@ -14,7 +14,7 @@ import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { direction, setOrientation, toForward } from '../libek/direction.js'
 import { BoxTerrain } from '../libek/boxterrain.js'
 import { VxScene } from '../libek/scene.js'
-import { plotLine, debugLine } from '../libek/plot.js'
+import { plotLine } from '../libek/plot.js'
 
 // Global rendering properties & controls (Mainly, materials and managed shader properties)
 var renderCTL = window.rctl = {
@@ -1240,9 +1240,10 @@ $(async function MAIN() {
     obj.ctn = undefined
   }
   
+  let positionKey = function(coord, isSide) {
+    return isSide ? `${coord.x},${coord.y},${coord.z},${coord.up}` : `${coord.x},${coord.y},${coord.z},` 
+  }
   
-  let draw_debugline = false
-  let debug_obj
   {(async function Cursor3DControl () {
     let evtman = new NextEventManager()
     
@@ -1300,10 +1301,10 @@ $(async function MAIN() {
             let ctn = vxc.get(coord.x, coord.y, coord.z)
             let spclasses = activeTool.spec.spclassPick
             if (ctn.contents) {
-              let strpos = `${coord.x},${coord.y},${coord.z}`
+              let posk = positionKey(coord, isSideCursor)
               for (let obj of ctn.contents) {
-                if (mrayDragPositions && (mrayDragPositions.indexOf(strpos) != -1)) {
-                  continue
+                if (mrayDragPositions && (mrayDragPositions.indexOf(posk) != -1)) {
+                  return false
                 }
                 if ((!obj.isEditorUI) && ((spclasses == "*") || (obj.spec && (spclasses.indexOf(obj.spec.spatialClass) != -1)))) {
                   cursor3d.raycastHit = true
@@ -1340,30 +1341,8 @@ $(async function MAIN() {
             //continue the plotting operation
             return true
           }
-          
-          // Plot a line from the mouse position, outward from the camera
-          // (mouse position is the screen-space mouse coordinates, projected onto the camera's backplane)
-          if (draw_debugline) {
-            if (debug_obj) {
-              vxc.scene.remove(debug_obj)
-              for (let ch of debug_obj.children) {
-                if (ch.isGeometry) {
-                  ch.dispose()
-                }
-                if (ch.material) {
-                  ch.material.dispose()
-                }
-              }
-            }
-            debug_obj = debugLine(origin, ray_end, plot)
-            vxc.scene.add(debug_obj)
-            draw_debugline = false
-            controlActive = true
-          }
-          else {
-            plotLine(origin, ray_end, plot)
-            controlActive = true
-          }
+          plotLine(origin, ray_end, plot)
+          controlActive = true
         } break
       }
       if ( ((up != cursor3d.up) || (forward != cursor3d.forward)) && (forward != direction.code.NODIR) && (up != undefined) && (forward != undefined) ) {
@@ -1511,14 +1490,15 @@ $(async function MAIN() {
           break
       }
     }
-    evict(up)
-    if (mrayDragPositions) {
-      mrayDragPositions.push(`${cursor3d.x},${cursor3d.y},${cursor3d.z}`)
-      if (mrayDragPositions.length >= MrayDragLimit) {
-        mrayDragPositions.shift(1)
-      }
-    }
     if (!activeTool.spec.requireRaycastHit || (pickmode != "mray") || cursor3d.raycastHit) {
+      if (mrayDragPositions) {
+        cursor3d.up = up
+        mrayDragPositions.push(positionKey(cursor3d, isSideCursor))
+        if (mrayDragPositions.length >= MrayDragLimit) {
+          mrayDragPositions.shift(1)
+        }
+      }
+      evict(up)
       _build(activeTool, cursor3d.x, cursor3d.y, cursor3d.z, up, forward, activeTool.components, activeTool.terrain, activeTool.terrainID)
     }
   }
@@ -1739,7 +1719,6 @@ $(async function MAIN() {
         return
       }
       if (pickmode == "mray") {
-        //draw_debugline = true
         if (!mrayDragPositions || mrayDragPositions.length != 0) {
           mrayDragPositions = []
         }

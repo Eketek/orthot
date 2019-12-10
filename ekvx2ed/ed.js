@@ -1134,6 +1134,7 @@ $(async function MAIN() {
       boxterrain:bxtbldr,
       chunks_per_tick:4
     })
+    edCTL.vxc = vxc
     surfaceDefs_bterr = {}
     renderCTL.display.scene.add(vxc.scene)
     cursor3d = {
@@ -1350,8 +1351,6 @@ $(async function MAIN() {
         } break
       }
       if ( ((up != cursor3d.up) || (forward != cursor3d.forward)) && (forward != direction.code.NODIR) && (up != undefined) && (forward != undefined) ) {
-        cursor3d.up = up
-        cursor3d.forward = forward
         let orientation = {}
         setOrientation(orientation, direction.invert[forward], up)
         cursor3d.mdl.position.copy(orientation.position)
@@ -1369,15 +1368,12 @@ $(async function MAIN() {
         let z = Math.round(mp3d.z)       //everything else can be as jittery as it wants
         
         //if the position changes, reposition the cursor
-        if ( (x != cursor3d.x) | (y != cursor3d.y) | (z != cursor3d.z)) {
+        if ( (x != cursor3d.x) || (y != cursor3d.y) || (z != cursor3d.z) || (((pickmode == "mray") && (up != cursor3d.up) && (forward != cursor3d.forward))) ) {
+          cursor3d.up = up
+          cursor3d.forward = forward
           positionObject(cursor3d, x,y,z)
           controlActive = true
           edCTL.event.dispatchEvent(new Event("mousemove_cube"))
-        }
-        
-        //If its a side-cursor, force a reposition to ensure it gets offset into the correct location
-        else if (isSideCursor && controlActive) {
-          positionObject(cursor3d, x,y,z)
         }
       }
       if (activeTool && (pickmode == "mray") && activeTool.spec.requireRaycastHit) {
@@ -1823,26 +1819,31 @@ $(async function MAIN() {
       if (opspec.drag_evttype) {
         inner:
         while (true) {
-          evt = await evtman.next(disp_elem, "lmb_up", edCTL.event, opspec.drag_evttype, "cancel")
-          switch(evt.vname) {
-            case "cancel":
-              if (opspec.cancel) { opspec.cancel() }
-              return
-            case "lmb_up":
-              if (!mrayDragPositions || mrayDragPositions.length != 0) {
-                mrayDragPositions = []
-              }
-              if (opspec.release) { opspec.release() }
-              edCTL.event.dispatchEvent( new Event("refresh"))
-              break inner
-            case opspec.drag_evttype:
-              if (opspec.drag) { opspec.drag() }
-              break
+          try {
+            evt = await evtman.next(disp_elem, "lmb_up", edCTL.event, opspec.drag_evttype, "cancel")
+            switch(evt.vname) {
+              case "cancel":
+                if (opspec.cancel) { opspec.cancel() }
+                return
+              case "lmb_up":
+                if (!mrayDragPositions || mrayDragPositions.length != 0) {
+                  mrayDragPositions = []
+                }
+                if (opspec.release) { opspec.release() }
+                edCTL.event.dispatchEvent( new Event("refresh"))
+                break inner
+              case opspec.drag_evttype:
+                if (opspec.drag) { opspec.drag() }
+                break
+            }
+            if (pickmode != "mray") {
+              recentPos.x = cursor3d.x
+              recentPos.y = cursor3d.y
+              recentPos.z = cursor3d.z
+            }
           }
-          if (pickmode != "mray") {
-            recentPos.x = cursor3d.x
-            recentPos.y = cursor3d.y
-            recentPos.z = cursor3d.z
+          catch(err) {
+            console.log("FIXTHIS:", err)
           }
         }
       }

@@ -1,10 +1,12 @@
-9 Dec 2019
+9-10 Dec 2019
   Add Detach tool
   Fix for attachment-type tools skipping a hit position and attaching where they should be obstructed when dragging
-  Partial fix for attachment-type tools being unable to attach to two sides of a block in one stroke with click & drag
+  Fix for attachment-type tools being unable to attach to two sides of a block in one stroke with click & drag
+    (also added a temporary workaround for an internal error which was triggered by the fix)
   Added a terrain painter (click and drag to change properties of individual tiles on existing terrain)
   Fixed import function (was erroneously converting a couple internal state variables to strings)
   Re-apply active tool alterations to editor state when initializing
+  
 
 6-7 Dec 2019
   Alignment handling to allow a 3d cursor to represent the side of a block

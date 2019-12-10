@@ -1,3 +1,6 @@
+9 Dec 2019
+  Add Detach tool
+
 6-7 Dec 2019
   Alignment handling to allow a 3d cursor to represent the side of a block
   Added a selection-mark object to the editor (to indicate a selected object/position)

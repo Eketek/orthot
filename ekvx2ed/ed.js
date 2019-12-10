@@ -1618,6 +1618,20 @@ $(async function MAIN() {
     }
   }
   
+  let detach = function() {
+    if (cursor3d.raycastHit) {
+      let ctn = vxc.get(cursor3d.x, cursor3d.y, cursor3d.z)
+      if (ctn && ctn.contents) {
+        for (let i = ctn.contents.length-1; i >= 0; i--) {
+          let obj = ctn.contents[i]
+          if (!obj.isEditorUI && (obj.side == cursor3d.up)) {
+            remove(ctn.contents[i])
+          }
+        }
+      }
+    }
+  }
+  
   let erase = function() {
     if (!activeTool.spec.requireRaycastHit || (pickmode != "mray") || cursor3d.raycastHit) {
       let ctn = vxc.get(cursor3d.x, cursor3d.y, cursor3d.z)
@@ -1699,6 +1713,11 @@ $(async function MAIN() {
       click:erase, 
       drag:erase,
       release:finishErase,
+      drag_evttype:"mousemove_cube"
+    },
+    detach:{
+      click:detach, 
+      drag:detach,
       drag_evttype:"mousemove_cube"
     },
     edit:{
@@ -2210,6 +2229,24 @@ $(async function MAIN() {
       sheet:"editoricons",
       row:1,
       col:1
+    },
+  })
+  defineTool({
+    type:"detach",
+    name:"Detach",
+    editorOnly:true,
+    pickModes:["mray"],
+    alignMode:"none",
+    pickIn:true,
+    spclassPick:"*",
+    routine:"detach",
+    cursorModel:"EraseFaceCursor",
+    sideCursor_mray:true,
+    requireRaycastHit:true,
+    icon:{
+      sheet:"editoricons",
+      row:1,
+      col:0
     },
   })
   

@@ -1369,11 +1369,13 @@ $(async function MAIN() {
         
         //if the position changes, reposition the cursor
         if ( (x != cursor3d.x) || (y != cursor3d.y) || (z != cursor3d.z) || (((pickmode == "mray") && (up != cursor3d.up) && (forward != cursor3d.forward))) ) {
-          cursor3d.up = up
-          cursor3d.forward = forward
-          positionObject(cursor3d, x,y,z)
-          controlActive = true
-          edCTL.event.dispatchEvent(new Event("mousemove_cube"))
+          if ( (up != undefined) && (forward != undefined)) {
+            cursor3d.up = up
+            cursor3d.forward = forward
+            positionObject(cursor3d, x,y,z)
+            controlActive = true
+            edCTL.event.dispatchEvent(new Event("mousemove_cube"))
+          }
         }
       }
       if (activeTool && (pickmode == "mray") && activeTool.spec.requireRaycastHit) {
@@ -1819,31 +1821,26 @@ $(async function MAIN() {
       if (opspec.drag_evttype) {
         inner:
         while (true) {
-          try {
-            evt = await evtman.next(disp_elem, "lmb_up", edCTL.event, opspec.drag_evttype, "cancel")
-            switch(evt.vname) {
-              case "cancel":
-                if (opspec.cancel) { opspec.cancel() }
-                return
-              case "lmb_up":
-                if (!mrayDragPositions || mrayDragPositions.length != 0) {
-                  mrayDragPositions = []
-                }
-                if (opspec.release) { opspec.release() }
-                edCTL.event.dispatchEvent( new Event("refresh"))
-                break inner
-              case opspec.drag_evttype:
-                if (opspec.drag) { opspec.drag() }
-                break
-            }
-            if (pickmode != "mray") {
-              recentPos.x = cursor3d.x
-              recentPos.y = cursor3d.y
-              recentPos.z = cursor3d.z
-            }
+          evt = await evtman.next(disp_elem, "lmb_up", edCTL.event, opspec.drag_evttype, "cancel")
+          switch(evt.vname) {
+            case "cancel":
+              if (opspec.cancel) { opspec.cancel() }
+              return
+            case "lmb_up":
+              if (!mrayDragPositions || mrayDragPositions.length != 0) {
+                mrayDragPositions = []
+              }
+              if (opspec.release) { opspec.release() }
+              edCTL.event.dispatchEvent( new Event("refresh"))
+              break inner
+            case opspec.drag_evttype:
+              if (opspec.drag) { opspec.drag() }
+              break
           }
-          catch(err) {
-            console.log("FIXTHIS:", err)
+          if (pickmode != "mray") {
+            recentPos.x = cursor3d.x
+            recentPos.y = cursor3d.y
+            recentPos.z = cursor3d.z
           }
         }
       }

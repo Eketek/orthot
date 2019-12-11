@@ -2,7 +2,7 @@ export { Ekvx2Interpreter }
 import { trit, T, getAsset, storeAsset, releaseAsset, Material } from '../libek/libek.js'
 import { property, properties_fromstring, mergeObjects, parseVec3, parseColor } from '../libek/util.js'
 
-import { orthotCTL } from './orthot.js'
+import { orthotCTL, renderCTL } from './orthot.js'
 import { parseO2Orientation } from './util.js'
 import { Wall, ScenePortal, InfoBlock, Stair, PushBlock, Crate, IceBlock, Key, Lock, Flag, Exit } from './simpleobjects.js'
 import { Ladder, Portal, Button, Icefloor } from './attachments.js'
@@ -72,6 +72,9 @@ var Ekvx2Interpreter = {
     }
   },
   load:function(zone, ldstate, ekvx) {
+    renderCTL.border.color = ekvx.Settings.NamedColors.border
+    renderCTL.hiliteA.color = ekvx.Settings.NamedColors.hiliteA
+    renderCTL.hiliteB.color = ekvx.Settings.NamedColors.hiliteB
     let vxc = zone.vxc
     let updBounds = function(x,y,z) {
       if (x<ldstate.min.x) ldstate.min.x=x
@@ -99,6 +102,46 @@ var Ekvx2Interpreter = {
         case "view":
           zone.viewpoints.push(new THREE.Vector3(x,y,z))
           break
+        case 'pushblock':
+          gobj = new PushBlock(zone, obj.materials)
+          break
+        case 'crate':
+          gobj = new Crate(zone, obj.materials)
+          break
+        case 'iceblock':
+          gobj = new IceBlock(zone, obj.materials)
+          break
+        case "mouse": 
+          gobj = new Mouse(zone, { up:up, forward:forward }, obj.materials)
+          break
+        case "moose": 
+          gobj = new Moose(zone, { up:up, forward:forward }, obj.materials)
+          break
+        case "key": {
+          let materials = obj.materials
+          let color = materials[0]
+          if (typeof(color) == "object") {
+            color = color.color
+          }
+          gobj = new Key(zone, color, color, materials)
+          zone.keys.push(gobj)
+        } break
+        case "lock": {
+          let materials = obj.materials
+          let color = materials[0]
+          if (typeof(color) == "object") {
+            color = color.color
+          }
+          gobj = new Lock(zone, color, color, materials)
+          zone.locks.push(gobj)
+        } break
+        case "stairs": {
+          gobj = new Stair(zone, obj.materials, { up:up, forward:direction.invert[forward] })
+          adjctn = zone.getAdjacentCTN(loc, direction.invert[up])
+          vxc.setTerrainKnockout(adjctn, up)
+          adjctn = zone.getAdjacentCTN(loc, direction.invert[forward])
+          vxc.setTerrainKnockout(adjctn, forward)
+        } break
         case "start": {
           zone.playerMaterials = obj.materials
           let campos = new THREE.Vector3(x+5,y+3.5,z+1)
@@ -155,9 +198,46 @@ var Ekvx2Interpreter = {
       let align, color, mats
       let adjctn
       switch(template.type) {
+        case "portal": {
+          vxc.setTerrainKnockout(loc, obj.$[4])
+                        
+          let portal = new Portal(
+            { up:obj.$[4], forward:obj.$[5] },
+            obj.materials,
+            obj.class, obj.name, obj.target
+          )
+          zone.attach(x,y,z, portal)
+
+          if (obj.target && obj.class) {
+            console.log("WARNING:  portal defines both single-target and class-based multitargeting (can't do both):", portal)
+          }
+          if (obj.name) {
+            ldstate.portals_byname[obj.name] = portal
+          }
+          if (obj.target) {
+            ldstate.targetted_portals.push(portal)
+            portal.target = obj.target
+          }
+          if (obj.class) {
+            let clist = ldstate.portals_byclass[obj.class]
+            if (!clist) {
+              clist = ldstate.portals_byclass[obj.class] = []
+            }
+            clist.push(portal)
+          }
+        } break
         case "ladder":
           let ldr = new Ladder( { up:obj.$[4], forward:obj.$[5] }, obj.materials)
           zone.attach(x,y,z, ldr)
+          break
+        case "button":
+          let btn = new Button(zone, { up:obj.$[4], forward:obj.$[5] }, obj.materials, "small", obj.press, obj.release)
+          zone.attach(x,y,z, btn)
+          break
+        case "icefloor":
+          let icf = new Icefloor( { up:obj.$[4], forward:obj.$[5] }, obj.materials)
+          zone.attach(x,y,z, icf)
+          vxc.setTerrainKnockout(loc, obj.$[4])
           break
       }
     }

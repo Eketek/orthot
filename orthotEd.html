@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>  Orthot III Puzzle Editor </title>
+    <title> Eketech Voxel Editor, Version 2 </title>
     <link rel="stylesheet" type="text/css" href="DefaultTheme.css">
 
     <script src="lib/three.js"></script>
@@ -13,13 +13,19 @@
     <script> 
       (async function f() {
         let resp = await fetch("/orthot/orthoted.json", {cache:"no-store"})
-        document.DEFAULT_EDITOR_CFG = JSON.parse(await resp.text())
+        let cfg = JSON.parse(await resp.text())
+        if (window.ectl && window.ectl.configure) {
+          window.ectl.configure(cfg)
+        }
+        else {
+          document.DEFAULT_EDITOR_CFG = cfg
+        }
       })();
     </script>
   </head>
   <body>
     <div class="mainblock section">
-     <span class="name" id="NameDisp"> Orthot III Puzzle Editor </span>
+     <span class="name" id="NameDisp"> Eketech Voxel Editor, Version 2 </span>
    </div>
 
     <div class="mainblock">
@@ -59,7 +65,15 @@
     <div id="port" class="info" style="min-width:400px;width:33%;padding:10px">
       ekvx2 export/import<hr>
       <textarea id="exportTarget" rows=40 style="min-width:100%;min-height:100%"></textarea>
-      <div id="import" class="btn_active">Import</div>
+      <div>
+        <span id="import" class="btn_active">Import</span>
+        &nbsp&nbsp&nbsp
+        <a id="savetofile" class="btn_active" download="untitled.ekvx2" title="Save to File">Save to File</a>
+        <span >
+          <label class="btn_active" for="loadfromfile">Load from File</label>
+          <input type="file" id="loadfromfile" name="ekvx2file" accept=".ekvx2,application/json" style="opacity:0;Width:0px"></input>
+        </span>
+      </div>
     </div>
     <div id="about" class="info" style="min-width:400px;width:33%;padding:10px">
       Ekvx2-ed with configuration for Orthot III<br>

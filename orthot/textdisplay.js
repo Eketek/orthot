@@ -527,7 +527,10 @@ var fadeoutTextDisplay = async function() {
     if (!textElem) break
     if (!textElem.tagName) break
     await fade(30, 1, 0, textElem)
-    TextDisplay.removeChild(textElem)
+    try {
+      TextDisplay.removeChild(textElem)
+    }
+    catch { /*Might think about doing somethign about this someday...*/ }
   }
   await fadeoutPromise  
   TextDisplay.innerText = ""

@@ -20,6 +20,7 @@
   padding:1px;
   margin-right:1px;
   background-color:hsl(60, 80%, 70%);
+  text-decoration: none;
 
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -97,7 +98,7 @@
   display:flex;
   align-items:center;
   flex-wrap: wrap;
-  max-width:200px;
+  max-width:210px;
 }
 
 .thickline {

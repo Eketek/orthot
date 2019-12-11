@@ -16,7 +16,9 @@ import { deactivateTextDisplay } from './textdisplay.js'
 import { Ekvx1Interpreter } from './ekvx1interpreter.js'
 import { Ekvx2Interpreter } from './ekvx2interpreter.js'
 
-var Zone = function(ekvx, override_startloc, name, yieldsProgressCode) {
+var Zone = function(ekvx, override_startloc, name, yieldsProgressCode, external, mainarea) {
+
+  
   this.isZone = true
   let isGeomValid = true
   this.name = name
@@ -28,6 +30,22 @@ var Zone = function(ekvx, override_startloc, name, yieldsProgressCode) {
   }
   else if (ekvx.EKVX2) {
     ekvxinterp = Ekvx2Interpreter
+    if (ekvx.Settings.isMainArea) {
+      mainarea= true
+    }
+  }
+  if (external) {
+    orthotCTL.$reload_defaultpack.show()
+  }
+  else {
+    orthotCTL.$reload_defaultpack.hide()
+  }
+  
+  if (mainarea) {
+    orthotCTL.$exit_to_mainarea.hide()
+  }
+  else {
+    orthotCTL.$exit_to_mainarea.show()
   }
 
   let bxtbldr = this.bxtbldr = new BoxTerrain(renderCTL.vxlMAT, renderCTL.uv2)

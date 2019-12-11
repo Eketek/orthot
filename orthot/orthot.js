@@ -154,10 +154,6 @@ $(async function MAIN() {
     setupMainTexts(txts.maintexts)
   }
 
-  //console.log("TEST-TXTLOADER---------")
-  //let testTXT = await load("orthot/test4.atxt", undefined, {cache:"reload"})
-  //console.log("---------TEST-TXTLOADER")
-
   orthotCTL.tiles.key = {
     source:orthotCTL.assets.symbols.image,
     x:0, y:0, w:64, h:64
@@ -169,9 +165,9 @@ $(async function MAIN() {
   let UI_TILESHADOW_OFFSET = [5,3]
   let UI_TILE_SIZE = [37,35]
 
-  renderCTL.fg = new ManagedColor("yellow")
-  renderCTL.bg1 = new ManagedColor("orange")
-  renderCTL.bg2 = new ManagedColor("green")
+  renderCTL.border = new ManagedColor("yellow")
+  renderCTL.hiliteA = new ManagedColor("orange")
+  renderCTL.hiliteB = new ManagedColor("green")
 
   renderCTL.vxlMAT = buildVariantMaterial("standard", {
     map:orthotCTL.assets.wall_8bit_fg,
@@ -182,8 +178,8 @@ $(async function MAIN() {
     sample:tt`
       vec4 mc = texture2D( map, vUv );
       vec4 bc = texture2D( bkgtex, uv2 );
-      vec3 fgColor = vColor*mc.r + ${renderCTL.fg}*mc.g;
-      vec3 bgColor = vColor*bc.r + ${renderCTL.bg1}*bc.g + ${renderCTL.bg2}*bc.b;
+      vec3 fgColor = vColor*mc.r + ${renderCTL.border}*mc.g;
+      vec3 bgColor = vColor*bc.r + ${renderCTL.hiliteA}*bc.g + ${renderCTL.hiliteB}*bc.b;
       sample = vec4(fgColor * mc.a + bgColor*(1.0-mc.a), 1.0);
     `
   })
@@ -250,6 +246,8 @@ $(async function MAIN() {
   orthotCTL.loadScene = function(arg, loc) {
     let ekvx = arg
     let yieldProgressCode = true
+    let external = false
+    let mainarea = false
     if (typeof(arg) == "string") {
       ekvx = orthotCTL.gdatapack.zones[arg]
       if (ekvx == undefined) {
@@ -262,16 +260,20 @@ $(async function MAIN() {
       ekvx = arg
       arg = "<< Test Zone >>"
       yieldProgressCode = false
+      external = true
     }
     else if (!arg) {
       arg = orthotCTL.gdatapack.mainAreaname
       ekvx = orthotCTL.gdatapack.zones[arg]
     }
+    if (arg == orthotCTL.gdatapack.mainAreaname) {
+      mainarea = true
+    }
     if (orthotCTL.ActiveZone) {
       renderCTL.display.scene.remove(orthotCTL.ActiveZone.scene)
       orthotCTL.ActiveZone.unload()
     }
-    orthotCTL.ActiveZone = new Zone(ekvx, loc, arg, yieldProgressCode)
+    orthotCTL.ActiveZone = new Zone(ekvx, loc, arg, yieldProgressCode, external, mainarea)
     renderCTL.display.scene.add(orthotCTL.ActiveZone.scene)
 
     for (let i = 0; i < levelSelector.length; i++) {
@@ -408,20 +410,32 @@ $(async function MAIN() {
       levelSelector.add($("<option>").text(name)[0])
     }
   }
+  
+  orthotCTL.$exit_to_mainarea = $("<div>").addClass("btn_active").text("Exit")
+  orthotCTL.$exit_to_mainarea[0].title = "Return to the Main Area"
+  on(orthotCTL.$exit_to_mainarea, "click", ()=>{
+    orthotCTL.loadScene("MainArea")
+  })
+  
+  orthotCTL.$reload_defaultpack = $("<div>").addClass("btn_active").text("Close File")
+  orthotCTL.$reload_defaultpack[0].title = "Close the custom puzzle or data-pack and Return to the Main Area"
+  on(orthotCTL.$reload_defaultpack, "click", ()=>{
+    loadDataPack("MainGdataPack", "MainArea", MAIN_ZONES, MAIN_TEXTS)
+    orthotCTL.loadScene("MainArea")
+  })
 
   loadDataPack("MainGdataPack", "MainArea", MAIN_ZONES, MAIN_TEXTS)
   
   if (window.StagedTestData) {
     orthotCTL.loadScene(JSON.parse(window.StagedTestData))
-    //console.log("TODO: ekvx2 loader", JSON.parse(StagedTestData))
   }
   else {
     orthotCTL.loadScene("MainArea")
   }
   
+  
   orthotCTL.runTest = function(data) {
     orthotCTL.loadScene(JSON.parse(data))
-    //console.log("TODO: ekvx2 loader", JSON.parse(data))
   }
 
   orthotCTL.forceReloadMainData = async function() {
@@ -431,6 +445,16 @@ $(async function MAIN() {
     loadDataPack("MainGdataPack", "MainArea", zones, texts)
     orthotCTL.loadScene("MainArea")
   }
+  
+  on($("#loadfromfile"), "change", ()=>{
+    let inputElem = $("#loadfromfile")[0]
+    if (inputElem.files.length > 0) {
+      let file = inputElem.files[0]
+      {(async function ldFile(){
+        orthotCTL.loadScene(JSON.parse(await file.text()))
+      })()}
+    }
+  })
 
   let selected_hrmode = false
 
@@ -509,9 +533,11 @@ $(async function MAIN() {
 
   $("#controls").append(highRespModeBTN)
   $("#controls").append(lwmodeBTN)
+  $("#controls").append(orthotCTL.$exit_to_mainarea)
   $("#controls").append(resetBTN)
   $("#controls").append(aboutBTN)
 
+  $("#controls").append(orthotCTL.$reload_defaultpack)
 
   let faderID
   let completionELEM = $("#completionGraphic")[0]

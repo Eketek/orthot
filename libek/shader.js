@@ -479,19 +479,25 @@ var ManagedTexture = function(arg) {
 var ManagedColor = function(arg) {
   this.isManagedParam = true
   this.isColor = true
-  if (typeof(arg) == "string") {
-    this.value = new THREE.Color(arg)
-  }
-  else if (arg.isVector3) {
-    this.value = new THREE.Color(arg.x, arg.y, arg.z)
-  }
-  else if (arg.isColor) {
-    this.value = arg
-  }
-  else {
-    this.value = new THREE.Color()
-  }
 
+  Object.defineProperty(this, 'color', {
+    get: function() { return this.value },
+    set: function(v) { 
+      if (typeof(v) == "string") {
+        this.value = new THREE.Color(v)
+      }
+      else if (v.isVector3) {
+        this.value = new THREE.Color(v.x, v.y, v.z)
+      }
+      else if (v.isColor) {
+        this.value = v
+      }
+      else {
+        this.value = new THREE.Color()
+      }
+    }
+  })
+  
   Object.defineProperty(this, 'r', {
     get: function() { return this.value.x },
     set: function(v) { this.value.x = v; }
@@ -504,6 +510,8 @@ var ManagedColor = function(arg) {
     get: function() { return this.value.z },
     set: function(v) { this.value.z = v }
   })
+  
+  this.color = arg
 }
 
   /*  This is a more consistant handle for referencing Texture Coordinates by code that manipulates BufferGeometry objects and Shaders.

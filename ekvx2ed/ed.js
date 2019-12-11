@@ -37,6 +37,8 @@ var edCTL = window.ectl = {
 $(async function MAIN() {
 
   initLIBEK()
+  
+  let docTitle = document.title
 
   let disp_elem = $("#editor").attr("tabindex", "0").get(0)
   disp_elem.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )
@@ -120,9 +122,9 @@ $(async function MAIN() {
   let UI_TILESHADOW_OFFSET = [5,3]
   let UI_TILE_SIZE = [37,35]
   
-  renderCTL.fg = new ManagedColor("yellow")
-  renderCTL.bg1 = new ManagedColor("orange")
-  renderCTL.bg2 = new ManagedColor("green")
+  renderCTL.border = new ManagedColor("yellow")
+  renderCTL.hiliteA = new ManagedColor("orange")
+  renderCTL.hiliteB = new ManagedColor("green")
 
   renderCTL.vxlMAT = buildVariantMaterial("standard", {
     map:edCTL.assets.wall_8bit_fg,
@@ -133,8 +135,8 @@ $(async function MAIN() {
     sample:tt`
       vec4 mc = texture2D( map, vUv );
       vec4 bc = texture2D( bkgtex, uv2 );
-      vec3 fgColor = vColor*mc.r + ${renderCTL.fg}*mc.g;
-      vec3 bgColor = vColor*bc.r + ${renderCTL.bg1}*bc.g + ${renderCTL.bg2}*bc.b;
+      vec3 fgColor = vColor*mc.r + ${renderCTL.border}*mc.g;
+      vec3 bgColor = vColor*bc.r + ${renderCTL.hiliteA}*bc.g + ${renderCTL.hiliteB}*bc.b;
       sample = vec4(fgColor * mc.a + bgColor*(1.0-mc.a), 1.0);
     `
   })
@@ -403,14 +405,45 @@ $(async function MAIN() {
     }
     else {
       $("#port").show()
+      modalizeInputElem($("#port")[0])
       putFloatingElement($("#port")[0], portuiBTN)
       $("#exportTarget")[0].value = serialize()
       portuiVisible = true
     }
   }
+  
   portuiBTN = $("<div>").addClass("btn_active").text("Export/Import").click(togglePortUI)[0]
+  
   on($("#import"), "click", ()=>{
     importData($("#exportTarget")[0].value)
+    $("#port").hide()
+    portuiVisible = false
+  })
+  
+  on($("#savetofile"), "click", ()=>{
+    console.log("save-file")
+    let durl = URL.createObjectURL(new Blob([$("#exportTarget")[0].value], {type: "application/json"}))
+    let elem = $("#savetofile")[0]
+    elem.href = durl
+    elem.download = Settings.Name + ".ekvx2"
+        
+    //let durl = mainCNV.toDataURL()
+    //let elem = $("#savepngBTN")[0]
+    //elem.href = durl
+    //elem.download = picName() + ".png"
+    //importData($("#exportTarget")[0].value)
+    //$("#port").hide()
+    //portuiVisible = false
+  })
+  
+  on($("#loadfromfile"), "change", ()=>{
+    let inputElem = $("#loadfromfile")[0]
+    if (inputElem.files.length > 0) {
+      let file = inputElem.files[0]
+      {(async function ldFile(){
+        importData(await file.text())
+      })()}
+    }
     $("#port").hide()
     portuiVisible = false
   })
@@ -675,7 +708,7 @@ $(async function MAIN() {
       y1 = section.y1
       y2 = section.y2
     }
-    
+  
     for (let y = y1; y < y2; y++) {
       for (let x = x1; x < x2; x++) {
         // extract pattern pixel, rename and convert each channel to a number in range [0:1]
@@ -685,9 +718,9 @@ $(async function MAIN() {
         let w_bg2 = ppixels.data[pos+2]/255
         
         // apply the shader compositing operation
-        let r = clamp(mainColor.r*w_main + renderCTL.bg1.value.r*w_bg1 + renderCTL.bg2.value.r*w_bg2, 0, 1)*255
-        let g = clamp(mainColor.g*w_main + renderCTL.bg1.value.g*w_bg1 + renderCTL.bg2.value.g*w_bg2, 0, 1)*255
-        let b = clamp(mainColor.b*w_main + renderCTL.bg1.value.b*w_bg1 + renderCTL.bg2.value.b*w_bg2, 0, 1)*255
+        let r = clamp(mainColor.r*w_main + renderCTL.hiliteA.value.r*w_bg1 + renderCTL.hiliteB.value.r*w_bg2, 0, 1)*255
+        let g = clamp(mainColor.g*w_main + renderCTL.hiliteA.value.g*w_bg1 + renderCTL.hiliteB.value.g*w_bg2, 0, 1)*255
+        let b = clamp(mainColor.b*w_main + renderCTL.hiliteA.value.b*w_bg1 + renderCTL.hiliteB.value.b*w_bg2, 0, 1)*255
         
         //draw the pixel onto the pattern picker UI
         ctx.fillStyle = `rgb(${r},${g},${b})`
@@ -841,10 +874,15 @@ $(async function MAIN() {
   let buildComponentEditor = function(obj) {
     //for now, spec & target distinction is not significant.
     //  but when more sophistication is needed, "spec" will provide additional attributes to help govern the properties editor
-    let spec, target
+    let target, spec
     if (obj) {
-      target = obj.data
-      spec = obj.spec.components
+      if (obj.data) {
+        target = obj.data
+        spec = obj.spec.components
+      }
+      else {
+        target = spec = obj
+      }
     }
     else {
       spec = target = activeTool.components
@@ -914,6 +952,19 @@ $(async function MAIN() {
           addRow("pattern", "Pattern", propEditor_pattern(obj, comp, "pattern"))
           addRow("merge", "Merge Class", propEditor_textarea(obj, comp, "mergeClass", "auto"))
           break
+        case "NamedColors":   //Yet Another prime target for configuration-defined properties editors.
+          addRow(name)
+          for (let propname in comp) {
+            switch(typeof(comp[propname])) {
+              case "string":
+                addRow(propname, propname, propEditor_color(obj, comp, propname, propname))
+                break
+              case "boolean":
+                addRow(propname, propname, propEditor_checkbox(obj, comp, propname))
+                break
+            }
+          }
+          break
         case "materials":
           addRow(name)
           for (let i = 0; i < comp.length; i++) {
@@ -956,7 +1007,7 @@ $(async function MAIN() {
     return chkb
   }
   
-  let propEditor_color = function(obj, component, name) {
+  let propEditor_color = function(obj, component, name, rctlpropname) {
     let btn = $("<div>")[0]
     btn.style.width = 18
     btn.style.height = 18
@@ -972,13 +1023,31 @@ $(async function MAIN() {
         else {
           updateTerrainProperties()
         }
+        if (rctlpropname) {
+          let rprop = renderCTL[rctlpropname]
+          if (rprop && (typeof(rprop) == "object") && rprop.isManagedParam) {
+            rprop.color = color
+          }
+          controlActive = true
+        }
       })
     })
     return btn
   }
   
+  
+  let modalizeInputElem = function(input_elem) {
+    on(input_elem, "focusin", ()=>{
+      sviewCTL.readKeyboard = false
+    })
+    on(input_elem, "focusout", ()=>{
+      sviewCTL.readKeyboard = true
+    })
+  }
+  
   let propEditor_textarea = function(obj, component, name, nullVal="None", deleteIfnull=true) {
     let ta = $("<textarea>")[0]
+    modalizeInputElem(ta)
     ta.value = component[name]
     if (component[name] == undefined) {
       ta.value = nullVal
@@ -1067,6 +1136,9 @@ $(async function MAIN() {
   
   // 3d position indicators
   let cursor3d, cursorMDL, mark, markMDL
+ 
+  //Miscellaneous properties 
+  let Settings, DefaultSettings
   
   // Templates are fixed lists of properties which are to be copied into the data (often this will be just be an Object type identifier).
   // Each generated object references one template
@@ -1162,6 +1234,19 @@ $(async function MAIN() {
     mark.mdl = markMDL
     //put(mark,0,0,0)
     
+    Settings = deepcopy(DefaultSettings)
+    
+    if (Settings && Settings.NamedColors) {
+      for (let cname in Settings.NamedColors) {
+        if (cname) {
+          let rprop = renderCTL[cname]
+          if (rprop && (typeof(rprop) == "object") && rprop.isManagedParam) {
+            rprop.color = Settings.NamedColors[cname]
+          }
+        }
+      }
+    }
+    
     UniqueObjects = {}
     next_terrainid = 1
     next_sfcid = 1
@@ -1214,6 +1299,34 @@ $(async function MAIN() {
       }
       obj.gx.position.set(x+ofsX, y+ofsY, z+ofsZ)
     }
+    
+    if (obj.spec && obj.spec.knockout) {
+      switch(obj.side) {
+        case direction.code.UP:
+          ctn.terr_koU = true
+          break
+        case direction.code.DOWN:
+          ctn.terr_koD = true
+          break
+        case direction.code.NORTH:
+          ctn.terr_koN = true
+          break
+        case direction.code.EAST:
+          ctn.terr_koE = true
+          break
+        case direction.code.SOUTH:
+          ctn.terr_koS = true
+          break
+        case direction.code.WEST:
+          ctn.terr_koW = true
+          break
+      }
+      for (let other of ctn.contents) {
+        if (other.terrain) {
+          vxc.setTerrain(x,y,z, other.terrain)
+        }
+      }
+    }
   }
   
   let remove = function(obj, release=true) {
@@ -1240,6 +1353,33 @@ $(async function MAIN() {
       }
       if (release) {
         releaseAsset(edCTL.assets, obj.gx)
+      }
+    }
+    if (obj.spec && obj.spec.knockout) {
+      switch(obj.side) {
+        case direction.code.UP:
+          ctn.terr_koU = false
+          break
+        case direction.code.DOWN:
+          ctn.terr_koD = false
+          break
+        case direction.code.NORTH:
+          ctn.terr_koN = false
+          break
+        case direction.code.EAST:
+          ctn.terr_koE = false
+          break
+        case direction.code.SOUTH:
+          ctn.terr_koS = false
+          break
+        case direction.code.WEST:
+          ctn.terr_koW = false
+          break
+      }
+      for (let other of ctn.contents) {
+        if (other.terrain) {
+          vxc.setTerrain(x,y,z, other.terrain)
+        }
       }
     }
     obj.ctn = undefined
@@ -1309,7 +1449,7 @@ $(async function MAIN() {
               let posk = positionKey(coord, isSideCursor)
               for (let obj of ctn.contents) {
                 if (mrayDragPositions && (mrayDragPositions.indexOf(posk) != -1)) {
-                  return false
+                  return !isSideCursor
                 }
                 if ((!obj.isEditorUI) && ((spclasses == "*") || (obj.spec && (spclasses.indexOf(obj.spec.spatialClass) != -1)))) {
                   cursor3d.raycastHit = true
@@ -1576,6 +1716,7 @@ $(async function MAIN() {
     if ((!components || !components.materials) && tool.spec.editorMaterials) {
       assignMaterials(mdl, tool.spec.editorMaterials)
     }
+    
     if (tool.spec.attachment) {
       obj.side = up
       positionObject(obj, x,y,z, up)
@@ -1795,7 +1936,8 @@ $(async function MAIN() {
       click:editTerrain,
       drag:editTerrain,
       drag_evttype:"mousemove_cube"
-    }
+    },
+    settings:{ }
   }
   
   let handleInput = async function(opspec) {
@@ -1803,6 +1945,8 @@ $(async function MAIN() {
     outer:
     while (true) {
       let evt = await evtman.next(disp_elem, "lmb_down", edCTL.event, "cancel")
+      document.activeElement.blur()
+      sviewCTL.readKeyboard = true
       if (evt.vname == "cancel") {
         return
       }
@@ -1995,10 +2139,15 @@ $(async function MAIN() {
       updateTerrainProperties()
       
       updateCursor()
+      if (activeTool.spec.type == "settings") {
+        clearComponentEditor()
+        buildComponentEditor(Settings)
+      }
     }
-    remove(mark)
+    remove(mark, false)
     positionObject(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
     controlActive = true
+    
   }
   
   // Special flag to offset the cursor 1 unit along its normal vector, so that it is drawn "above" the selected position
@@ -2022,10 +2171,11 @@ $(async function MAIN() {
     cursor3d.gx.remove(cursorMDL)
     releaseAsset(edCTL.assets, cursorMDL)
     
-    cursorMDL = getAsset(edCTL.assets, mdlname)
-    cursor3d.mdl = cursorMDL
-    cursor3d.gx.add(cursorMDL)
-    controlActive = true
+    if (mdlname) {
+      cursorMDL = getAsset(edCTL.assets, mdlname)
+      cursor3d.mdl = cursorMDL
+      cursor3d.gx.add(cursorMDL)
+    }
     
     mdlname = activeTool.spec.markModel
     if (mdlname) {
@@ -2041,6 +2191,7 @@ $(async function MAIN() {
     }
     
     positionObject(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
+    controlActive = true
   }
   
   // BoxTerrain configuration section
@@ -2187,14 +2338,24 @@ $(async function MAIN() {
     if (typeof(cfg) == "string") {
       cfg = JSON.parse(cfg)
     }
-    let dformat = cfg.DataFormat
-    if (!dformat) {
-      dformat = "Unspecified-data-format"
+    let dtype = cfg.DataType
+    if (!dtype) {
+      dtype = "Unspecified-data-type"
     }
     
-    edCTL.DataFormat = dformat
+    edCTL.DataType = dtype
     edCTL.DataVersion = cfg.DataVersion
     edCTL.AppLink = cfg.AppLink
+    
+    DefaultSettings = cfg.Settings
+    if (!DefaultSettings) {
+      DefaultSettings = {}
+    }
+    DefaultSettings.Name = "untitled"
+    Settings = deepcopy(DefaultSettings)
+    
+    document.title = `${docTitle} | "${edCTL.DataType}"`
+    $("#NameDisp").text(document.title)
     
     if (edCTL.AppLink) {
       let testBTN = $("<div>").addClass("btn_active").text("Test").click(()=>{
@@ -2219,9 +2380,9 @@ $(async function MAIN() {
     }
     
     let rscver = cfg.EdrscVersion|0
-    let prev_ver = 0|parseInt(window.localStorage[dformat+"EDVER"])
+    let prev_ver = 0|parseInt(window.localStorage[dtype+"EDVER"])
     let reloadOPT = (rscver > prev_ver) ? {cache:"reload"} : undefined
-    window.localStorage[dformat+"EDVER"] = rscver
+    window.localStorage[dtype+"EDVER"] = rscver
     
     if (cfg.Resources) {
       try {
@@ -2243,7 +2404,7 @@ $(async function MAIN() {
           }
           else if (data.type == "archive") {
             promises.push(
-              update(dformat, (fetchOPTS)=>{
+              update(dtype, (fetchOPTS)=>{
                 return loadZIP(edCTL.assets, false, data.src, reloadOPT)
               })
             )
@@ -2251,7 +2412,7 @@ $(async function MAIN() {
         }
         if (textureRefs.length > 0) {
           promises.push(
-            update(dformat, (fetchOPTS)=>{
+            update(dtype, (fetchOPTS)=>{
               return loadMuch( edCTL.assets, false, reloadOPT, textureRefs )
             }),
           )
@@ -2278,6 +2439,7 @@ $(async function MAIN() {
         }
       }
     }
+    reset()
   }).bind(this)
   
   if (document.DEFAULT_EDITOR_CFG) {
@@ -2341,11 +2503,27 @@ $(async function MAIN() {
     },
   })
   
+  defineTool({
+    type:"settings",
+    name:"Settings",
+    editorOnly:true,
+    pickModes:["xz", "xy", "yz", "mray"],
+    alignMode:"none",
+    pickIn:true,
+    routine:"settings",
+    icon:{
+      sheet:"editoricons",
+      row:2,
+      col:2
+    },
+  })
+  
   let serialize = function() {
     let o = {
       EKVX2:true,
-      DataType:edCTL.DataFormat,
+      DataType:edCTL.DataType,
       Version:edCTL.DataVersion,
+      Settings:Settings,
       Templates:templates,
       Memos:memos,
       Surfaces:surfaceDefs,
@@ -2388,17 +2566,20 @@ $(async function MAIN() {
       console.log("ERROR: input data is not a valid EKVX2 data", src)
       return
     }
-    if (data.DataType != edCTL.DataFormat) {
+    if (data.DataType != edCTL.DataType) {
       console.log(`ERROR: Ekvxed2 is not configured to load/edit data type "${data.DataType}"`)
       return
     }
+    
     reset()
+    
     
     // copy data off the parsed object
     templates = data.Templates
     surfaceDefs = data.Surfaces
     terrainDefs = data.Terrains
     memos = data.Memos
+    Settings = data.Settings
     
     for (let memoid in memos) {
       memoid = Number.parseInt(memoid)

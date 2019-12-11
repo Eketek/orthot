@@ -1,3 +1,7 @@
+10 Dec 1019
+  Added a "color" getter/setter to ManagedColor (libek/shader.js)
+    This is used to set the color (string, THREE.Vector3, or THREE.Color)
+
 6 Dec 2019
   Adjust deepcopy to return the input value if not an object or array
 

@@ -1,8 +1,17 @@
 {
-  "DataFormat":"orthot3-zone",
+  "DataType":"orthot3-zone",
   "AppLink":"index.html",
   "DataVersion":1,
   "EdrscVersion":1,
+  "Settings":{
+    "Name":"untitled",
+    "isMainArea":false,
+    "NamedColors":{
+      "border":"yellow",
+      "hiliteA":"green",
+      "hiliteB":"cyan"
+    }
+  },
   "Resources":{
     "AppIcons": {
       "type":"texture",
@@ -288,6 +297,82 @@
       }
     },
     {
+      "extend":"UnalignedObject",
+      "type":"pushblock",
+      "name":"PushBlock", 
+      "shortname":"PBlock",
+      "model":"pushblock",
+      "icon":{
+        "sheet":"AppIcons",
+        "row":1,
+        "col":4
+      },
+      "components":{
+        "materials":["white", "red", "black"]
+      }
+    },
+    {
+      "extend":"UnalignedObject",
+      "type":"crate",
+      "name":"Crate", 
+      "shortname":"Crate",
+      "model":"crate",
+      "icon":{
+        "sheet":"AppIcons",
+        "row":1,
+        "col":5
+      },
+      "components":{
+        "materials":["hsl(20, 100%, 50%)", "black", "hsl(25, 90%, 25%)", "hsl(22, 100%, 55%)"]
+      }
+    },
+    {
+      "extend":"UnalignedObject",
+      "type":"iceblock",
+      "name":"IceBlock", 
+      "shortname":"IceBlock",
+      "model":"iceblock",
+      "icon":{
+        "sheet":"AppIcons",
+        "row":1,
+        "col":6
+      },
+      "components":{
+        "materials":[
+          {"color":"white", "metalness":0.25, "roughness":1 }, 
+          "blue", 
+          "cyan", 
+          "hsl(175, 100%, 75%)", 
+          {"color":"blue", "transparent":true, "opacity":0.25, "metalness":1, "roughness":0.5}
+        ]
+      }
+    },
+    {
+      "extend":"Attachment",
+      "type":"portal",
+      "name":"Portal",
+      "shortname":"Portal",
+      "cursorModel":"FaceCursor",
+      "model":"portal_pane",
+      "knockout":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":2,
+        "col":0
+      },
+      "alignMode":"any",
+      "components":{
+        "materials":[
+          {"color":"yellow", "emissive":"yellow", "emissiveIntensity":0.4 }, 
+          "blue",
+          {"color":"cyan", "transparent":true, "opacity":0.5}
+        ],
+        "class":"",
+        "name":"",
+        "target":""
+      }
+    },
+    {
       "extend":"Attachment",
       "type":"ladder",
       "name":"Ladder",
@@ -302,6 +387,52 @@
       "alignMode":"vertical",
       "components":{
         "materials":["hsl(15,75%,40%)"]
+      }
+    },
+    {
+      "extend":"Attachment",
+      "type":"button",
+      "name":"Button",
+      "shortname":"Button",
+      "cursorModel":"FaceCursor",
+      "model":"smallbutton_up",
+      "icon":{
+        "sheet":"AppIcons",
+        "row":2,
+        "col":2
+      },
+      "alignMode":"any",
+      "components":{
+        "materials":["red"],
+        "press":"",
+        "release":""
+      }
+    },
+    {
+      "extend":"Attachment",
+      "type":"icefloor",
+      "name":"IceFloor",
+      "shortname":"IceFloor",
+      "cursorModel":"FaceCursor",
+      "model":"icefloor",
+      "knockout":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":2,
+        "col":3
+      },
+      "alignMode":"any",
+      "components":{
+        "materials":[
+          {"color":"white", "metalness":0.25, "roughness":1 }, 
+          "blue", 
+          "cyan", 
+          "hsl(175, 100%, 75%)", 
+          {"color":"blue", "transparent":true, "opacity":0.25, "metalness":1, "roughness":0.5},
+          "black"
+        ],
+        "press":"",
+        "release":""
       }
     },
     {
@@ -334,6 +465,47 @@
       }
     },
     {
+      "extend":"HorizObject",
+      "type":"sceneportal",
+      "name":"Exit", 
+      "shortname":"Exit",
+      "model":"EndBlock",
+      "spatialClass":"scenery",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "icon":{
+        "sheet":"AppIcons",
+        "row":0,
+        "col":1
+      },
+      "components":{
+        "materials":[
+          {"color":"yellow", "emissive":"yellow", "emissiveIntensity":0.4 },
+          {"color":"cyan", "transparent":true, "opacity":0.5}
+        ],
+        "dest":"",
+        "target":""
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"stairs",
+      "name":"Stairs", 
+      "shortname":"Stairs",
+      "model":"stair_ramp",
+      "spatialClass":"ramp",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "icon":{
+        "sheet":"AppIcons",
+        "row":3,
+        "col":0
+      },
+      "components":{
+        "materials":[ "white" ]
+      }
+    },
+    {
       "extend":"UnalignedObject",
       "type":"infoblock",
       "name":"InfoBlock", 
@@ -351,6 +523,90 @@
       "components":{
         "materials":[ "green", "yellow" ],
         "message":""
+      }
+    },
+    {
+      "extend":"UnalignedObject",
+      "type":"key",
+      "name":"Key", 
+      "shortname":"Key",
+      "model":"key",
+      "spatialClass":"item",
+      "spclassPick":["solid"],
+      "spclassCoexist":["scenery"],
+      "icon":{
+        "sheet":"AppIcons",
+        "row":4,
+        "col":0
+      },      
+      "routine":"buildcube_clickonly",
+      "components":{
+        "materials":[ "white" ]
+      }
+    },
+    {
+      "extend":"UnalignedObject",
+      "type":"lock",
+      "name":"Lock", 
+      "shortname":"Lock",
+      "model":"lock",
+      "spatialClass":"item",
+      "spclassPick":["solid"],
+      "spclassCoexist":["scenery"],
+      "icon":{
+        "sheet":"AppIcons",
+        "row":4,
+        "col":1
+      },      
+      "routine":"buildcube_clickonly",
+      "components":{
+        "materials":[ "white", "black" ]
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"mouse",
+      "name":"Mouse", 
+      "shortname":"Mouse",
+      "model":"mouse",
+      "spatialClass":"creature",
+      "spclassPick":["solid", "creature"],
+      "spclassCoexist":["scenery"],
+      "icon":{
+        "sheet":"AppIcons",
+        "row":5,
+        "col":0
+      },
+      "components":{
+        "materials":[
+          "hsl(20, 100%, 50%)", 
+          "hsl(0, 100%, 70%)", 
+          {"color":"green", "emissive":"green", "emissiveIntensity":1}, 
+          "hsl(30, 100%, 20%)"
+        ]
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"moose",
+      "name":"Moose", 
+      "shortname":"Moose",
+      "model":"moose",
+      "spatialClass":"creature",
+      "spclassPick":["solid", "creature"],
+      "spclassCoexist":["scenery"],
+      "icon":{
+        "sheet":"AppIcons",
+        "row":5,
+        "col":1
+      },
+      "components":{
+        "materials":[
+          "hsl(20, 100%, 50%)", 
+          "black", 
+          "hsl(30, 100%, 20%)", 
+          {"color":"red", "emissive":"red", "emissiveIntensity":1}
+        ]
       }
     }
   ]

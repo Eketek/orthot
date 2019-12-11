@@ -2,7 +2,7 @@ export { Ekvx1Interpreter }
 import { trit, T, getAsset, storeAsset, releaseAsset, Material } from '../libek/libek.js'
 import { property, properties_fromstring, mergeObjects, parseVec3, parseColor } from '../libek/util.js'
 
-import { orthotCTL } from './orthot.js'
+import { orthotCTL, renderCTL } from './orthot.js'
 import { parseO2Orientation } from './util.js'
 import { Wall, ScenePortal, InfoBlock, Stair, PushBlock, Crate, IceBlock, Key, Lock, Flag, Exit } from './simpleobjects.js'
 import { Ladder, Portal, Button, Icefloor } from './attachments.js'
@@ -95,6 +95,11 @@ var Ekvx1Interpreter = {
     })
   },
   load:function(zone, ldstate, ekvx) {
+  
+    renderCTL.border.color = "yellow"
+    renderCTL.hiliteA.color = "orange"
+    renderCTL.hiliteB.color = "green"
+    
     let ldstage =  1
     let vxc = zone.vxc
     ekvx.loadData( (x,y,z, template, data) => {

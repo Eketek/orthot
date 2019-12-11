@@ -143,6 +143,8 @@ var SceneviewController = function(params = {}) {
   //  Mouse ray is defined as a line originating at the camera which intersects the point in camera-backpane-space which is equal to the normalized mouse cursor
   //    position (mpos/screensize)
   this.mpos3d = undefined
+  
+  this.readKeyboard = true
 
   {(async function trackMouse() {
     while (true) {
@@ -329,6 +331,9 @@ var SceneviewController = function(params = {}) {
         
         // manage arrow keys.  This is a little complex due to logic to match arrow keys with the current 3d perspective
         let processArrow = (function(k) {
+          if (!this.readKeyboard) {
+            return
+          }
           d = this.subunit
           //console.log("shift-amt:" + d, evt)
           //console.log(_this.evtman.DownKeys)

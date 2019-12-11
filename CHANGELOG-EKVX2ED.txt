@@ -5,6 +5,18 @@
   Added a terrain painter (click and drag to change properties of individual tiles on existing terrain)
   Fixed import function (was erroneously converting a couple internal state variables to strings)
   Re-apply active tool alterations to editor state when initializing
+  Remove a potential synchronization problem in the configuration loader (in ekvx2ed.html)
+  Add functionality to handle ekvx2 files (save to file, load from file)
+  Set a more accurate title for the editor in ekvx2ed.html
+  Added a general-purpose/free-floating settings editor
+  Defined a "NamedColors" component
+    Any string properties will get a color-picker UI
+    Any boolean properties will get a checkbox UI
+    Colors named "border", "hiliteA", or "hiliteB" will be applied to the terrain shader
+  Deactivate the picking-plane controller while text areas are focused
+  Show "terrain-knockouts" 
+    A terrain knockout is a flag to disable its rendering (to allow other tile-filling objects to render properly)
+    This is cosmetic only and is controllable only by adding a "knockout" attribute to an attachment tool
 
 6-7 Dec 2019
   Alignment handling to allow a 3d cursor to represent the side of a block

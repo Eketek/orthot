@@ -1,4 +1,12 @@
 0.3.0:
+  10 Dec 2019
+    Set terrain "hilites" (static colors that get applied by the shader) from ekvx2
+    Added function to load a puzzle from a file
+    Added function to reload the main area
+    Added function to close a custom puzzle or data package and return to the builtin game data
+    Add ekvx2 tools to editor configuration:
+      pushblock, crate, iceblock, portal, button, icefloor, exit, stairs, key, lock, mouse, and moose
+    
   6-7 Dec 2019
     Apply starting position alignment
     Add InfoBlocks to ekvx2 loader

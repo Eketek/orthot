@@ -1,3 +1,6 @@
+11 Dec 2019
+  Fixed inconsistant orientation
+
 9-10 Dec 2019
   Add Detach tool
   Fix for attachment-type tools skipping a hit position and attaching where they should be obstructed when dragging

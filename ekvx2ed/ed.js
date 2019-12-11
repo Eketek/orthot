@@ -1508,7 +1508,7 @@ $(async function MAIN() {
         let z = Math.round(mp3d.z)       //everything else can be as jittery as it wants
         
         //if the position changes, reposition the cursor
-        if ( (x != cursor3d.x) || (y != cursor3d.y) || (z != cursor3d.z) || (((pickmode == "mray") && (up != cursor3d.up) && (forward != cursor3d.forward))) ) {
+        if ( (x != cursor3d.x) || (y != cursor3d.y) || (z != cursor3d.z) || (up != cursor3d.up) || (forward != cursor3d.forward) ) {
           if ( (up != undefined) && (forward != undefined)) {
             cursor3d.up = up
             cursor3d.forward = forward
@@ -1632,6 +1632,9 @@ $(async function MAIN() {
           break
       }
     }
+    if (activeTool.spec.invertForward) {
+      forward = direction.invert[forward]
+    }
     if (!activeTool.spec.requireRaycastHit || (pickmode != "mray") || cursor3d.raycastHit) {
       if (mrayDragPositions) {
         cursor3d.up = up
@@ -1641,7 +1644,7 @@ $(async function MAIN() {
         }
       }
       evict(up)
-      _build(activeTool, cursor3d.x, cursor3d.y, cursor3d.z, up, forward, activeTool.components, activeTool.terrain, activeTool.terrainID)
+      let obj = _build(activeTool, cursor3d.x, cursor3d.y, cursor3d.z, up, forward, activeTool.components, activeTool.terrain, activeTool.terrainID)
     }
   }
   
@@ -1724,6 +1727,7 @@ $(async function MAIN() {
     else {
       put(obj, x, y, z)
     }
+    return obj
   }
   
   let updateObject = function(obj) {

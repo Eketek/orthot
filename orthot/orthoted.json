@@ -496,6 +496,7 @@
       "spatialClass":"ramp",
       "spclassPick":["solid"],
       "spclassCoexist":[],
+      "invertForward":true,
       "icon":{
         "sheet":"AppIcons",
         "row":3,

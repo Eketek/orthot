@@ -1601,6 +1601,7 @@ var Zone = function(ekvx, override_startloc, name, yieldsProgressCode, external,
     let fpmode = ldstate.start_fpmode
     if (start_target.fpview != undefined) {
       fpmode = start_target.fpview
+      start_campos.y = startloc.y
     }
       
     player = new Player(this, pl_align, fpmode)

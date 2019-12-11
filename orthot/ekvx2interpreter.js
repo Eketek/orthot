@@ -142,18 +142,27 @@ var Ekvx2Interpreter = {
           adjctn = zone.getAdjacentCTN(loc, direction.invert[forward])
           vxc.setTerrainKnockout(adjctn, forward)
         } break
+        case "flag":
+          gobj = new Flag(zone, { up:up, forward:forward }, obj.code, obj.materials)
+          break
+        case "gate": {
+          let gateData = {
+            extend:(obj.extend_signal != "" ? obj.extend_signal : undefined),
+            retract:(obj.retract_signal != "" ? obj.retract_signal : undefined),
+            toggle:(obj.toggle_signal != "" ? obj.toggle_signal : undefined),
+            initial_state:(obj.start_extended ? "extended" : "retracted")
+          }
+          let gate = new Gate(zone, loc, obj.materials,  {up:up, forward:direction.invert[forward]}, gateData)
+          ldstate.gategroups.push(new GateGroup(zone, gate))
+        }
+        break
         case "start": {
           zone.playerMaterials = obj.materials
-          let campos = new THREE.Vector3(x+5,y+3.5,z+1)
           zone.targets.__STARTLOC = {
             loc:loc,
             align:{ up:up, forward:forward },
-            campos:new THREE.Vector3(campos.x, campos.y, campos.z),
+            campos:new THREE.Vector3(x+5,y+3.5,z+1),
             fpview:obj.fpview
-          }
-          if (obj.fpview) {
-            zone.targets.__STARTLOC.fpview = true
-            zone.targets.__STARTLOC.campos.y = y
           }
           
           let tipMSG = obj.startMSG
@@ -175,7 +184,14 @@ var Ekvx2Interpreter = {
             ldstate.loaded_objects.push(info_obj)
             zone.putGameobject(x,y,z, info_obj)
           }
-          
+        } break
+        case "target": {
+          zone.targets[obj.name] = {
+            loc:loc,
+            align:{ up:up, forward:forward },
+            campos:new THREE.Vector3(x+5,y+3.5,z+1),
+            fpview:obj.fpview
+          }
         } break
         case "infoblock": {
           gobj = new InfoBlock(zone, true, obj.message, undefined, obj.materials, [obj.materials[1]])

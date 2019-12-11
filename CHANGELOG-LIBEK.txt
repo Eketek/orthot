@@ -1,3 +1,6 @@
+11 Dec 2019
+  Fixed window size errors in putFloatingElement (util.js)
+
 10 Dec 1019
   Added a "color" getter/setter to ManagedColor (libek/shader.js)
     This is used to set the color (string, THREE.Vector3, or THREE.Color)

@@ -2,7 +2,7 @@ export {
   deepcopy,
   objprop, property, mergeObjects, properties_fromstring,
   clamp,
-  flatten, anythingIN, removeItems,
+  flatten, anythingIN, anythingElse, removeItems,
   parseVec3, parseColor, toBinColor,
   putFloatingElement, centerElementOverElement
 }
@@ -85,6 +85,17 @@ var anythingIN = function(obj) {
   return false
 }
 
+var anythingElse = function(obj, name) {
+  if (!obj) {
+    return false
+  }
+  for (let k in obj) {
+    if (k != name) {
+      return true
+    }
+  }
+  return false
+}
 var property = function(name, objects, defaultVal, transform) {
   if (!Array.isArray(objects)) {
     objects = [objects]
@@ -204,8 +215,11 @@ var putFloatingElement = function(element, target) {
   if (y < 0) {
     y = 0
   }
-  if (y+h > window.height) {
-    y = window.height - h
+  if (y+h > window.innerHeight) {
+    y = window.innerHeight - h
+  }
+  if (x+w > window.innerWidth) {
+    x = window.innerWidth - w
   }
   element.style.left = x + "px"
   element.style.top = y + "px"

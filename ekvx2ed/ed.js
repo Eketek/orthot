@@ -9,7 +9,7 @@ import {
 } from '../libek/libek.js'
 import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
-import { deepcopy, anythingIN, clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
+import { deepcopy, anythingIN, anythingElse, clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { direction, setOrientation, toForward } from '../libek/direction.js'
 import { BoxTerrain } from '../libek/boxterrain.js'
@@ -498,30 +498,40 @@ $(async function MAIN() {
       elem.style["border-color"] = "lightgray"
     })
     
-    let resize = function(w,h) {
-      if (h == undefined) {
-        h = w
+    let resize
+    
+    if (params.usePadding) {
+      resize = function(w,h) {
+        elem.style["padding-right"] = w
+        elem.style["padding-bottom"] = h
       }
-      elem.style["min-width"] = w
-      elem.style["max-width"] = w
-      elem.style["min-height"] = h
-      elem.style["max-height"] = h
+    }
+    else {
+      resize = function(w,h) {
+        if (h == undefined) {
+          h = w
+        }
+        elem.style["min-width"] = w
+        elem.style["max-width"] = w
+        elem.style["min-height"] = h
+        elem.style["max-height"] = h
+      }
     }
     
     let sz
     if (params.small) {
-      if (params.emphasize) {
-        resize(9,18)
+      if (params.w) {
+        resize (params.w, params.h)
       }
       else {
         resize(9,9)
       }
-      elem.style["border-width"] = 1
+      elem.style["border-width"] = 0.5
       elem.style["margin"] = 0
     }
     else {
       resize(18)
-      elem.style["border-width"] = 2
+      elem.style["border-width"] = 1
       elem.style["margin"] = 2
     }
     
@@ -576,29 +586,26 @@ $(async function MAIN() {
   }
   
   let _col = new THREE.Color()
-  let numHues = 18
-  
-  let paletteBTNS = []
+  let numHues = 48
   
   let loadPalette = function() {
-    for (let btn of paletteBTNS) {
-      btn.remove()
-    }
-    paletteBTNS = []
+    let _w = clamp(Number.parseInt($("#palbtnW")[0].value), 4, 32)
+    
+    $("#palleteColors").empty()
     let sats, lights, numHues
     try {
       sats = extractNums($("#satsTA")[0].value)
     }
     catch {}
     if (!sats || (sats.length == 0)) {
-      sats = [1, 0.6, 0.3, 0.1]
+      sats = [1, 0.8, 0.6, 0.3, 0.1]
     }
     try {
       lights = extractNums($("#lightsTA")[0].value)
     }
     catch {}
     if (!lights || (lights.length == 0)) {
-      lights = [0.85, 0.7, 0.5, 0.25, 0.1]
+      lights = [0.85, 0.775, 0.7, 0.5, 0.4, 0.25, 0.1]
     }
     
     //build buttons for each color, but [for sanity] do not exceed 1800 buttons generated
@@ -607,7 +614,7 @@ $(async function MAIN() {
     numHues = clamp(Number.parseFloat($("#numHuesTA")[0].value), 0, 360)
     for (let l = 0; l < numHues; l++) {      
       _col.setHSL(0, 0, l/(numHues-1))
-      paletteBTNS.push(new colorBTN({ loc:"palleteColors", color:_col.getStyle(), small:true, setRecent:true }))
+      new colorBTN({ loc:"palleteColors", color:_col.getStyle(), small:true, setRecent:true, usePadding:true, w:_w, h:8 })
       count++
       if (count > 1800) {
         return
@@ -616,9 +623,10 @@ $(async function MAIN() {
     // Why go through the trouble of inserting a big color picker, when I can just do this?:
     for (let s of sats) {
       for (let l of lights) {
+        $("<br>").appendTo($("#palleteColors"))
         for (let h = 0; h < numHues; h ++) {
           _col.setHSL(h/numHues, s, l)
-          paletteBTNS.push(new colorBTN({ loc:"palleteColors", color:_col.getStyle(), small:true, setRecent:true, emphasize:((numHues==18) && (l==0.5)) }))
+          new colorBTN({ loc:"palleteColors", color:_col.getStyle(), small:true, setRecent:true, usePadding:true, w:_w, h:8 })
           count++
           if (count > 1800) {
             return
@@ -632,14 +640,15 @@ $(async function MAIN() {
   on($("#numHuesTA"), "input", loadPalette)
   on($("#satsTA"), "input", loadPalette)
   on($("#lightsTA"), "input", loadPalette)
-  
-  on($("#resetHSLcfgBTN"), "click", ()=>{
-    $("#numHuesTA")[0].value = "18"
-    $("#satsTA")[0].value = "100 60 30 10"
-    $("#lightsTA")[0].value = "85 70 50 25 10"
+  on($("#palbtnW"), "input", loadPalette)
+    
+  let resetPalette = function() {
+    $("#numHuesTA")[0].value = "48"
+    $("#satsTA")[0].value = "100 80 60 30 10"
+    $("#lightsTA")[0].value = "85 78 70 50 40 25 10"
+    $("#palbtnW")[0].value = "16"
     loadPalette()
-  })
-  
+  }
   
   let extractNums = function(val) {
     let parts = val.split(' ')
@@ -954,8 +963,8 @@ $(async function MAIN() {
           break
         case "NamedColors":   //Yet Another prime target for configuration-defined properties editors.
           addRow(name)
-          for (let propname in comp) {
-            switch(typeof(comp[propname])) {
+          for (let propname in def) {
+            switch(typeof(def[propname])) {
               case "string":
                 addRow(propname, propname, propEditor_color(obj, comp, propname, propname))
                 break
@@ -971,7 +980,7 @@ $(async function MAIN() {
             if (typeof(comp[i]) == "string") {
               addRow(`m${i}-col`, `Material #${i} Main Color`, propEditor_color(obj, comp, i))
             }
-            else {
+            else if (!comp[i].immutable) {
               addRow(`m${i}-col`, `Material #${i} Main Color`, propEditor_color(obj, comp[i], "color"))
             }
           }
@@ -1045,7 +1054,7 @@ $(async function MAIN() {
     })
   }
   
-  let propEditor_textarea = function(obj, component, name, nullVal="None", deleteIfnull=true) {
+  let propEditor_textarea = function(obj, component, name, nullVal="", deleteIfnull=false) {
     let ta = $("<textarea>")[0]
     modalizeInputElem(ta)
     ta.value = component[name]
@@ -1605,8 +1614,7 @@ $(async function MAIN() {
         //  up vector is locked to World-UP, 
         //  If the cursor is horizontal (World-UP or World-DOWN), the cursor forward vector is retained
         //  If the cursor is vertical, the cursor's up vector is used as forward (point object away from a vertical surface behind the cursor)
-        case "horiz":
-        case "horizontal":
+        case "horizontal_away":
           up = direction.code.UP
           if ( (cursor3d.up == direction.code.UP) || (cursor3d.up == direction.code.DOWN) ) {
             forward = cursor3d.forward
@@ -1615,7 +1623,16 @@ $(async function MAIN() {
             forward = cursor3d.up
           }
           break
-        case "vert":
+        // similar to above, but the object forward vecxtor will be set toward a hit vertical surface
+        case "horizontal_toward":
+          up = direction.code.UP
+          if ( (cursor3d.up == direction.code.UP) || (cursor3d.up == direction.code.DOWN) ) {
+            forward = cursor3d.forward
+          }
+          else {
+            forward = direction.invert[cursor3d.up]
+          }
+          break
         case "vertical":
           if ( (cursor3d.up == direction.code.UP) || (cursor3d.up == direction.code.DOWN) ) {
             return
@@ -1712,7 +1729,6 @@ $(async function MAIN() {
           //every other component
           default:
             obj.data[compName] = deepcopy(components[compName])
-            break
         }
       }
     }
@@ -1725,6 +1741,7 @@ $(async function MAIN() {
       positionObject(obj, x,y,z, up)
     }
     else {
+      obj.volumetric = true
       put(obj, x, y, z)
     }
     return obj
@@ -1868,19 +1885,84 @@ $(async function MAIN() {
     if (!activeTool.spec.requireRaycastHit || (pickmode != "mray") || cursor3d.raycastHit) {
       let ctn = vxc.get( cursor3d.x, cursor3d.y, cursor3d.z)
       if (ctn.contents) {
+        // Select the most preferable object to open immediately in the object properties editor
+        // If in MRAY mode:
+        //   #1 an attachment-type object with components and aligned like the cursor
+        //   #2 a volumetric object with components
+        //   #3 anything
+        //   #4 nothing
+        //
+        // If not in MRAY mode:
+        //   #1 a volumetric object with components
+        //   #2 anything with components
+        //   #3 anything
+        //   #4 nothing
+        let preferred
         for (let obj of ctn.contents) {
           if (!obj.isEditorUI && obj.data) {
-            mark.up = cursor3d.up
-            mark.forward = cursor3d.forward
-            mark.mdl.position.copy(cursor3d.mdl.position)
-            mark.mdl.rotation.copy(cursor3d.mdl.rotation)
-            positionObject(mark, cursor3d.x, cursor3d.y, cursor3d.z)
-            buildComponentEditor(obj)
-            populateObjectSelector(ctn, (pickmode == "mray" ? cursor3d.up : undefined), obj)
-            return
+            console.log(obj)
+            
+            if (pickmode == "mray") {
+              if (obj.side == cursor3d.up) {
+                if (!preferred) {
+                  preferred = obj
+                }
+                else if (!anythingElse(preferred.data, '$')) {
+                  preferred = obj
+                }
+                else if (anythingElse(obj.data, '$')) {
+                  preferred = obj
+                  break
+                }
+              }
+              else if (obj.volumetric) {
+                if (!preferred) {
+                  preferred = obj
+                }
+                else if (!anythingElse(preferred.data, '$')) {
+                  preferred = obj
+                }
+                else if (anythingElse(obj.data, '$')) {
+                  preferred = obj
+                }
+              }
+            }
+            else {
+              if (!preferred) {
+                preferred = obj
+              }
+              else if (obj.volumetric) {
+                if (!anythingElse(preferred.data, '$')) {
+                  preferred = obj
+                }
+                else if (anythingElse(obj.data, '$')) {
+                  preferred = obj
+                  break
+                }
+              }
+              else {
+                if (anythingElse(preferred.data, '$')) {
+                  continue
+                }
+                else if (anythingElse(obj.data, '$')) {
+                  preferred = obj
+                }
+              }
+            }
           }
         }
+        if (preferred) {
+          mark.up = cursor3d.up
+          mark.forward = cursor3d.forward
+          mark.mdl.position.copy(cursor3d.mdl.position)
+          mark.mdl.rotation.copy(cursor3d.mdl.rotation)
+          positionObject(mark, cursor3d.x, cursor3d.y, cursor3d.z)
+          buildComponentEditor(preferred)
+          populateObjectSelector(ctn, (pickmode == "mray" ? cursor3d.up : undefined), preferred)
+          return
+        }
       }
+      // if nothing was selected, clear the object properties editor instead
       clearComponentEditor()
       remove(mark, false)
       positionObject(cursor3d, cursor3d.x, cursor3d.y, cursor3d.z)
@@ -2512,6 +2594,7 @@ $(async function MAIN() {
     name:"Settings",
     editorOnly:true,
     pickModes:["xz", "xy", "yz", "mray"],
+    spclassPick:"*",
     alignMode:"none",
     pickIn:true,
     routine:"settings",
@@ -2704,8 +2787,6 @@ $(async function MAIN() {
     }
   }
 })
-
-
 
 
 

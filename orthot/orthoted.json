@@ -73,7 +73,7 @@
     },
     "HorizObject":{
       "pickModes":["xz", "xy", "yz", "mray"],
-      "alignMode":"horizontal",
+      "alignMode":"horizontal_away",
       "volumetric":true,
       "pickOut":true,
       "cursorModel":"DirCursor",
@@ -466,6 +466,28 @@
     },
     {
       "extend":"HorizObject",
+      "type":"target",
+      "name":"TargetPosition", 
+      "shortname":"Target",
+      "model":"targetbox",
+      "spatialClass":"scenery",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "editorMaterials":[ 
+        "red", "yellow", "green", "white",
+        {"color":"blue", "transparent":true, "opacity":0.15, "emissive":"white", "emissiveIntensity":0.25 } 
+      ],
+      "icon":{
+        "sheet":"editoricons",
+        "row":2,
+        "col":3
+      },
+      "components":{
+        "name":""
+      }
+    },
+    {
+      "extend":"HorizObject",
       "type":"sceneportal",
       "name":"Exit", 
       "shortname":"Exit",
@@ -473,6 +495,7 @@
       "spatialClass":"scenery",
       "spclassPick":["solid"],
       "spclassCoexist":[],
+      "invertForward":true,
       "icon":{
         "sheet":"AppIcons",
         "row":0,
@@ -485,25 +508,6 @@
         ],
         "dest":"",
         "target":""
-      }
-    },
-    {
-      "extend":"HorizObject",
-      "type":"stairs",
-      "name":"Stairs", 
-      "shortname":"Stairs",
-      "model":"stair_ramp",
-      "spatialClass":"ramp",
-      "spclassPick":["solid"],
-      "spclassCoexist":[],
-      "invertForward":true,
-      "icon":{
-        "sheet":"AppIcons",
-        "row":3,
-        "col":0
-      },
-      "components":{
-        "materials":[ "white" ]
       }
     },
     {
@@ -524,6 +528,73 @@
       "components":{
         "materials":[ "green", "yellow" ],
         "message":""
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"flag",
+      "name":"Flag", 
+      "shortname":"Flag",
+      "model":"FlagPlain",
+      "spatialClass":"scenery",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "invertForward":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":0,
+        "col":3
+      },
+      "components":{
+        "materials":[ "brown", "green" ],
+        "code":""
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"stairs",
+      "name":"Stairs", 
+      "shortname":"Stairs",
+      "model":"stair_ramp",
+      "spatialClass":"ramp",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "alignMode":"horizontal_toward",
+      "invertForward":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":3,
+        "col":0
+      },
+      "components":{
+        "materials":[ "white" ]
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"gate",
+      "name":"Gate", 
+      "shortname":"Gate",
+      "model":"ed_gate",
+      "cursorModel":"AdvancedDirCursor",
+      "spatialClass":"ramp",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "invertForward":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":3,
+        "col":1
+      },
+      "components":{
+        "materials":[
+          "white", 
+          {"color":"red", "immutable":true}
+        ],
+        "extend_signal":"",
+        "retract_signal":"",
+        "toggle_signal":"",
+        "start_extended":true
       }
     },
     {

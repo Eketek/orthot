@@ -98,7 +98,7 @@
         If you would like to contribute, be be warned that the project is still somewhat more like a hastilly assembled mess of JavaScript than an elegantly
         coded and well-documented software project.  Eketek at least knows what to do about it.
       </p>
-      <span class="btn_active" id="hideabout">Click -&gt<b>Here</b>&lt- or --&gt<b>there</b> to hide this message.</span>
+      <span class="btn_active" id="hideabout">Close</span>
     </div>
     <div id="textdisplay" style="position:absolute;margin:auto;pointer-events:none;opacity:0"></div>
     
@@ -123,6 +123,96 @@
         </div>
         <div style="clear:left"></div>
       </div>
+    </div>
+    
+    <div id="instructions" class="info" style="width:60%;height:75%;overflow:auto;border-color:green;padding:10px">
+      <h1>Orthot 3 Puzzle Editor Instructions</h1>
+      <hr>
+      <h3>OVERVIEW</h3>
+      <div>This document is written with the perspective of the Orthot 3 Editor as "Orthot-3 Editor".  Technically, it should be called "Eketech Voxel Editor Version 2, with a configuration for Orthot 3", but that is arguably too cumbersome.</div><br>
+
+      <div>The Orthot 3 Editor is a volumetric modelling and layout tool.  It handles two main types of objects:  Blocks and Attachments.  Blocks are anything which physically occupies a fixed-size cube-shaped volume.  Attachments are non-volumetric objects which are attached to the sides of a Block.</div><br>
+
+      <div>The interface is driven primarilly by a mouse, and secondarilly by keyboard.  The mouse is used to pick positions, activate Tools, to manipulate the 3D View, and to activate/manipulate property-editing GUI elements.  The keyboard is used to augment the mouse in selecting position, to interact with text-based property editors, and for keyboard shortcuts.</div><br>
+      
+      <div>Click the "Import/Export" button (right side of the Display) to save or load a puzzle.</div>
+      <div>Click the "Test" button (right side of the Display) to test your puzzle (this opens or reactivates another window/tab).</div>
+      
+      <h3>TOOLS</h3>
+      <div>Tools are operators that get applied to positions/objects located at the position which has been picked through mouse-movement.  In general operations are:</div>
+      <div style="padding-left:1em">
+        Add an instance of the tool-specified object at the picked position or position+side (or replace an existing non-coexistable object)<br>
+        Remove all blocks and attachments at the picked position<br>
+        Remove all attachments at the picked position+side<br>
+        Edit properties of an object at the picked position or position+side</div>
+
+      <h3>PICKING</h3>
+      <div>Mouse positions are transformed from 2d positions on your Display to 3d positions in your puzzle.  The function used for that transformation is called the "pick mode".  There are two basic modes available:
+        Mouse Ray - In this pick mode, picking is performed against existing objects in your puzzle which are positioned exactly under the mouse cursor.  Based on tool properties, this may pick either the position of the picked object or the position adjacent to the picked object. Additionally, some tools are selective about which objects to pick against (a tool might pass through "scenery" and/or "liquid" and pick something further back which is "solid").
+        Planar - In this pick mode, picking is performed against an infinite plane.  The picking plane may be offset along a perpendicular line by using the "arrow" or "wasd" keyboard buttons. Planar pick mode comes in three flavors:  "XZ", "XY", and "YZ" - each of which permits free mouse-based picking in two dimensions, but needs keyboard input to alter the third.</div>
+      <h3>3D CURSORS</h3>
+      <div>A cursor is positioned at the picked position.  Depending on which tool & pickmode is active, the following cursors will appear:
+      <div style="padding-left:1em">
+        White box frame - this is used for unaligned blocks<br>
+        White square frame - this is used for unaligned attachments (or not, since none of the tools are set up that way)<br>
+        White square frame with a white arrow - used to indicate which direction is forward (both for attachments and for orientable blocks)<br>
+        White square frame with a white arrow and a red chevron - The chevron is used to better emphasize which direction is right (relative to forward).</div></div>
+      <h3>ORIENTATION</h3>
+      <div>Most of the different types of objects on Orthot have an orientation.  When orientation is used, it will be derived from the picked position (based on where the mouse is in relation to the exact center of the picked side of the picked position).  Orientation is also indicated by a 3d cursor which shows a forward-pointing arrow.</div>
+      <h3>PROPERTIES</h3>
+      <div>Many tools/objects have special properties which can be edited.  Tool/Object properties appear on the left side of the Display either when a tool is selected or when an object is being manipulated by the edit tool.  Properties altered when a tool is active will affect all objects generated by that tool after the alteration (but not any objects which have already been placed).  Properties altered through the edit tool affect only the selected object.  The exact behavior of the properties editors is based on what sort of property each one is (color picker for adjusting colors, tile picker for adjusting tile-based textures, textarea for adjusting text, checkbox for enabling or disabling thigns, etc...).</div>
+      
+      <h3>Puzzle element details and properties</h3>
+      <div>
+      Wall - The three flavors provide different levels of customization (amount of surface specifications)<br>
+      paint-Wl - This tool sets the surface properties of individual terrain sides, allowing you to "paint" arbitrary patches of your terrain<br>
+      Stairs, PBlock, Crate, IceBlock - These are fairly generic blocks with no special properties<br>
+      Start - starting position<br>
+      <div style="padding-left:1em">
+        startMSG - text (or text-entry-name) to display when standing in the starting position</br>
+        defeatMSG - text (or text-entry-name) to display when respawning after defeat</br>
+        fpview - if checked, start in first-person perspective (consider using this for cramped maze-type puzzles)
+      </div>
+      Exit - End position, puzzles are considered "solved" if one of these is reached.
+      <div style="padding-left:1em">
+        dest - name of zone to teleport to (puzzle pack only, defaults to main area)</br>
+        target - name of target position to spawn at in destination zone
+      </div>
+      Target - Named position (target position for use with zone portals and exits)<br>
+      zPortal - Teleporter to another puzzle/zone.
+      <div style="padding-left:1em">
+        dest - name of zone to teleport to (puzzle pack only, defaults to main area)</br>
+        target - name of target position to spawn at in destination zone
+      </div>
+      Portal - Links two or more positions within the zone
+      <div style="padding-left:1em">
+        class - If set, the portal is a bidirectional link with every other portal of the same class.</br>
+        name - If set, the portal is the destination of a one-way link from any portal which has the same value as its target
+        target - If set, the portal is a one-way link to a portal with the same value set as its name
+      </div>
+      Icefloor and ladder are fairly generic attachments with no special properties</br>
+      Button - An attachment that emits a signal when it gets pressed and when it gets released
+      <div style="padding-left:1em">
+        press - Signal to emit when the button is pressed.</br>
+        release - Signal to emit when the button is released.
+      </div>
+      Gate - A barrier which extends and retracts when signals are emitted (arbitrary text-based codes that logically link signal emitters to receivers)
+      <div style="padding-left:1em">
+        extend_signal - Gate extends (from retracted or retracting state) when something emits this signal.</br>
+        retract_signal - Gate retracts (from extended or extending state) when something emits this signal.</br>
+        toggle_signal - Gate flips between retract[ed/ing] & extend[ed/ing] when something emits this signal.</br>
+      </div>
+      Lock and Key - If the key and the lock share the same color, then the key opens the lock.  (Lock uses its first color for this)
+      Mouse and Moose are fairly vicious creatures with no special properties</br>
+      Flag - A scenery-type object which indicates whether or not a puzzle has been completed.  A flag is green if indicating completion, red otherwise.
+      <div style="padding-left:1em">
+        code - Name of puzzle to indicate whether or not it has been completed.
+      </div>
+      InfoBox - A scenery-type block which displays a helpful (or not) message when the player is standing in it.
+      <div style="padding-left:1em">
+        message - text (or text-entry-name) to display when standing in the InfoBox position
+      </div>
+      <span class="btn_active" id="hideinstructions">Close</span>
     </div>
   </body>
 </html>

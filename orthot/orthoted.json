@@ -239,7 +239,7 @@
     },
     {
       "type":"editterrain",
-      "name":"PaintWall",
+      "name":"Paint Wall",
       "shortname":"paint-Wl",
       "pickModes":["mray"],
       "alignMode":"any",
@@ -299,7 +299,7 @@
     {
       "extend":"UnalignedObject",
       "type":"pushblock",
-      "name":"PushBlock", 
+      "name":"Push-Block", 
       "shortname":"PBlock",
       "model":"pushblock",
       "icon":{
@@ -329,7 +329,7 @@
     {
       "extend":"UnalignedObject",
       "type":"iceblock",
-      "name":"IceBlock", 
+      "name":"Ice Block", 
       "shortname":"IceBlock",
       "model":"iceblock",
       "icon":{
@@ -350,7 +350,7 @@
     {
       "extend":"HorizObject",
       "type":"start",
-      "name":"Player-Start", 
+      "name":"Starting Position", 
       "shortname":"Start",
       "model":"man",
       "unique":"type",
@@ -378,7 +378,7 @@
     },
     {
       "extend":"HorizObject",
-      "type":"sceneportal",
+      "type":"exit",
       "name":"Exit", 
       "shortname":"Exit",
       "model":"EndBlock",
@@ -403,7 +403,7 @@
     {
       "extend":"HorizObject",
       "type":"target",
-      "name":"TargetPosition", 
+      "name":"Named/Target Position", 
       "shortname":"Target",
       "model":"targetbox",
       "spatialClass":"scenery",
@@ -425,7 +425,7 @@
     {
       "extend":"UnalignedObject",
       "type":"view",
-      "name":"View", 
+      "name":"3d View Position", 
       "shortname":"View",
       "model":"View",
       "editorMaterials":[
@@ -440,6 +440,30 @@
         "col":0
       },      
       "routine":"buildcube_clickonly"
+    },
+    {
+      "extend":"HorizObject",
+      "type":"zoneportal",
+      "name":"Zone Portal", 
+      "shortname":"zPortal",
+      "model":"scene_portal",
+      "spatialClass":"scenery",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "invertForward":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":0,
+        "col":4
+      },
+      "components":{
+        "materials":[
+          {"color":"yellow", "emissive":"yellow", "emissiveIntensity":0.4 },
+          {"color":"cyan", "transparent":true, "opacity":0.5}
+        ],
+        "dest":"",
+        "target":""
+      }
     },
     {
       "extend":"Attachment",
@@ -486,7 +510,7 @@
     {
       "extend":"Attachment",
       "type":"icefloor",
-      "name":"IceFloor",
+      "name":"Ice Floor",
       "shortname":"IceFloor",
       "cursorModel":"FaceCursor",
       "model":"icefloor",
@@ -505,9 +529,7 @@
           "hsl(175, 100%, 75%)", 
           {"color":"blue", "transparent":true, "opacity":0.25, "metalness":1, "roughness":0.5},
           "black"
-        ],
-        "press":"",
-        "release":""
+        ]
       }
     },
     {
@@ -527,6 +549,33 @@
         "materials":["red"],
         "press":"",
         "release":""
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"gate",
+      "name":"Gate", 
+      "shortname":"Gate",
+      "model":"ed_gate",
+      "cursorModel":"AdvancedDirCursor",
+      "spatialClass":"ramp",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "invertForward":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":3,
+        "col":1
+      },
+      "components":{
+        "materials":[
+          "white", 
+          {"color":"red", "immutable":true}
+        ],
+        "extend_signal":"",
+        "retract_signal":"",
+        "toggle_signal":"",
+        "start_extended":true
       }
     },
     {
@@ -615,33 +664,6 @@
     },
     {
       "extend":"HorizObject",
-      "type":"gate",
-      "name":"Gate", 
-      "shortname":"Gate",
-      "model":"ed_gate",
-      "cursorModel":"AdvancedDirCursor",
-      "spatialClass":"ramp",
-      "spclassPick":["solid"],
-      "spclassCoexist":[],
-      "invertForward":true,
-      "icon":{
-        "sheet":"AppIcons",
-        "row":3,
-        "col":1
-      },
-      "components":{
-        "materials":[
-          "white", 
-          {"color":"red", "immutable":true}
-        ],
-        "extend_signal":"",
-        "retract_signal":"",
-        "toggle_signal":"",
-        "start_extended":true
-      }
-    },
-    {
-      "extend":"HorizObject",
       "type":"flag",
       "name":"Flag", 
       "shortname":"Flag",
@@ -663,7 +685,7 @@
     {
       "extend":"UnalignedObject",
       "type":"infoblock",
-      "name":"InfoBlock", 
+      "name":"Info Block", 
       "shortname":"Info",
       "model":"InfoBlockFull",
       "spatialClass":"scenery",

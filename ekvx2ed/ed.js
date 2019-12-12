@@ -396,6 +396,15 @@ $(async function MAIN() {
   aboutBTN = $("<div>").addClass("btn_active").text("About").click(toggleAboutBox)[0]
   $("#controls").append(aboutBTN)
   
+  let instructionsBTN
+  let toggleInstructionsBox = function() {
+    $("#instructions").toggle()
+    putFloatingElement($("#instructions")[0], instructionsBTN)
+  }
+  instructionsBTN = $("<div>").addClass("btn_active").text("Instructions").click(toggleInstructionsBox)[0]
+  $("#controls").append(instructionsBTN)
+  on($("#hideinstructions"), "click", toggleInstructionsBox)
+  
   let portuiBTN
   let portuiVisible = false
   let togglePortUI = function() {
@@ -426,14 +435,6 @@ $(async function MAIN() {
     let elem = $("#savetofile")[0]
     elem.href = durl
     elem.download = Settings.Name + ".ekvx2"
-        
-    //let durl = mainCNV.toDataURL()
-    //let elem = $("#savepngBTN")[0]
-    //elem.href = durl
-    //elem.download = picName() + ".png"
-    //importData($("#exportTarget")[0].value)
-    //$("#port").hide()
-    //portuiVisible = false
   })
   
   on($("#loadfromfile"), "change", ()=>{
@@ -453,6 +454,13 @@ $(async function MAIN() {
   on($("#foldrecentBTN"), "click", ()=>{ $("#recentColors").toggle()})
   on($("#foldpalettecfgBTN"), "click", ()=>{ $("#palettecfg").toggle()})
   on($("#foldpaletteBTN"), "click", ()=>{ $("#palleteColors").toggle()})
+  
+  // catch-all floating-html-thing hider
+  on(document, "Escape", ()=>{
+    $(".info").hide()
+    portuiVisible = false
+  })
+  
   
   let pixCNV = $("<canvas>")[0]
   pixCNV.width = 1
@@ -2192,12 +2200,15 @@ $(async function MAIN() {
       spec.shortname ? spec.shortname : spec.name, 
       spec.desc ? spec.desc : spec.name,
       spec.name, 
-      false, 
+      spec.default, 
       "tools", 
       "*", 
       spec.icon.sheet, spec.icon.row, spec.icon.col, 
       275, 5
     )
+    if (spec.default) {
+      setTool(spec.name)
+    }
   }
   
   let setTool = function(name) {
@@ -2520,9 +2531,6 @@ $(async function MAIN() {
         }
         resolveRefs(tooldef, tooldef)
         defineTool(tooldef)
-        if (tooldef.default) {
-          setTool(tooldef.name)
-        }
       }
     }
     reset()

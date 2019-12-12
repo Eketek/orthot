@@ -186,6 +186,12 @@ var Ekvx2Interpreter = {
             zone.putGameobject(x,y,z, info_obj)
           }
         } break
+        case "exit":
+          gobj = new Exit(zone, { up:up, forward:forward }, obj.dest, obj.target, obj.materials)
+          break
+        case "zoneportal":
+          gobj = new ScenePortal(zone, obj.dest, obj.target, obj.materials)
+          break
         case "target": {
           zone.targets[obj.name] = {
             loc:loc,

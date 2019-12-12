@@ -1,3 +1,9 @@
+
+12 Dec 2019
+  Add basic overview/instructions to editor UI
+  Add a generic floating-html-thing hider
+  Initalize the UI button correctly if a tool is specified as the default tool.
+
 11 Dec 2019
   Fixed inconsistant orientation
   More flexible color picker (it now resizes as needed)

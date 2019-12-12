@@ -1,4 +1,10 @@
 0.3.0:
+  12 Dec 2019
+    Add exit and zone-portal to ekvx2 loader
+    Add zone-portal to editor configuration
+    Adjust a few tool names in the editor configuration
+    Put the gate tool next to the button tool (Until and unless there are a lot of them, signal emitters and signal receivers should be grouped)
+    
   11 Dec 2019
     Add flags, gates, and named positions to editor configuration and ekvx2 loader
     Add a link to the puzzle editor (ekvxed2 with an auto-loaded orthot configuration) to the UI

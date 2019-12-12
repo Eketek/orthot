@@ -2528,10 +2528,42 @@ $(async function MAIN() {
     reset()
   }).bind(this)
   
-  if (document.DEFAULT_EDITOR_CFG) {
-    edCTL.configure(document.DEFAULT_EDITOR_CFG)
-  }
-  
+  defineTool({
+    type:"settings",
+    name:"Settings",
+    editorOnly:true,
+    pickModes:["xz", "xy", "yz", "mray"],
+    spclassPick:"*",
+    alignMode:"none",
+    pickIn:true,
+    routine:"settings",
+    icon:{
+      sheet:"editoricons",
+      row:2,
+      col:2
+    },
+  })
+  defineTool({
+    type:"edit",
+    name:"Edit",
+    editorOnly:true,
+    pickModes:["xz", "xy", "yz", "mray"],
+    alignMode:"none",
+    pickIn:true,
+    spclassPick:"*",
+    routine:"edit",
+    cursorModel:"CubeCursor",
+    cursorModel_mray:"FaceCursor",
+    markModel:"CubeMark",
+    markModel_mray:"FaceMark",
+    sideCursor_mray:true,
+    requireRaycastHit:true,
+    icon:{
+      sheet:"editoricons",
+      row:2,
+      col:1
+    },
+  })  
   defineTool({
     type:"erase",
     name:"Erase",
@@ -2567,43 +2599,10 @@ $(async function MAIN() {
     },
   })
   
-  defineTool({
-    type:"edit",
-    name:"Edit",
-    editorOnly:true,
-    pickModes:["xz", "xy", "yz", "mray"],
-    alignMode:"none",
-    pickIn:true,
-    spclassPick:"*",
-    routine:"edit",
-    cursorModel:"CubeCursor",
-    cursorModel_mray:"FaceCursor",
-    markModel:"CubeMark",
-    markModel_mray:"FaceMark",
-    sideCursor_mray:true,
-    requireRaycastHit:true,
-    icon:{
-      sheet:"editoricons",
-      row:2,
-      col:1
-    },
-  })
+  if (document.DEFAULT_EDITOR_CFG) {
+    edCTL.configure(document.DEFAULT_EDITOR_CFG)
+  }
   
-  defineTool({
-    type:"settings",
-    name:"Settings",
-    editorOnly:true,
-    pickModes:["xz", "xy", "yz", "mray"],
-    spclassPick:"*",
-    alignMode:"none",
-    pickIn:true,
-    routine:"settings",
-    icon:{
-      sheet:"editoricons",
-      row:2,
-      col:2
-    },
-  })
   
   let serialize = function() {
     let o = {

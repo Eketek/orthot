@@ -110,25 +110,6 @@
   },
   "Tools":[
     {
-      "extend":"UnalignedObject",
-      "type":"view",
-      "name":"View", 
-      "shortname":"View",
-      "model":"View",
-      "editorMaterials":[
-        {"color":"white", "emissive":"white", "emissiveIntensity":0.25}, 
-        {"color":"green", "emissive":"white", "emissiveIntensity":0.25}, 
-        "blue", 
-        {"color":"cyan", "transparent":true, "opacity":0.33, "emissive":"white", "emissiveIntensity":0.25 } 
-      ],
-      "icon":{
-        "sheet":"editoricons",
-        "row":2,
-        "col":0
-      },      
-      "routine":"buildcube_clickonly"
-    },
-    {
       "name":"Wall-OneColor",
       "extend":"Wall",
       "default":true,
@@ -199,7 +180,6 @@
         "row":1,
         "col":2
       },
-      
       "components":{
         "up":{
           "color":"white",
@@ -297,6 +277,26 @@
       }
     },
     {
+      "extend":"HorizObject",
+      "type":"stairs",
+      "name":"Stairs", 
+      "shortname":"Stairs",
+      "model":"stair_ramp",
+      "spatialClass":"ramp",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "alignMode":"horizontal_toward",
+      "invertForward":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":3,
+        "col":0
+      },
+      "components":{
+        "materials":[ "white" ]
+      }
+    },
+    {
       "extend":"UnalignedObject",
       "type":"pushblock",
       "name":"PushBlock", 
@@ -348,6 +348,100 @@
       }
     },
     {
+      "extend":"HorizObject",
+      "type":"start",
+      "name":"Player-Start", 
+      "shortname":"Start",
+      "model":"man",
+      "unique":"type",
+      "spatialClass":"creature",
+      "spclassPick":["solid", "creature"],
+      "spclassCoexist":["scenery"],
+      "icon":{
+        "sheet":"AppIcons",
+        "row":0,
+        "col":0
+      },
+      "components":{
+        "materials":[
+          "hsl(25, 80%, 60%)", 
+          "blue", 
+          "hsl(15, 100%, 15%)", 
+          "black", 
+          {"color":"black", "metalness":1}, 
+          {"color":"white", "emissive":"yellow", "emissiveIntensity":1}
+        ],
+        "startMSG":"",
+        "defeatMSG":"",
+        "fpview":false
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"sceneportal",
+      "name":"Exit", 
+      "shortname":"Exit",
+      "model":"EndBlock",
+      "spatialClass":"scenery",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "invertForward":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":0,
+        "col":1
+      },
+      "components":{
+        "materials":[
+          {"color":"yellow", "emissive":"yellow", "emissiveIntensity":0.4 },
+          {"color":"cyan", "transparent":true, "opacity":0.5}
+        ],
+        "dest":"",
+        "target":""
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"target",
+      "name":"TargetPosition", 
+      "shortname":"Target",
+      "model":"targetbox",
+      "spatialClass":"scenery",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "editorMaterials":[ 
+        "red", "yellow", "green", "white",
+        {"color":"blue", "transparent":true, "opacity":0.15, "emissive":"white", "emissiveIntensity":0.25 } 
+      ],
+      "icon":{
+        "sheet":"editoricons",
+        "row":2,
+        "col":3
+      },
+      "components":{
+        "name":""
+      }
+    },
+    {
+      "extend":"UnalignedObject",
+      "type":"view",
+      "name":"View", 
+      "shortname":"View",
+      "model":"View",
+      "editorMaterials":[
+        {"color":"white", "emissive":"white", "emissiveIntensity":0.25}, 
+        {"color":"green", "emissive":"white", "emissiveIntensity":0.25}, 
+        "blue", 
+        {"color":"cyan", "transparent":true, "opacity":0.33, "emissive":"white", "emissiveIntensity":0.25 } 
+      ],
+      "icon":{
+        "sheet":"editoricons",
+        "row":2,
+        "col":0
+      },      
+      "routine":"buildcube_clickonly"
+    },
+    {
       "extend":"Attachment",
       "type":"portal",
       "name":"Portal",
@@ -391,25 +485,6 @@
     },
     {
       "extend":"Attachment",
-      "type":"button",
-      "name":"Button",
-      "shortname":"Button",
-      "cursorModel":"FaceCursor",
-      "model":"smallbutton_up",
-      "icon":{
-        "sheet":"AppIcons",
-        "row":2,
-        "col":2
-      },
-      "alignMode":"any",
-      "components":{
-        "materials":["red"],
-        "press":"",
-        "release":""
-      }
-    },
-    {
-      "extend":"Attachment",
       "type":"icefloor",
       "name":"IceFloor",
       "shortname":"IceFloor",
@@ -436,184 +511,22 @@
       }
     },
     {
-      "extend":"HorizObject",
-      "type":"start",
-      "name":"Player-Start", 
-      "shortname":"Start",
-      "model":"man",
-      "unique":"type",
-      "spatialClass":"creature",
-      "spclassPick":["solid", "creature"],
-      "spclassCoexist":["scenery"],
+      "extend":"Attachment",
+      "type":"button",
+      "name":"Button",
+      "shortname":"Button",
+      "cursorModel":"FaceCursor",
+      "model":"smallbutton_up",
       "icon":{
         "sheet":"AppIcons",
-        "row":0,
-        "col":0
-      },
-      "components":{
-        "materials":[
-          "hsl(25, 80%, 60%)", 
-          "blue", 
-          "hsl(15, 100%, 15%)", 
-          "black", 
-          {"color":"black", "metalness":1}, 
-          {"color":"white", "emissive":"yellow", "emissiveIntensity":1}
-        ],
-        "startMSG":"",
-        "defeatMSG":"",
-        "fpview":false
-      }
-    },
-    {
-      "extend":"HorizObject",
-      "type":"target",
-      "name":"TargetPosition", 
-      "shortname":"Target",
-      "model":"targetbox",
-      "spatialClass":"scenery",
-      "spclassPick":["solid"],
-      "spclassCoexist":[],
-      "editorMaterials":[ 
-        "red", "yellow", "green", "white",
-        {"color":"blue", "transparent":true, "opacity":0.15, "emissive":"white", "emissiveIntensity":0.25 } 
-      ],
-      "icon":{
-        "sheet":"editoricons",
         "row":2,
-        "col":3
-      },
-      "components":{
-        "name":""
-      }
-    },
-    {
-      "extend":"HorizObject",
-      "type":"sceneportal",
-      "name":"Exit", 
-      "shortname":"Exit",
-      "model":"EndBlock",
-      "spatialClass":"scenery",
-      "spclassPick":["solid"],
-      "spclassCoexist":[],
-      "invertForward":true,
-      "icon":{
-        "sheet":"AppIcons",
-        "row":0,
-        "col":1
-      },
-      "components":{
-        "materials":[
-          {"color":"yellow", "emissive":"yellow", "emissiveIntensity":0.4 },
-          {"color":"cyan", "transparent":true, "opacity":0.5}
-        ],
-        "dest":"",
-        "target":""
-      }
-    },
-    {
-      "extend":"UnalignedObject",
-      "type":"infoblock",
-      "name":"InfoBlock", 
-      "shortname":"Info",
-      "model":"InfoBlockFull",
-      "spatialClass":"scenery",
-      "spclassPick":"*",
-      "spclassCoexist":["creature"],
-      "icon":{
-        "sheet":"AppIcons",
-        "row":0,
         "col":2
-      },      
-      "routine":"buildcube_clickonly",
-      "components":{
-        "materials":[ "green", "yellow" ],
-        "message":""
-      }
-    },
-    {
-      "extend":"HorizObject",
-      "type":"flag",
-      "name":"Flag", 
-      "shortname":"Flag",
-      "model":"FlagPlain",
-      "spatialClass":"scenery",
-      "spclassPick":["solid"],
-      "spclassCoexist":[],
-      "invertForward":true,
-      "icon":{
-        "sheet":"AppIcons",
-        "row":0,
-        "col":3
       },
+      "alignMode":"any",
       "components":{
-        "materials":[ "brown", "green" ],
-        "code":""
-      }
-    },
-    {
-      "extend":"HorizObject",
-      "type":"stairs",
-      "name":"Stairs", 
-      "shortname":"Stairs",
-      "model":"stair_ramp",
-      "spatialClass":"ramp",
-      "spclassPick":["solid"],
-      "spclassCoexist":[],
-      "alignMode":"horizontal_toward",
-      "invertForward":true,
-      "icon":{
-        "sheet":"AppIcons",
-        "row":3,
-        "col":0
-      },
-      "components":{
-        "materials":[ "white" ]
-      }
-    },
-    {
-      "extend":"HorizObject",
-      "type":"gate",
-      "name":"Gate", 
-      "shortname":"Gate",
-      "model":"ed_gate",
-      "cursorModel":"AdvancedDirCursor",
-      "spatialClass":"ramp",
-      "spclassPick":["solid"],
-      "spclassCoexist":[],
-      "invertForward":true,
-      "icon":{
-        "sheet":"AppIcons",
-        "row":3,
-        "col":1
-      },
-      "components":{
-        "materials":[
-          "white", 
-          {"color":"red", "immutable":true}
-        ],
-        "extend_signal":"",
-        "retract_signal":"",
-        "toggle_signal":"",
-        "start_extended":true
-      }
-    },
-    {
-      "extend":"UnalignedObject",
-      "type":"key",
-      "name":"Key", 
-      "shortname":"Key",
-      "model":"key",
-      "spatialClass":"item",
-      "spclassPick":["solid"],
-      "spclassCoexist":["scenery"],
-      "icon":{
-        "sheet":"AppIcons",
-        "row":4,
-        "col":0
-      },      
-      "routine":"buildcube_clickonly",
-      "components":{
-        "materials":[ "white" ]
+        "materials":["red"],
+        "press":"",
+        "release":""
       }
     },
     {
@@ -633,6 +546,25 @@
       "routine":"buildcube_clickonly",
       "components":{
         "materials":[ "white", "black" ]
+      }
+    },
+    {
+      "extend":"UnalignedObject",
+      "type":"key",
+      "name":"Key", 
+      "shortname":"Key",
+      "model":"key",
+      "spatialClass":"item",
+      "spclassPick":["solid"],
+      "spclassCoexist":["scenery"],
+      "icon":{
+        "sheet":"AppIcons",
+        "row":4,
+        "col":0
+      },      
+      "routine":"buildcube_clickonly",
+      "components":{
+        "materials":[ "white" ]
       }
     },
     {
@@ -679,6 +611,73 @@
           "hsl(30, 100%, 20%)", 
           {"color":"red", "emissive":"red", "emissiveIntensity":1}
         ]
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"gate",
+      "name":"Gate", 
+      "shortname":"Gate",
+      "model":"ed_gate",
+      "cursorModel":"AdvancedDirCursor",
+      "spatialClass":"ramp",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "invertForward":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":3,
+        "col":1
+      },
+      "components":{
+        "materials":[
+          "white", 
+          {"color":"red", "immutable":true}
+        ],
+        "extend_signal":"",
+        "retract_signal":"",
+        "toggle_signal":"",
+        "start_extended":true
+      }
+    },
+    {
+      "extend":"HorizObject",
+      "type":"flag",
+      "name":"Flag", 
+      "shortname":"Flag",
+      "model":"FlagPlain",
+      "spatialClass":"scenery",
+      "spclassPick":["solid"],
+      "spclassCoexist":[],
+      "invertForward":true,
+      "icon":{
+        "sheet":"AppIcons",
+        "row":0,
+        "col":3
+      },
+      "components":{
+        "materials":[ "brown", "green" ],
+        "code":""
+      }
+    },
+    {
+      "extend":"UnalignedObject",
+      "type":"infoblock",
+      "name":"InfoBlock", 
+      "shortname":"Info",
+      "model":"InfoBlockFull",
+      "spatialClass":"scenery",
+      "spclassPick":"*",
+      "spclassCoexist":["creature"],
+      "icon":{
+        "sheet":"AppIcons",
+        "row":0,
+        "col":2
+      },      
+      "routine":"buildcube_clickonly",
+      "components":{
+        "materials":[ "green", "yellow" ],
+        "message":""
       }
     }
   ]

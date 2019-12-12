@@ -12,7 +12,7 @@
     
     <script> 
       (async function f() {
-        let resp = await fetch("/orthot/orthoted.json", {cache:"no-store"})
+        let resp = await fetch("orthot/orthoted.json", {cache:"no-store"})
         let cfg = JSON.parse(await resp.text())
         if (window.ectl && window.ectl.configure) {
           window.ectl.configure(cfg)

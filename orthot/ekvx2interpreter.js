@@ -72,6 +72,7 @@ var Ekvx2Interpreter = {
     }
   },
   load:function(zone, ldstate, ekvx) {
+    zone.playerMaterials = ["hsl(25, 80%, 60%)", "blue", "hsl(15, 100%, 15%)", "black", {color:"black", metalness:1}, {color:"white", emissive:"yellow", emissiveIntensity:1}]
     renderCTL.border.color = ekvx.Settings.NamedColors.border
     renderCTL.hiliteA.color = ekvx.Settings.NamedColors.hiliteA
     renderCTL.hiliteB.color = ekvx.Settings.NamedColors.hiliteB

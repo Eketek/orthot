@@ -2,6 +2,8 @@
   11 Dec 2019
     Add flags, gates, and named positions to editor configuration and ekvx2 loader
     Add a link to the puzzle editor (ekvxed2 with an auto-loaded orthot configuration) to the UI
+    Fixed a few issues with invalid puzzle "easy mode"
+      (ensure player materials are present and the zone bounds are adjusted correctly)
     
   10 Dec 2019
     Set terrain "hilites" (static colors that get applied by the shader) from ekvx2

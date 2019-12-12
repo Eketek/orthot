@@ -1523,7 +1523,7 @@ var Zone = function(ekvx, override_startloc, name, yieldsProgressCode, external,
       
       let msg
       if (_max.x == Number.MIN_VALUE) {
-        msg = "CONTENTCREATOR forgot to create content, so EKETEK enabled EASY MODE for you.\nHave Fun!" 
+        msg = "CONTENTCREATOR forgot to create content, so GAMEDEVELOPER enabled EASYMODE.\nHave Fun!" 
         x = 0
         y = 0
         z = 0
@@ -1535,8 +1535,9 @@ var Zone = function(ekvx, override_startloc, name, yieldsProgressCode, external,
         _max.z = 5
       }
       else {
-        msg = "CONTENTCREATOR forgot to define a start position, so EKETEK enabled EASY MODE for you.\nHave Fun!"
+        msg = "CONTENTCREATOR forgot to define a starting position, so GAMEDEVELOPER enabled EASYMODE.\nHave Fun!"
         _min.x -= 5
+        _min.y -= 5
         _min.z -= 5
       }
       start_target = {

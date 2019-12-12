@@ -2336,40 +2336,40 @@ $(async function MAIN() {
       
       let comps = []
       if (activeTool.components.all) {
-        comps[0] = activeTool.components.all
-        comps[1] = activeTool.components.all
-        comps[2] = activeTool.components.all
-        comps[3] = activeTool.components.all
-        comps[4] = activeTool.components.all
-        comps[5] = activeTool.components.all
+        comps[0] = deepcopy(activeTool.components.all)
+        comps[1] = comps[0]
+        comps[2] = comps[0]
+        comps[3] = comps[0]
+        comps[4] = comps[0]
+        comps[5] = comps[0]
       }
       if (activeTool.components.horiz) {
-        comps[4] = activeTool.components.horiz
-        comps[5] = activeTool.components.horiz
+        comps[4] = deepcopy(activeTool.components.horiz)
+        comps[5] = comps[4]
       }
       if (activeTool.components.vert) {
-        comps[0] = activeTool.components.vert
-        comps[1] = activeTool.components.vert
-        comps[2] = activeTool.components.vert
-        comps[3] = activeTool.components.vert
+        comps[0] = deepcopy(activeTool.components.vert)
+        comps[1] = comps[0]
+        comps[2] = comps[0]
+        comps[3] = comps[0]
       }
       if (activeTool.components.up) {
-        comps[4] = activeTool.components.up
+        comps[4] = deepcopy(activeTool.components.up)
       }
       if (activeTool.components.north) {
-        comps[0] = activeTool.components.north
+        comps[0] = deepcopy(activeTool.components.north)
       }
       if (activeTool.components.east) {
-        comps[1] = activeTool.components.east
+        comps[1] = deepcopy(activeTool.components.east)
       }
       if (activeTool.components.south) {
-        comps[2] = activeTool.components.south
+        comps[2] = deepcopy(activeTool.components.south)
       }
       if (activeTool.components.west) {
-        comps[3] = activeTool.components.west
+        comps[3] = deepcopy(activeTool.components.west)
       }
       if (activeTool.components.down) {
-        comps[5] = activeTool.components.down
+        comps[5] = deepcopy(activeTool.components.down)
       }
       
       

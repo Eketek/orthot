@@ -4,6 +4,7 @@
   When preparing the object properties editor, it now prefers to display objects which are suitably aligned (for the pickmode) and with editable components
   Convert horizontal alignment mode into two alignment modes - one which points objects toward vertcal surfaces and one which points them away
   Added an "immutable" flag to omit entries from the materials component editor
+  Fixed a terrain data handling error (was using references to tool data objects instead of copies)
 
 9-10 Dec 2019
   Add Detach tool

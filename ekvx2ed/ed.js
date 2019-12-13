@@ -1874,8 +1874,11 @@ $(async function MAIN() {
         
           let shadeOBJ = {
             x:cursor3d.x,y:cursor3d.y,z:cursor3d.z,
-            mdl:getAsset(edCTL.assets, "ShadeCube")
+            mdl:getAsset(edCTL.assets, "ShadeCube"),
+            gx:new THREE.Object3D()
           }
+          shadeOBJ.gx.add(shadeOBJ.mdl)
+          
           put(shadeOBJ,cursor3d.x, cursor3d.y, cursor3d.z)
           
           if (remLocs.length > MrayDragLimit) {

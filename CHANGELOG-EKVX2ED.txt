@@ -1,4 +1,6 @@
-
+13 Dec 2019
+  Fix erase tool erasure indicators (erased objects are supposed to be visible but significantly darkened until the mouse is released).
+  
 12 Dec 2019
   Add basic overview/instructions to editor UI
   Add a generic floating-html-thing hider

@@ -434,6 +434,9 @@ $(async function MAIN() {
     let durl = URL.createObjectURL(new Blob([$("#exportTarget")[0].value], {type: "application/json"}))
     let elem = $("#savetofile")[0]
     elem.href = durl
+    if (Settings.Name == edCTL.Configuration.Settings.Name) {
+      Settings.Name = window.prompt(`"${Settings.Name}" seems a bit cliché.  By what name should your beautiful "${edCTL.DataType}" REALLY be known?`, Settings.Name)
+    }
     elem.download = Settings.Name + ".ekvx2"
   })
   
@@ -2442,6 +2445,8 @@ $(async function MAIN() {
     if (!dtype) {
       dtype = "Unspecified-data-type"
     }
+    
+    edCTL.Configuration = cfg
     
     edCTL.DataType = dtype
     edCTL.DataVersion = cfg.DataVersion

@@ -1,3 +1,6 @@
+16 Dec 2019
+  Auto-resize DOM elements managed by the Display when the window is resized (libek.js).
+
 11 Dec 2019
   Fixed window size errors in putFloatingElement (util.js)
 

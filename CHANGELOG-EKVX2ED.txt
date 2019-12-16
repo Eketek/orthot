@@ -1,3 +1,6 @@
+16 Dec 2019
+  Force-trigger the new window auto-resizer after the GUI is prepared.
+
 13 Dec 2019
   Fix erase tool erasure indicators (erased objects are supposed to be visible but significantly darkened until the mouse is released).
   

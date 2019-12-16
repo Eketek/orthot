@@ -1,4 +1,7 @@
 0.3.0:
+  16 Dec 2019
+    Trigger a complete rendering update when the window is resized.
+
   12 Dec 2019
     Add exit and zone-portal to ekvx2 loader
     Add zone-portal to editor configuration

@@ -61,19 +61,24 @@ var Display = function( elem, background=false, foreground=false ) {
   }
 
   let disp = new __Display()
-
+  
+  let w = elem.clientWidth
+  let h = elem.clientHeight
+  
   elem.dataset.display = disp
-  disp.renderer.setSize( elem.clientWidth, elem.clientHeight )
-  disp.camera.aspect = elem.clientWidth / elem.clientHeight
+  disp.renderer.setSize( w, h )
+  disp.camera.aspect = w / h
   disp.scene.add(disp.camera)
   disp.camera.updateProjectionMatrix()
 
+  let backgroundElem, foregroundElem
+  
   if (background) {
-    let backgroundElem = document.createElement("canvas")
-    backgroundElem.width = elem.clientWidth
-    backgroundElem.height = elem.clientHeight
-    backgroundElem.style.width = elem.clientWidth
-    backgroundElem.style.height = elem.clientHeight
+    backgroundElem = document.createElement("canvas")
+    backgroundElem.width = w
+    backgroundElem.height = h
+    backgroundElem.style.width = w
+    backgroundElem.style.height = h
     backgroundElem.style.position = "absolute"
     elem.appendChild( backgroundElem )
     disp.background = backgroundElem
@@ -82,15 +87,38 @@ var Display = function( elem, background=false, foreground=false ) {
   elem.appendChild( disp.renderer.domElement )
 
   if (foreground) {
-    let foregroundElem = document.createElement("canvas")
-    foregroundElem.width = elem.clientWidth
-    foregroundElem.height = elem.clientHeight
-    foregroundElem.style.width = elem.clientWidth
-    foregroundElem.style.height = elem.clientHeight
+    foregroundElem = document.createElement("canvas")
+    foregroundElem.width = w
+    foregroundElem.height = h
+    foregroundElem.style.width = w
+    foregroundElem.style.height = h
     foregroundElem.style.position = "absolute"
     elem.appendChild( foregroundElem )
     disp.foreground = foregroundElem
   }
+  
+  on(window, "resize", ()=>{
+    w = elem.clientWidth
+    h = elem.clientHeight
+    
+    disp.renderer.setSize( w, h )
+    disp.camera.aspect = w / h
+    disp.camera.updateProjectionMatrix()
+    
+    if (background) {
+      backgroundElem.width = w
+      backgroundElem.height = h
+      backgroundElem.style.width = w
+      backgroundElem.style.height = h
+    }
+    if (foreground) {
+      foregroundElem.width = w
+      foregroundElem.height = h
+      foregroundElem.style.width = w
+      foregroundElem.style.height = h
+    }
+  })
+  
   return disp
 }
 

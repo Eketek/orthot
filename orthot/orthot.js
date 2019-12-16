@@ -933,7 +933,12 @@ $(async function MAIN() {
     }
   }
   run()
-
+  
+  on(window, "resize", ()=>{
+    hg.update()
+    controlActive = true
+  })
+  
   //console.log(assets)
 })
 

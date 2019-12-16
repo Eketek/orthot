@@ -2537,6 +2537,9 @@ $(async function MAIN() {
       }
     }
     reset()
+    
+    // fake a resize event to force the rendering system to update (the renderer is set up well before the editor finishes manipulating the DOM).
+    window.dispatchEvent(new Event("resize"))
   }).bind(this)
   
   defineTool({

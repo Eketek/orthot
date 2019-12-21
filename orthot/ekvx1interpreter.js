@@ -34,7 +34,7 @@ let materials = {
 }
 
 let walldefs, bxtbldr, walltemplates
-let a8bparams = {ul:{x:0.5,y:0.5}, br:{x:1,y:1}, cols:16, rows:16}
+let a8bparams = {ul:{x:0,y:0.5}, br:{x:0.5,y:1}, cols:16, rows:16}
 let defineWallTerrain = function(id, color) {
   let sfc_v = bxtbldr.build_Sfcdef({
     color:color,

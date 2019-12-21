@@ -124,6 +124,9 @@ var Ekvx2Interpreter = {
       let gobj
       let align, color, mats
       let adjctn
+      if (typeof(obj.materials) == "number") {
+        obj.materials = ekvx.Memos[obj.materials]
+      }
       switch(template.type) {
         case "wall":
           vxc.loadTerrain(x,y,z, ekvx.Terrains[obj.$[4]])

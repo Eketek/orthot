@@ -5,6 +5,7 @@
     Add ability to load textures from ekvx2 data
     Update orthot-editor configuration for changes to ekvxed2
     Update ekvx1 interpreter for changes to BoxTerrain (and to prevent custom texture leakage)
+    Load memoized materials from ekvx2
     
   16 Dec 2019
     Trigger a complete rendering update when the window is resized.

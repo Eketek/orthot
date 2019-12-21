@@ -1,8 +1,8 @@
 {
   "DataType":"orthot3-zone",
   "AppLink":"index.html",
-  "DataVersion":1,
-  "EdrscVersion":1,
+  "DataVersion":2,
+  "EdrscVersion":2,
   "Settings":{
     "Name":"untitled",
     "isMainArea":false,

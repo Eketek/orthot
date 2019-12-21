@@ -2830,7 +2830,14 @@ $(async function MAIN() {
       if (ctn.contents && ctn.contents.length > 0) {
         for (let obj of (ctn.contents)) {
           if (obj.data) {
-            o.Objects.push(obj.data)
+            if (obj.data.materials) {
+              let _data = deepcopy(obj.data)
+              _data.materials = memoize(_data.materials)
+              o.Objects.push(_data)
+            }
+            else {
+              o.Objects.push(obj.data)
+            }
           }
         }
       }
@@ -3016,6 +3023,9 @@ $(async function MAIN() {
         if ((tool.spec.alignMode != "none") && (activeTool.spec.alignMode != undefined)) {
           up = obj.$[4]
           forward = obj.$[5]
+        }
+        if (typeof(obj.materials) == "number") {
+          obj.materials = deepcopy(memos[obj.materials])
         }
         let components = {}
         for (let k in obj) {

@@ -706,9 +706,9 @@ $(async function MAIN() {
   let ppixels
   let setPattern = function(patternPickerSRC) {
     //let patternPickerSRC = edCTL.assets.patterns.image
-    buf.width = patternPickerSRC.width
-    buf.height = patternPickerSRC.height
-    bufctx.drawImage(patternPickerSRC, 0,0)
+    buf.width = 512
+    buf.height = 512
+    bufctx.drawImage(patternPickerSRC, 0,0, patternPickerSRC.width, patternPickerSRC.height, 0,0,512,512)
     ppixels = bufctx.getImageData(0,0,512,512)
     drawPatternPicker("white")
   }

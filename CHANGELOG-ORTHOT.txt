@@ -1,4 +1,7 @@
 0.3.0:
+  21 Dec 2019
+    Stage the logic for de-referencing textures loaded by the puzzle package loader.
+    
   18-20 Dec 2019
     [temporarilly] added 3 extra sets of border tiles to the border texture
       (These are simple variations on the original border texture - and should eventually be replaced with a more varied set of graphics)

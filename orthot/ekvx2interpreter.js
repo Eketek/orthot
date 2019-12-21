@@ -96,8 +96,11 @@ var Ekvx2Interpreter = {
           renderCTL[texid].value = cnvtex
         }
         else {
-          // texture referneced only by name (for packaged data)...
-          // This should probably be thought through a bit -- probably store row/column data and generate a generic/debug texture if it doesn't match the default
+          // NOT-REAL-CODE:  orthotCTL.assets is used here as a proxy for whatever object the puzzle-package loader will load custom data into.
+          let tex = orthotCTL.assets[entry.name]
+          if (tex) {
+            renderCTL[texid].value = tex
+          }
         }
       }
     }

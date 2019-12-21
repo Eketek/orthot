@@ -47,7 +47,6 @@ $(async function MAIN() {
   renderCTL.display.renderer.setClearAlpha(1)
   renderCTL.display.renderer.setClearColor("black")
   
-
   let TextureProps = {
     magFilter:THREE.NearestFilter,
     anisotropy:4,
@@ -815,8 +814,6 @@ $(async function MAIN() {
     }
   })
   
-  
-  
   let tpicker_target
   let customTextures = {
     PatternTexture:{
@@ -832,20 +829,6 @@ $(async function MAIN() {
       textureManaged:renderCTL.BorderTexture,
       textureDisplay:renderCTL.BorderTexture.value.image,
       textureSerialized:""
-    }
-  }
-  
-  function previewFile() {
-    var preview = document.querySelector('img');
-    var file    = document.querySelector('input[type=file]').files[0];
-    var reader  = new FileReader();
-
-    reader.addEventListener("load", function () {
-      preview.src = reader.result;
-    }, false);
-
-    if (file) {
-      reader.readAsDataURL(file);
     }
   }
   
@@ -892,7 +875,7 @@ $(async function MAIN() {
   
   on($("#tp_embedtexture"), "change", ()=>{
     let ctEntry = customTextures[tpicker_target]
-    ctEntry.embed = $("#tp_embedtexture").value
+    ctEntry.embed = $("#tp_embedtexture")[0].checked
   })
   on($("#tp_deporttexture"), "click", ()=>{
     let ctEntry = customTextures[tpicker_target]
@@ -904,7 +887,6 @@ $(async function MAIN() {
     setPattern(ctEntry.textureDisplay)
   })
   
-  
   let activatePatternPicker = function(targetElem, tinfo, ppcallback) {
     let ctEntry = customTextures.PatternTexture
     if (tpicker_target != "PatternTexture") {
@@ -914,7 +896,7 @@ $(async function MAIN() {
       }
     }
     
-    $("#tp_embedtexture").value = ctEntry.embed
+    $("#tp_embedtexture")[0].checked = ctEntry.embed
     let $tpk = $("#texturePicker")
     $("#tpRows")[0].value = tinfo.rows
     $("#tpCols")[0].value = tinfo.cols
@@ -937,7 +919,7 @@ $(async function MAIN() {
       }
     }
     
-    $("#tp_embedtexture").value = ctEntry.embed
+    $("#tp_embedtexture")[0].checked = ctEntry.embed
     let $tpk = $("#texturePicker")
     $("#tpRows")[0].value = tinfo.rows
     $("#tpCols")[0].value = tinfo.cols
@@ -2797,7 +2779,6 @@ $(async function MAIN() {
     edCTL.configure(document.DEFAULT_EDITOR_CFG)
   }
   
-  
   let serialize = function() {
     let o = {
       EKVX2:true,
@@ -2813,13 +2794,21 @@ $(async function MAIN() {
     
     let storeTexture = function(texid) {
       let entry = customTextures[texid]
-      if (entry && entry.embed && (entry.name != "")) {
+      if (entry && (entry.name != "")) {
         o[texid] = {
           name:entry.name,
           embed:entry.embed
         }
         if (entry.embed) {
           o[texid].textureSerialized = entry.textureSerialized
+        }
+        
+        // If it is a custom reference-only texture, retain a copy in local storage to keep it between sessions
+        //  (There are no plans at present to allow ekvxed to access to whatever packaging scheme is to be used to transfer the texture to the application
+        //    -- though if there were, it would be something simple, like a final pass through the [common-format] package to convert duplicate textures 
+        //       into referenced textures)
+        else if (entry.textureSerialized != "") {
+          window.localStorage["TextureMemory_"+entry.name] = entry.textureSerialized
         }
       }
     }
@@ -2881,7 +2870,17 @@ $(async function MAIN() {
       if (entry) {
         customTextures[texid] = entry
         entry.textureManaged = renderCTL[texid]
-        if (entry.embed) {
+        
+        if (!entry.embed && (entry.name != "")) {
+          let stored = window.localStorage["TextureMemory_"+entry.name]
+          if (stored && (stored != "")) {
+            entry.textureSerialized = stored
+          }
+        }
+        // still need to account for data with unknown reference-only textures
+        // This should probably be thought through a bit -- probably store row/column data and generate a generic/debug texture if it doesn't match the default
+        
+        if (entry.textureSerialized && (entry.textureSerialized != "")) {
           let elem = new Image()
           elem.src = entry.textureSerialized
           
@@ -2899,10 +2898,6 @@ $(async function MAIN() {
           
           entry.textureDisplay = cnv
           entry.textureManaged.value = cnvtex
-        }
-        else {
-          // texture referneced only by name (for packaged data)...
-          // This should probably be thought through a bit -- probably store row/column data and generate a generic/debug texture if it doesn't match the default
         }
       }
     }

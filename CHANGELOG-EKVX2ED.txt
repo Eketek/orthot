@@ -1,3 +1,8 @@
+21 Dec 2019
+  Fix "Embed Texture" UI handler
+  Use localStorage to hold non-embedded custom textures.  
+    (There is no plan or intent to managed data packaging schemes from ekvxed - keeping these textures in localsStorage should be a decent compromise)
+
 18-20 Dec 2019
   Move orthot-specific pattern and border texture declaration to the Orthot Editor configuration.
   Use the PatternTexture resource declaration to set default tiling information on all related tool components

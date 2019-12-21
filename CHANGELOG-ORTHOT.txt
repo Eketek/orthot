@@ -1,4 +1,11 @@
 0.3.0:
+  18-20 Dec 2019
+    [temporarilly] added 3 extra sets of border tiles to the border texture
+      (These are simple variations on the original border texture - and should eventually be replaced with a more varied set of graphics)
+    Add ability to load textures from ekvx2 data
+    Update orthot-editor configuration for changes to ekvxed2
+    Update ekvx1 interpreter for changes to BoxTerrain (and to prevent custom texture leakage)
+    
   16 Dec 2019
     Trigger a complete rendering update when the window is resized.
 

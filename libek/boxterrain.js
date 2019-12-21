@@ -267,7 +267,7 @@ var BoxTerrain = function(material, uv2spec) {
     for (let i = 0; i < texcoordInfos.length; i++) {
       let tci = texcoordInfos[i]
       switch(tci.type) {
-        case TEXCOORDTYPE.TILE:
+        case TEXCOORDTYPE.TILE: {
           let tparams = params[tci.parname]
           let tw = 1/tparams.cols
           let th = 1/tparams.rows
@@ -279,7 +279,7 @@ var BoxTerrain = function(material, uv2spec) {
             x1+tw, y1+th,
             x1,    y1+th
           ])
-          break
+        } break
         case TEXCOORDTYPE.LUT8B: {
           let lutparams = params[tci.parname]
           if (lutparams) {
@@ -287,7 +287,20 @@ var BoxTerrain = function(material, uv2spec) {
               sfc.tcis[i] = lutparams
               continue
             }
-            sfc.tci[i] = build_texcoordLUT(lutparams.ul, lutparams.br, lutparams.cols, lutparams.rows)
+            if (lutparams.layout) {
+              let rw = 1/lutparams.cols
+              let rh = 1/lutparams.rows
+              let x1 = lutparams.x*rw
+              let y1 = 1-lutparams.y*rh-rh
+              switch(lutparams.layout) {
+                case "16x16":
+                  sfc.tci[i] = build_texcoordLUT({x:x1, y:y1}, {x:x1+rw, y:y1+rh}, 16, 16)
+                  break
+              }
+            }
+            else {
+              sfc.tci[i] = build_texcoordLUT(lutparams.ul, lutparams.br, lutparams.cols, lutparams.rows)
+            }
           }
           else {
             sfc.tci[i] = build_texcoordLUT({x:0,y:0}, {x:1,y:1}, 16, 16)

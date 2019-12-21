@@ -1,2 +1,2 @@
 model 3
-texture 1
+texture 2

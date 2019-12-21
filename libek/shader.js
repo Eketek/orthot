@@ -1,4 +1,4 @@
-export { buildVariantMaterial, UVspec, UV_ATTRIBUTE_PREFIX, ManagedColor }
+export { buildVariantMaterial, UVspec, UV_ATTRIBUTE_PREFIX, ManagedColor, ManagedTexture }
 import { getUID } from '../libek/libek.js'
 
   /* A shader variation generator.  -- A simple and convenient way to inject custom GLSL into shader (as well as to configure the Material).

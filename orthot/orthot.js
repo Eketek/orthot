@@ -7,7 +7,7 @@ import {
   assignMaterials, getAsset, storeAsset, 
   debug_tip 
 } from '../libek/libek.js'
-import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
+import { UVspec, buildVariantMaterial, ManagedColor, ManagedTexture } from '../libek/shader.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
 import { direction } from '../libek/direction.js'
 import { Hackground } from '../libek/hackground.js'
@@ -168,10 +168,12 @@ $(async function MAIN() {
   renderCTL.border = new ManagedColor("yellow")
   renderCTL.hiliteA = new ManagedColor("orange")
   renderCTL.hiliteB = new ManagedColor("green")
+  renderCTL.BorderTexture = new ManagedTexture(orthotCTL.assets.wall_8bit_fg)
+  renderCTL.PatternTexture = new ManagedTexture(orthotCTL.assets.patterns)
 
   renderCTL.vxlMAT = buildVariantMaterial("standard", {
-    map:orthotCTL.assets.wall_8bit_fg,
-    bkgtex:orthotCTL.assets.patterns,
+    map:renderCTL.BorderTexture,
+    bkgtex:renderCTL.PatternTexture,
     uv2:renderCTL.uv2,
     roughness:0.76,
     metalness:0.05,

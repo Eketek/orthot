@@ -34,9 +34,11 @@ let materials = {
 }
 
 let walldefs, bxtbldr, walltemplates
+let a8bparams = {ul:{x:0.5,y:0.5}, br:{x:1,y:1}, cols:16, rows:16}
 let defineWallTerrain = function(id, color) {
   let sfc_v = bxtbldr.build_Sfcdef({
     color:color,
+    area8b:a8bparams,
     tile:{
       rows:8,
       cols:8,
@@ -47,6 +49,7 @@ let defineWallTerrain = function(id, color) {
   
   let sfc_h = bxtbldr.build_Sfcdef({
     color:color,
+    area8b:a8bparams,
     tile:{
       rows:8,
       cols:8,
@@ -60,6 +63,8 @@ let defineWallTerrain = function(id, color) {
 
 var Ekvx1Interpreter = {
   configure:function(zone, ekvx) {
+    renderCTL.BorderTexture.value = orthotCTL.assets.wall_8bit_fg
+    renderCTL.PatternTexture.value = orthotCTL.assets.patterns
     zone.playerMaterials = materials.man
     walldefs = {}
     bxtbldr = zone.bxtbldr

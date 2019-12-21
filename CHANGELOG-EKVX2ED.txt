@@ -1,3 +1,11 @@
+18-20 Dec 2019
+  Move orthot-specific pattern and border texture declaration to the Orthot Editor configuration.
+  Use the PatternTexture resource declaration to set default tiling information on all related tool components
+  Add mechanism to load textures from local files and embed them into the output data.
+  Add a border picker (an alternative setup for PatternPicker which selects which portion of the border texture to use, on a per-surface-definition basis).
+    (Another BoxTerrain feature exposed)
+  Add a few details about terrain texturing to the "Instructions" display.
+
 16 Dec 2019
   Force-trigger the new window auto-resizer after the GUI is prepared.
   Prompt User for a name when saving to a file if no name has been provided.

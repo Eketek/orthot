@@ -15,27 +15,20 @@
   "Resources":{
     "AppIcons": {
       "type":"texture",
-      "src":"assets/textures/orthot_editoricons.png",
-      "NumRows":16,
-      "NumCols":16,
-      "TileWidth":48,
-      "TileHeight":22
+      "src":"assets/textures/orthot_editoricons.png"
     },
-    "BorderImg":{
+    "BorderTexture":{
       "type":"texture",
       "src":"assets/textures/wall_8bit_fg.png",
-      "NumRows":16,
-      "NumCols":16,
-      "TileWidth":32,
-      "TileHeight":32
+      "rows":2,
+      "cols":2,
+      "layout":"16x16"
     },
-    "PatternImg":{
+    "PatternTexture":{
       "type":"texture",
       "src":"assets/textures/patterns.png",
-      "NumRows":8,
-      "NumCols":8,
-      "TileWidth":64,
-      "TileHeight":64
+      "rows":8,
+      "cols":8
     },
     "Models":{
       "src":"assets/models.zip",
@@ -121,13 +114,8 @@
       "components":{
         "all":{
           "color":"white",
-          "main":1,
-          "pattern":{
-            "rows":8,
-            "cols":8,
-            "x":0,
-            "y":0
-          }
+          "pattern":true,
+          "border":true
         }
       }
     },
@@ -143,32 +131,20 @@
         "up":{
           "color":"white",
           "main":1,
-          "pattern":{
-            "rows":8,
-            "cols":8,
-            "x":0,
-            "y":0
-          }
+          "pattern":true,
+          "border":true
         },
         "vert":{
           "color":"white",
           "main":1,
-          "pattern":{
-            "rows":8,
-            "cols":8,
-            "x":0,
-            "y":0
-          }
+          "pattern":true,
+          "border":true
         },
         "down":{
           "color":"white",
           "main":1,
-          "pattern":{
-            "rows":8,
-            "cols":8,
-            "x":0,
-            "y":0
-          }
+          "pattern":true,
+          "border":true
         }
       }
     },
@@ -183,57 +159,33 @@
       "components":{
         "up":{
           "color":"white",
-          "pattern":{
-            "rows":8,
-            "cols":8,
-            "x":0,
-            "y":0
-          }
+          "pattern":true,
+          "border":true
         },
         "north":{
           "color":"white",
-          "pattern":{
-            "rows":8,
-            "cols":8,
-            "x":0,
-            "y":0
-          }
+          "pattern":true,
+          "border":true
         },
         "east":{
           "color":"white",
-          "pattern":{
-            "rows":8,
-            "cols":8,
-            "x":0,
-            "y":0
-          }
+          "pattern":true,
+          "border":true
         },
         "south":{
           "color":"white",
-          "pattern":{
-            "rows":8,
-            "cols":8,
-            "x":0,
-            "y":0
-          }
+          "pattern":true,
+          "border":true
         },
         "west":{
           "color":"white",
-          "pattern":{
-            "rows":8,
-            "cols":8,
-            "x":0,
-            "y":0
-          }
+          "pattern":true,
+          "border":true
         },
         "down":{
           "color":"white",
-          "pattern":{
-            "rows":8,
-            "cols":8,
-            "x":0,
-            "y":0
-          }
+          "pattern":true,
+          "border":true
         }
       }
     },
@@ -267,12 +219,8 @@
       "components":{
         "surface":{
           "color":"white",
-          "pattern":{
-            "rows":8,
-            "cols":8,
-            "x":0,
-            "y":0
-          }
+          "pattern":true,
+          "border":true
         }
       }
     },

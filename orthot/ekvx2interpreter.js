@@ -71,11 +71,40 @@ var Ekvx2Interpreter = {
       }
     }
   },
-  load:function(zone, ldstate, ekvx) {
+  load:async function(zone, ldstate, ekvx) {
     zone.playerMaterials = ["hsl(25, 80%, 60%)", "blue", "hsl(15, 100%, 15%)", "black", {color:"black", metalness:1}, {color:"white", emissive:"yellow", emissiveIntensity:1}]
     renderCTL.border.color = ekvx.Settings.NamedColors.border
     renderCTL.hiliteA.color = ekvx.Settings.NamedColors.hiliteA
     renderCTL.hiliteB.color = ekvx.Settings.NamedColors.hiliteB
+    renderCTL.BorderTexture.value = orthotCTL.assets.wall_8bit_fg
+    renderCTL.PatternTexture.value = orthotCTL.assets.patterns
+    
+    let loadcustomTexture = async function(texid) {
+      
+      let entry = ekvx[texid]
+      if (entry) {
+        if (entry.embed) {
+          let elem = new Image()
+          elem.src = entry.textureSerialized
+          
+          await next(elem, "load")
+          
+          let cnvtex = new THREE.CanvasTexture(elem)
+          cnvtex.magFilter = THREE.NearestFilter
+          cnvtex.anisotropy = 4
+          
+          renderCTL[texid].value = cnvtex
+        }
+        else {
+          // texture referneced only by name (for packaged data)...
+          // This should probably be thought through a bit -- probably store row/column data and generate a generic/debug texture if it doesn't match the default
+        }
+      }
+    }
+    
+    loadcustomTexture("PatternTexture")
+    loadcustomTexture("BorderTexture")
+    
     let vxc = zone.vxc
     let updBounds = function(x,y,z) {
       if (x<ldstate.min.x) ldstate.min.x=x

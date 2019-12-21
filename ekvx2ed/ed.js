@@ -7,7 +7,7 @@ import {
   assignMaterials, getAsset, releaseAsset, storeAsset, 
   pickAgainstPlane, debug_tip 
 } from '../libek/libek.js'
-import { UVspec, buildVariantMaterial, ManagedColor } from '../libek/shader.js'
+import { UVspec, buildVariantMaterial, ManagedColor, ManagedTexture } from '../libek/shader.js'
 import { QueryTriggeredButtonControl, SceneviewController } from '../libek/control.js'
 import { deepcopy, anythingIN, anythingElse, clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
@@ -88,8 +88,7 @@ $(async function MAIN() {
           edCTL.assets,
           true,
           fetchOPTS,
-          {url:"assets/textures/patterns.png", properties:TextureProps},
-          {url:"assets/textures/wall_8bit_fg.png", properties:TextureProps},
+          {url:"assets/textures/nulltexture.png", properties:TextureProps},
           {url:"assets/textures/editoricons.png", properties:TextureProps},
         )
       }),
@@ -126,9 +125,13 @@ $(async function MAIN() {
   renderCTL.hiliteA = new ManagedColor("orange")
   renderCTL.hiliteB = new ManagedColor("green")
 
+ // renderCTL.BorderTexture = new ManagedTexture(edCTL.assets.patterns)
+  //renderCTL.PatternTexture = new ManagedTexture(edCTL.assets.wall_8bit_fg)
+  renderCTL.BorderTexture = new ManagedTexture(edCTL.assets.nulltexture)
+  renderCTL.PatternTexture = new ManagedTexture(edCTL.assets.nulltexture)
   renderCTL.vxlMAT = buildVariantMaterial("standard", {
-    map:edCTL.assets.wall_8bit_fg,
-    bkgtex:edCTL.assets.patterns,
+    map:renderCTL.BorderTexture,
+    bkgtex:renderCTL.PatternTexture,
     uv2:renderCTL.uv2,
     roughness:0.76,
     metalness:0.05,
@@ -698,13 +701,17 @@ $(async function MAIN() {
     $btn.appendTo($loc)
   }
   
-  let patternPickerSRC = edCTL.assets.patterns.image
   let buf = $("<canvas>")[0]
-  buf.width = patternPickerSRC.width
-  buf.height = patternPickerSRC.height
   let bufctx = buf.getContext('2d')
-  bufctx.drawImage(patternPickerSRC, 0,0)
-  let ppixels = bufctx.getImageData(0,0,512,512)
+  let ppixels
+  let setPattern = function(patternPickerSRC) {
+    //let patternPickerSRC = edCTL.assets.patterns.image
+    buf.width = patternPickerSRC.width
+    buf.height = patternPickerSRC.height
+    bufctx.drawImage(patternPickerSRC, 0,0)
+    ppixels = bufctx.getImageData(0,0,512,512)
+    drawPatternPicker("white")
+  }
   //$(buf).appendTo($("body"))
   
   let pickPattern_tileinfo
@@ -808,7 +815,106 @@ $(async function MAIN() {
     }
   })
   
+  
+  
+  let tpicker_target
+  let customTextures = {
+    PatternTexture:{
+      name:"",
+      embed:true,
+      textureManaged:renderCTL.PatternTexture,
+      textureDisplay:renderCTL.PatternTexture.value.image,
+      textureSerialized:""
+    },
+    BorderTexture:{
+      name:"",
+      embed:true,
+      textureManaged:renderCTL.BorderTexture,
+      textureDisplay:renderCTL.BorderTexture.value.image,
+      textureSerialized:""
+    }
+  }
+  
+  function previewFile() {
+    var preview = document.querySelector('img');
+    var file    = document.querySelector('input[type=file]').files[0];
+    var reader  = new FileReader();
+
+    reader.addEventListener("load", function () {
+      preview.src = reader.result;
+    }, false);
+
+    if (file) {
+      reader.readAsDataURL(file);
+    }
+  }
+  
+  on($("#tp_importtexture"), "change", async ()=>{
+    let ctEntry = customTextures[tpicker_target]
+    let inputElem = $("#tp_importtexture")[0]
+    if (inputElem.files.length > 0) {
+    
+      let file = inputElem.files[0]
+      let reader = new FileReader()
+      reader.readAsDataURL(file)
+      
+      await next(reader, "load")
+      
+      let serialized_image = reader.result 
+      let elem = new Image()
+      elem.src = serialized_image
+      
+      await next(elem, "load")
+      
+      let cnvtex = new THREE.CanvasTexture(elem)
+      cnvtex.magFilter = THREE.NearestFilter
+      cnvtex.anisotropy = 4
+      
+      let fname = file.name
+      let i = fname.lastIndexOf('.')
+      if (i != -1) {
+        fname = fname.substr(0, i)
+      }
+      
+      let cnv = document.createElement("canvas")
+      cnv.width = 512
+      cnv.height = 512
+      let ctx = cnv.getContext('2d')
+      ctx.drawImage(elem,0,0, elem.width, elem.height, 0,0, 512,512)
+      setPattern(cnv)
+      
+      ctEntry.name = fname
+      ctEntry.textureSerialized = serialized_image
+      ctEntry.textureDisplay = cnv
+      ctEntry.textureManaged.value = cnvtex
+    }
+  })
+  
+  on($("#tp_embedtexture"), "change", ()=>{
+    let ctEntry = customTextures[tpicker_target]
+    ctEntry.embed = $("#tp_embedtexture").value
+  })
+  on($("#tp_deporttexture"), "click", ()=>{
+    let ctEntry = customTextures[tpicker_target]
+    ctEntry.name = ""
+    ctEntry.embed = true
+    ctEntry.textureManaged.value = edCTL.assets[tpicker_target]
+    ctEntry.textureDisplay = edCTL.assets[tpicker_target].image,
+    ctEntry.textureSerialized = ""
+    setPattern(ctEntry.textureDisplay)
+  })
+  
+  
   let activatePatternPicker = function(targetElem, tinfo, ppcallback) {
+    let ctEntry = customTextures.PatternTexture
+    if (tpicker_target != "PatternTexture") {
+      tpicker_target = "PatternTexture"
+      if (ctEntry.textureDisplay) {
+        setPattern(ctEntry.textureDisplay)
+      }
+    }
+    
+    $("#tp_embedtexture").value = ctEntry.embed
     let $tpk = $("#texturePicker")
     $("#tpRows")[0].value = tinfo.rows
     $("#tpCols")[0].value = tinfo.cols
@@ -822,8 +928,28 @@ $(async function MAIN() {
     pickPattern_tileinfo = tinfo
   }
   
-  drawPatternPicker("white")
-  
+  let activateBorderPicker = function(targetElem, tinfo, ppcallback) {
+    let ctEntry = customTextures.BorderTexture
+    if (tpicker_target != "BorderTexture") {
+      tpicker_target = "BorderTexture"
+      if (ctEntry.textureDisplay) {
+        setPattern(ctEntry.textureDisplay)
+      }
+    }
+    
+    $("#tp_embedtexture").value = ctEntry.embed
+    let $tpk = $("#texturePicker")
+    $("#tpRows")[0].value = tinfo.rows
+    $("#tpCols")[0].value = tinfo.cols
+    $tpk.show()
+    pickPattern_callback = ppcallback
+    on(document, "escape", (evt)=>{
+      $tpk.hide()
+      pickPattern_callback = undefined
+    })
+    putFloatingElement($tpk[0], targetElem)
+    pickPattern_tileinfo = tinfo
+  }
   
   //reset button.  At some point, the confirmation dialog should probably be removed and the deleted data instead made restoreable through an 'undo' function
   btnfunc("commands", "reset", ()=>{
@@ -970,6 +1096,7 @@ $(async function MAIN() {
           //mergeclass textarea
           addRow("color", "Color", propEditor_color(obj, comp, "color"))
           addRow("pattern", "Pattern", propEditor_pattern(obj, comp, "pattern"))
+          addRow("border", "Border", propEditor_border(obj, comp, "border"))
           addRow("merge", "Merge Class", propEditor_textarea(obj, comp, "mergeClass", "auto"))
           break
         case "NamedColors":   //Yet Another prime target for configuration-defined properties editors.
@@ -1021,7 +1148,6 @@ $(async function MAIN() {
     let chkb = $('<input type="checkbox">')[0]
     chkb.value = Boolean(component[name])
     on(chkb, "input", ()=>{
-      console.log("chkb-changed?")
       component[name] = chkb.checked
     })
     return chkb
@@ -1132,6 +1258,30 @@ $(async function MAIN() {
     
     return $btn
   }
+  
+  let propEditor_border = function(obj, component, k) {
+    let $btn = $('<span class="btn_active">')
+    
+    let update = function() {
+      $btn.text(`${component.border.x},${component.border.y} // ${component.border.cols},${component.border.rows}`)
+    }
+    update()
+    
+    on($btn, "click", ()=>{
+      activateBorderPicker($btn[0], component[k], ()=>{
+        update()
+        if (obj) {
+          updateObject(obj)
+        }
+        else {
+          updateTerrainProperties()
+        }
+      })
+    })
+    
+    return $btn
+  }
+  
   
   updateTerrainProperties()
   
@@ -1806,7 +1956,8 @@ $(async function MAIN() {
             
             activeTool.components.surface.color = toRGBstring(activeTool.components.surface.color)
             let fdef = {
-              area8b:activeTool.spec.area8b,
+              //area8b:activeTool.spec.area8b,
+              area8b:activeTool.components.surface.border,
               tile:activeTool.components.surface.pattern,
               mergeClass:activeTool.components.surface.mergeClass,
               color:activeTool.components.surface.color,
@@ -1902,7 +2053,7 @@ $(async function MAIN() {
         // Select the most preferable object to open immediately in the object properties editor
         // If in MRAY mode:
         //   #1 an attachment-type object with components and aligned like the cursor
-        //   #2 a volumetric object with components
+        //   #2 a volumetric object with co{"EKVX2":true,"DataType":"orthot3-zone","Version":1,"Settings":{"Name":"untitled","isMainArea":false,"NamedColors":{"border":"yellow","hiliteA":"green","hiliteB":"cyan"}},"Templates":{"1":{"type":"wall","toolname":"Wall-OneColor"},"2":{"type":"wall","toolname":"Wall-ThreeColors"},"3":{"type":"wall","toolname":"Wall-SixColors"},"4":{"type":"stairs","toolname":"Stairs"},"5":{"type":"pushblock","toolname":"Push-Block"},"6":{"type":"crate","toolname":"Crate"},"7":{"type":"iceblock","toolname":"Ice Block"},"8":{"type":"start","toolname":"Starting Position"},"9":{"type":"exit","toolname":"Exit"},"10":{"type":"target","toolname":"Named/Target Position"},"11":{"type":"view","toolname":"3d View Position"},"12":{"type":"zoneportal","toolname":"Zone Portal"},"13":{"type":"portal","toolname":"Portal"},"14":{"type":"ladder","toolname":"Ladder"},"15":{"type":"icefloor","toolname":"Ice Floor"},"16":{"type":"button","toolname":"Button"},"17":{"type":"gate","toolname":"Gate"},"18":{"type":"lock","toolname":"Lock"},"19":{"type":"key","toolname":"Key"},"20":{"type":"mouse","toolname":"Mouse"},"21":{"type":"moose","toolname":"Moose"},"22":{"type":"flag","toolname":"Flag"},"23":{"type":"infoblock","toolname":"Info Block"}},"Memos":{"1":{"rows":2,"cols":2,"x":0,"y":0,"layout":"16x16"},"2":{"rows":8,"cols":8,"x":0,"y":0}},"Surfaces":{"1":{"tile":2,"area8b":1,"color":"rgb(255,255,255)"}},"Terrains":{"1":[1,1,1,1,1,1]},"Objects":[]}mponents
         //   #3 anything
         //   #4 nothing
         //
@@ -2172,7 +2323,6 @@ $(async function MAIN() {
           break
       }
     }
-
     if (typeof(spec.spclassPick) == "string") {
       spec.spclassPick = spec.spclassPick.split(" ")
     }
@@ -2215,6 +2365,7 @@ $(async function MAIN() {
     if (spec.default) {
       setTool(spec.name)
     }
+    return tool
   }
   
   let setTool = function(name) {
@@ -2303,47 +2454,10 @@ $(async function MAIN() {
   let defineTerrain = function(terrspec) {
     let facedefs = [{}, {}, {}, {}, {}, {}]
     
-    if (terrspec.primary.all) {
-      facedefs[0].area8b = terrspec.primary.all
-      facedefs[1].area8b = terrspec.primary.all
-      facedefs[2].area8b = terrspec.primary.all
-      facedefs[3].area8b = terrspec.primary.all
-      facedefs[4].area8b = terrspec.primary.all
-      facedefs[5].area8b = terrspec.primary.all
-    }
-    if (terrspec.primary.v) {
-      facedefs[0].area8b = terrspec.primary.v
-      facedefs[1].area8b = terrspec.primary.v
-      facedefs[2].area8b = terrspec.primary.v
-      facedefs[3].area8b = terrspec.primary.v
-    }
-    if (terrspec.primary.h) {
-      facedefs[4].area8b = terrspec.primary.h
-      facedefs[5].area8b = terrspec.primary.h
-    }
-    if (terrspec.primary.n) {
-      facedefs[0].area8b = terrspec.primary.n
-    }
-    if (terrspec.primary.e) {
-      facedefs[1].area8b = terrspec.primary.e
-    }
-    if (terrspec.primary.s) {
-      facedefs[2].area8b = terrspec.primary.s
-    }
-    if (terrspec.primary.w) {
-      facedefs[3].area8b = terrspec.primary.w
-    }
-    if (terrspec.primary.u) {
-      facedefs[4].area8b = terrspec.primary.u
-    }
-    if (terrspec.primary.d) {
-      facedefs[5].area8b = terrspec.primary.d
-    }
-    
-    let baseK = JSON.stringify(terrspec)+"|"
-    
     boxterrainDefiners[terrspec.name] = function config_bxt() {
-      let tk = baseK + JSON.stringify(activeTool.components)
+      //let tk = baseK + JSON.stringify(activeTool.components)
+      
+      let tk = JSON.stringify(activeTool.components)
       if (terrains[tk]) {
         return [terrains[tk], terrainIDs[tk]]
       }
@@ -2405,6 +2519,7 @@ $(async function MAIN() {
       for (let i = 0; i < 6; i++) {
         let fdef = facedefs[i]
         fdef.tile = comps[i].pattern
+        fdef.area8b = comps[i].border
         fdef.mergeClass = comps[i].mergeClass
         fdef.color = comps[i].color
         let sk = JSON.stringify(fdef)
@@ -2461,6 +2576,8 @@ $(async function MAIN() {
     
     document.title = `${docTitle} | "${edCTL.DataType}"`
     $("#NameDisp").text(document.title)
+    
+    let pattern_rows, pattern_cols, border_rows, border_cols, border_layout
     
     if (edCTL.AppLink) {
       let testBTN = $("<div>").addClass("btn_active").text("Test").click(()=>{
@@ -2530,7 +2647,30 @@ $(async function MAIN() {
       catch (err) {
         console.log("ERROR loading app-resources:", err)
       }
+      
+      
+      for (let rscname in (cfg.Resources)) {
+        if (renderCTL[rscname]) {
+          renderCTL[rscname].value = edCTL.assets[rscname]
+        }
+        switch(rscname) {
+          case "PatternTexture":
+            setPattern(edCTL.assets[rscname].image)
+            customTextures.PatternTexture.textureDisplay = edCTL.assets[rscname].image
+            pattern_rows = cfg.Resources[rscname].rows
+            pattern_cols = cfg.Resources[rscname].cols
+            break
+          case "BorderTexture":
+            customTextures.BorderTexture.textureDisplay = edCTL.assets[rscname].image
+            border_rows = cfg.Resources[rscname].rows
+            border_cols = cfg.Resources[rscname].cols
+            border_layout = cfg.Resources[rscname].layout
+            break
+        }
+      }
     }
+    
+    
     
     if (cfg.Tools) {
       for (let tooldef of cfg.Tools) {
@@ -2538,7 +2678,42 @@ $(async function MAIN() {
           tooldef = Object.assign({}, cfg.AbstractTools[tooldef.extend], tooldef)
         }
         resolveRefs(tooldef, tooldef)
-        defineTool(tooldef)
+        let tool = defineTool(tooldef)
+        if (tool.spec.components) {
+          for (let name in tool.spec.components) {
+            let comp = tool.spec.components[name]
+            if (comp.pattern) {
+              tool.components[name].pattern = {
+                rows:pattern_rows,
+                cols:pattern_cols,
+                x:0,
+                y:0
+              }
+              comp.pattern = {
+                rows:pattern_rows,
+                cols:pattern_cols,
+                x:0,
+                y:0
+              }
+            }
+            if (comp.border) {
+              tool.components[name].border = {
+                rows:border_rows,
+                cols:border_cols,
+                x:0,
+                y:0,
+                layout:border_layout
+              }
+              comp.border = {
+                rows:border_rows,
+                cols:border_cols,
+                x:0,
+                y:0,
+                layout:border_layout
+              }
+            }
+          }
+        }
       }
     }
     reset()
@@ -2635,6 +2810,22 @@ $(async function MAIN() {
       Terrains:terrainDefs,
       Objects:[],
     }
+    
+    let storeTexture = function(texid) {
+      let entry = customTextures[texid]
+      if (entry && entry.embed && (entry.name != "")) {
+        o[texid] = {
+          name:entry.name,
+          embed:entry.embed
+        }
+        if (entry.embed) {
+          o[texid].textureSerialized = entry.textureSerialized
+        }
+      }
+    }
+    storeTexture("PatternTexture")
+    storeTexture("BorderTexture")
+    
     vxc.forAll((ctn)=>{
       if (ctn.contents && ctn.contents.length > 0) {
         for (let obj of (ctn.contents)) {
@@ -2678,6 +2869,39 @@ $(async function MAIN() {
     
     reset()
     
+    let loadcustomTexture = async function(texid) {
+      let entry = data[texid]
+      if (entry) {
+        customTextures[texid] = entry
+        entry.textureManaged = renderCTL[texid]
+        if (entry.embed) {
+          let elem = new Image()
+          elem.src = entry.textureSerialized
+          
+          await next(elem, "load")
+          
+          let cnvtex = new THREE.CanvasTexture(elem)
+          cnvtex.magFilter = THREE.NearestFilter
+          cnvtex.anisotropy = 4
+          
+          let cnv = document.createElement("canvas")
+          cnv.width = 512
+          cnv.height = 512
+          let ctx = cnv.getContext('2d')
+          ctx.drawImage(elem,0,0, elem.width, elem.height, 0,0, 512,512)
+          
+          entry.textureDisplay = cnv
+          entry.textureManaged.value = cnvtex
+        }
+        else {
+          // texture referneced only by name (for packaged data)...
+          // This should probably be thought through a bit -- probably store row/column data and generate a generic/debug texture if it doesn't match the default
+        }
+      }
+    }
+    
+    loadcustomTexture("PatternTexture")
+    loadcustomTexture("BorderTexture")
     
     // copy data off the parsed object
     templates = data.Templates

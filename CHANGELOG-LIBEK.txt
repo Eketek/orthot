@@ -1,3 +1,9 @@
+20 Dec 2019
+  Adjusted BoxTerrain border texture coordinate deifnition to be more consistant with pattern texture coordinate definition
+
+18 Dec 2019
+  add ManagedTexture to shader.js exports
+  
 16 Dec 2019
   Auto-resize DOM elements managed by the Display when the window is resized (libek.js).
 

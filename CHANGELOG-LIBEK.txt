@@ -1,3 +1,7 @@
+24 Dec 2019
+  Attach CSound 6.13.0 (WebAudio variant) to the project.  Plan is to have extensive sound synthesis capabilities (and a few reasonable presets on hand).
+      (See https://csound.com/ for details)
+
 20 Dec 2019
   Adjusted BoxTerrain border texture coordinate deifnition to be more consistant with pattern texture coordinate definition
 

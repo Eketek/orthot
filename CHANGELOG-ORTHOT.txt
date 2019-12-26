@@ -1,8 +1,3 @@
-0.3.0:
-  24 Dec 2019
-    Attach CSound 6.13.0 (WebAudio variant) to the project.  Plan is to have extensive sound synthesis capabilities (and a few reasonable presets on hand).
-        (See https://csound.com/ for details) 
-
   21 Dec 2019
     Stage the logic for de-referencing textures loaded by the puzzle package loader.
     

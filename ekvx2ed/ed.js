@@ -941,47 +941,6 @@ $(async function MAIN() {
    }
   })
   
-  // Basic setup for operating CSound.
-  /*
-  { (async function prepSynth() {
-      await CsoundObj.importScripts("lib/csound/")
-      var csound = new CsoundObj();
-      csound.compileOrc(`
-        nchnls=2
-        0dbfs=1
-        instr 1
-         k1 expon p4,p3,p4*0.001
-         a1 oscili k1,p5
-         chnset p5, "freq"
-         outs a1,a1
-         schedule 1,0.25,0.5,0.3+rnd(0.2),1000+birnd(500)
-        endin
-        schedule 1,0,0.5,0.1,500`
-      );
-      csound.start()
-      CSOUND_AUDIO_CONTEXT.suspend()
-      on(window, "unload", ()=>{
-        if (csound != null) {
-          csound.destroy()
-        }
-      })
-      
-      var playing = false
-      var $btn = btnfunc("commands", "Synth Test - play", ()=>{
-        if(playing == false) {
-          CSOUND_AUDIO_CONTEXT.resume();
-          $btn.text("Synth Test - pause")
-          playing = true;
-        } 
-        else {
-          CSOUND_AUDIO_CONTEXT.suspend();
-          $btn.text("Synth Test - play")
-          playing = false;
-        }
-      })
-    })()
-  } */
-  
   // Prepare the object selector.
   // The object selector is a drop-down menu which appears when the edit-tool selects more than one object.
   // This drop-down menu shows a listing obj valid editable objects at the selected position

@@ -623,7 +623,7 @@ var loadZIP = async function(assets, override, ref, fetch_options) {
       // "text"-animations
       case 'atxt':
       case 'animtxt': {
-        txt = await entry.async("string")
+        let txt = await entry.async("string")
         try {
           assets[name] = parse_Animtext(txt)
         }

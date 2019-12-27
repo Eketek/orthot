@@ -65,7 +65,7 @@ $(async function MAIN() {
     anisotropy:4,
   }
   
-  let MAIN_ZONES = {}
+  let MAIN_DATA = {}
   let MAIN_TEXTS = {}
   try {
     // Asset management - check assets/verison.txt, compare everything with stored version numbers
@@ -112,7 +112,7 @@ $(async function MAIN() {
         return loadZIP(orthotCTL.assets, true, 'assets/models.zip', fetchOPTS)
       }),
       update("ekvx", (fetchOPTS)=>{
-        return loadZIP(MAIN_ZONES, true, 'assets/ekvxdat.zip', fetchOPTS)
+        return loadZIP(MAIN_DATA, true, 'assets/ekvxdat.zip', fetchOPTS)
       }),
       update("text", (fetchOPTS)=>{
         return loadMuch(
@@ -252,11 +252,11 @@ $(async function MAIN() {
     let external = false
     let mainarea = false
     if (typeof(arg) == "string") {
-      ekvx = orthotCTL.gdatapack.zones[arg]
-      if (ekvx == undefined) {
+      ekvx = orthotCTL.gdatapack.objects[arg]
+      if ( (ekvx == undefined) || (typeof(ekvx) != "object") || !(ekvx.EKVX1 || ekvx.EKVX2) ) {
         console.log(`No puzzle named "${arg}" to load...  Loading the default (MainArea)`)
         arg = orthotCTL.gdatapack.mainAreaname
-        ekvx = orthotCTL.gdatapack.zones[arg]
+        ekvx = orthotCTL.gdatapack.objects[arg]
       }
     }
     else if ( (typeof(arg) == "object") && (arg.EKVX1 || arg.EKVX2) ) {
@@ -267,7 +267,7 @@ $(async function MAIN() {
     }
     else if (!arg) {
       arg = orthotCTL.gdatapack.mainAreaname
-      ekvx = orthotCTL.gdatapack.zones[arg]
+      ekvx = orthotCTL.gdatapack.objects[arg]
     }
     if (arg == orthotCTL.gdatapack.mainAreaname) {
       mainarea = true
@@ -397,20 +397,53 @@ $(async function MAIN() {
   });
 
 
-  let loadDataPack = function(packname, mainareaname, data, texts) {
+  let loadDataPack = function(packname, mainareaname, data, texts, isExternal=true) {
+    if (mainareaname == undefined) {
+      let firstName
+      let alt_mainname
+      for (let name in data) {
+        let obj = data[name]
+        if ( (typeof(obj) == "object") && (obj.EKVX1 || obj.EKVX2) ) {
+          if (obj.isMainArea) {
+            mainareaname = name
+            break
+          }
+          if (!firstName) {
+            firstName = name
+          } 
+          if (name.toLowerCase().indexOf("mainarea") != -1) {
+            alt_mainname = name
+          }
+        }
+      }
+      if (mainareaname == undefined) {
+        if (alt_mainname) {
+          mainareaname = alt_mainname
+        }
+        else {
+          mainareaname = firstName
+        }
+      }
+    }
+    
+    
     orthotCTL.gdatapack = {
       name:packname,
       mainAreaname:mainareaname,
-      zones:data,
-      texts:texts
+      objects:data,
+      texts:texts ? texts : data,
+      external:isExternal
     }
     loadProgress()
 
     for (let i = levelSelector.length-1; i >= 0; i--) {
       levelSelector.remove(i)
     }
-    for (let name in orthotCTL.gdatapack.zones) {
-      levelSelector.add($("<option>").text(name)[0])
+    for (let name in orthotCTL.gdatapack.objects) {
+      let obj = orthotCTL.gdatapack.objects[name]
+      if ((typeof(obj) == "object") && (obj.EKVX1 || obj.EKVX2)) {
+        levelSelector.add($("<option>").text(name)[0])
+      }
     }
   }
   
@@ -422,12 +455,14 @@ $(async function MAIN() {
   
   orthotCTL.$reload_defaultpack = $("<div>").addClass("btn_active").text("Close File")
   orthotCTL.$reload_defaultpack[0].title = "Close the custom puzzle or data-pack and Return to the Main Area"
+  let loadDefaultDatapack = function() {
+    loadDataPack("MainGdataPack", "MainArea", MAIN_DATA, MAIN_TEXTS, false)
+  }
   on(orthotCTL.$reload_defaultpack, "click", ()=>{
-    loadDataPack("MainGdataPack", "MainArea", MAIN_ZONES, MAIN_TEXTS)
+    loadDefaultDatapack()
     orthotCTL.loadScene("MainArea")
   })
-
-  loadDataPack("MainGdataPack", "MainArea", MAIN_ZONES, MAIN_TEXTS)
+  loadDefaultDatapack()
   
   if (window.StagedTestData) {
     orthotCTL.loadScene(JSON.parse(window.StagedTestData))
@@ -442,10 +477,9 @@ $(async function MAIN() {
   }
 
   orthotCTL.forceReloadMainData = async function() {
-    let zones = {}
-    let texts = {}
-    await loadZIP(zones, true, 'assets/ekvxdat.zip', {cache:"reload"})
-    loadDataPack("MainGdataPack", "MainArea", zones, texts)
+    MAIN_DATA = {}
+    await loadZIP(MAIN_DATA, true, 'assets/ekvxdat.zip', {cache:"reload"})
+    loadDefaultDatapack()
     orthotCTL.loadScene("MainArea")
   }
   
@@ -454,7 +488,25 @@ $(async function MAIN() {
     if (inputElem.files.length > 0) {
       let file = inputElem.files[0]
       {(async function ldFile(){
-        orthotCTL.loadScene(JSON.parse(await file.text()))
+        let i = file.name.lastIndexOf('.')
+        let ext = file.name.substr(i+1).toLowerCase()
+        let shortname = file.name.substr(0, i)
+        console.log(file, ext, shortname)
+        switch(ext) {
+          case 'ekvx2':
+          case 'json':
+            orthotCTL.loadScene(JSON.parse(await file.text()))
+            break
+          case 'zip':
+          case 'ZIP': {
+            let data = {}
+            await loadZIP(data, true, file)
+            loadDataPack(shortname, undefined, data)
+            console.log(orthotCTL.gdatapack)
+            console.log(data)
+            orthotCTL.loadScene(orthotCTL.gdatapack.mainAreaname)
+          } break
+        }
       })()}
     }
   })
@@ -568,18 +620,21 @@ iRellen = 0.1
 iCutoff = 1000
 iRes = 0.1
 
-kEnv linsegr 0, iAtklen, iAtkpow, iDeclen, iDecpow, iSuslen, iSuspow, iRellen, 0
+aEnv linsegr 0, iAtklen, iAtkpow, iDeclen, iDecpow, iSuslen, iSuspow, iRellen, 0
+
+giSquare ftgen 1, 0, 65536, 10, 1, 0 , .33, 0, .2 , 0, .14, 0 , .11, 0, .09
 
 aValue = 0
 
 startArrayedOP:
   iPMag = 1
   iPFreqMul = 1
-  aValue = aValue + vco2( iPMag, iPFreqMul*iFreq)
+  aValue = aValue + poscil( iPMag, iPFreqMul*iFreq, 1)
 endArrayedOP:
   
-aLp moogladder aValue, iCutoff*kEnv, iRes
-aOut = aLp*kEnv
+;aLp moogladder aValue, iCutoff*aEnv, iRes
+;aOut = aLp*aEnv
+aOut = aValue * aEnv
 out aOut, aOut
 endin
 

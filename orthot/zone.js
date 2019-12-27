@@ -34,7 +34,7 @@ var Zone = function(ekvx, override_startloc, name, yieldsProgressCode, external,
       mainarea= true
     }
   }
-  if (external) {
+  if (external || orthotCTL.gdatapack.external) {
     orthotCTL.$reload_defaultpack.show()
   }
   else {

@@ -1,3 +1,6 @@
+  27 Dec 2019
+    Added puzzle package loader.
+
   21 Dec 2019
     Stage the logic for de-referencing textures loaded by the puzzle package loader.
     

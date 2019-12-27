@@ -548,8 +548,14 @@ var loadMuch = async function(assets, override, fetchOPTS, ... entries) {
 //      Asset names can be overriden by specifying a name in the manifest file (*.mf)
 //    url:  location to load the ZIP file from
 //    fetch_options:  [optional] parameters to initialize the fetch()
-var loadZIP = async function(assets, override, url, fetch_options) {
-  let buf = await load_to_ArrayBuffer(url, fetch_options)
+var loadZIP = async function(assets, override, ref, fetch_options) {
+  let buf
+  if (typeof(ref) == "string") {
+    buf = await load_to_ArrayBuffer(ref, fetch_options)
+  }
+  else {
+    buf = await ref.arrayBuffer()
+  }
   let jz = new JSZip()
   let archive = await jz.loadAsync(buf)
   let aliastable = {}
@@ -612,8 +618,9 @@ var loadZIP = async function(assets, override, url, fetch_options) {
         catch(err) {
           console.log(`ERROR parsing ${fname}: `, err)
         }
-      }
-      break
+      } break
+      
+      // "text"-animations
       case 'atxt':
       case 'animtxt': {
         txt = await entry.async("string")
@@ -623,8 +630,9 @@ var loadZIP = async function(assets, override, url, fetch_options) {
         catch(err) {
           console.log(`ERROR parsing ${fname}: `, err)
         }
-      }
-      break
+      } break
+      
+      // wavefront objects
       case 'obj': {
         let txt = await entry.async("string")
         try {
@@ -633,16 +641,28 @@ var loadZIP = async function(assets, override, url, fetch_options) {
         catch(err) {
           console.log(`ERROR parsing ${fname}: `, err)
         }
-      }
-      break
+      } break
+      
+      // textures
       case 'png':
       case 'jpg':
       case 'jpeg':
         console.log(`Support for loading '${ext}' files from zip archive has not yet been hacked in!`)
-      break
+        break
+        
+      // raw text resources.
+      case 'csd':
+      case 'orc':
+      case 'txt':
+        assets[name] = await entry.async("string")
+        break
+      case 'ekvx2':
+      case 'json':
+        assets[name] = JSON.parse(await entry.async("string"))
+        break
       default:
         console.log(`Unsupported format: '${ext}' (${fname})`)
-      break
+        break
     }
   }
 

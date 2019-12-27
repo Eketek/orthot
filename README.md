@@ -13,8 +13,9 @@ http://orthot.eketech.com/___release.html
 #0.3.0 (to be left-shifted to 3.0 after the project is ready for release)
 
 # Project status:
-All puzzle mechanics are implemented.  The Puzzle editor has been implemented.  Sound has not been implemented (also have not decided whether or not to do anything interesting with sound).
+All puzzle mechanics are implemented.  The Puzzle editor has been implemented.  Current effort is focused on using webaudio-csound for music and sound effects.
 
 # Roadmap (for version 3.0): 
-1.  Additional data package handling considerations
-2.  Sound / music 
+1.  Sound / music
+2.  New textures
+3.  Replace the old orthot-2 puzzles

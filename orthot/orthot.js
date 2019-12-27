@@ -13,7 +13,7 @@ import { direction } from '../libek/direction.js'
 import { Hackground } from '../libek/hackground.js'
 import { clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
-import { initSynth, updateSynth } from '../libek/synth.js'
+import { initSynth, updateSynth, resetSynths } from '../libek/synth.js'
 
 import { Zone } from './zone.js'
 import { configureTextDisplay, activateTextDisplay, deactivateTextDisplay, setTextDisplayLocale } from './textdisplay.js'
@@ -608,6 +608,42 @@ $(async function MAIN() {
         endLen:1
       })
     })
+    on('y', ()=>{
+      if (CSOUND_AUDIO_CONTEXT.state == "suspended") {
+        CSOUND_AUDIO_CONTEXT.resume()
+      }
+      updateSynth({
+        group_name:"A",
+        group_maxsize:2,
+        forced:true,
+        program:synthPRG,
+        config:{
+          1:{
+            iAtkLen:Math.random()*0.2,
+            iDecpow:Math.random()*0.5,
+            iDeclen:Math.random()*0.2,
+            iSuspow:Math.random()*0.05,
+            iRellen:Math.random()*0.3,
+            iCutoff:Math.random()*5000,
+            iRes:Math.random()*0.15
+          }
+        },
+        score:`
+          i1 0 0.2 50 .7
+          i1 0.5 0.2 100 .3
+          i1 1 0.2 200 .3
+          i1 1.5 0.2 300 .3
+        `,
+        play:true,
+        endLen:1
+      })
+    })
+    /*
+    let resetSynthsBTN = $("<div>").addClass("btn_active").text("Reset Synths").click(resetSynths)[0]
+    resetSynthsBTN.title = "The sound synthesis system is known to be pretty unstable.  If things seem to have gone a bit quiet, try clicking this to reset it (or refresh the page)."
+    $("#controls").append(resetSynthsBTN)
+    */
+    
   })()}
   
   let faderID

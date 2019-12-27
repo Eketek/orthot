@@ -1,4 +1,4 @@
-export { Synth, initSynth, updateSynth }
+export { Synth, initSynth, updateSynth, resetSynths }
 import { on } from './nextevent.js'
 import { deepcopy } from './util.js'
 import { getUID } from './libek.js'
@@ -111,12 +111,23 @@ var updateSynth = function(operation) {
     synth.configure(config)
   }
   if (score) {
-    synth.score = score
+    synth.setScore(score)
   }
   if (play) {
     synth.play()
   }
   return synth
+}
+
+var resetSynths = function() {
+  for (let k in synths) {
+    let grp = synths[k]
+    for (let synth of grp) {
+      csnd_instances.splice(csnd_instances.indexOf(synth.csound),1)
+      synth.csound.destroy()
+      synth.repair()
+    }
+  }
 }
 
 var Synth = function(code, endLen) {
@@ -129,7 +140,6 @@ var Synth = function(code, endLen) {
   // Subsequent changes seem to have cleaned up a few of the exceptions, but this will remain as-is for now.
   this.repair = function() {
     this.csound = new CsoundObj()
-    this.csound.setMessageCallback(recvMessage)
     csnd_instances.push(this.csound)
     this.broken = false
   }
@@ -162,6 +172,8 @@ var Synth = function(code, endLen) {
     code = code.split(/\;[^\n]*/).join('\n')
     code = code.split(/\/\/[^\n]*/).join('\n')
     
+    this.raw = code
+    
     // Find the instrument with the highest ID
     //  The next ID is used for a dummy instrument  
     let maxID = 0
@@ -178,8 +190,6 @@ var Synth = function(code, endLen) {
         }
       }
     }
-
-    let score
     
     // If in 'orc' format, convert to 'csd'
     if (code.indexOf('<CsoundSynthesizer>') == -1) {
@@ -208,42 +218,39 @@ var Synth = function(code, endLen) {
     }
     // remove score and put it in a separate section
     let scorePos = code.indexOf("<CsScore>")
-    //console.log(code)
     if (scorePos != -1) {
       let scoreEnd = code.indexOf("</CsScore>")
-      score = code.substring(scorePos+9, scoreEnd)
-      if (endLen) {
-        setEnd(score)
-        //score = addEndSentinel(score, endLen)
-      }
-      score = `
-        i${dummyID} 3600 0
-        ${score}
-      `
+      this.setScore(code.substring(scorePos+9, scoreEnd))
       code = code.substring(0, scorePos) + code.substring(scoreEnd+10)
     }
-    this.raw = code
     this.code = undefined
-    this.score = score
-    //console.log(scorePos, score)
   }
   
-  let setEnd = (function(score) {
-    let lines = score.split('\n')
-    let end = 0
-    for (let line of lines) {
-      let parts = line.split(/\s+/)
-      if (parts.length > 1) {
-        let t = Number.parseFloat((parts[0] == "" ? parts[2] : parts[1]))
-        if (t != undefined) {
-          t = Number.parseFloat(t)
-          if ((t > end) && (parts[0] != "i"+dummyID)) {
-            end = t
+  this.setScore = function(score) {
+    if (endLen) {
+      let lines = score.split('\n')
+      let end = 0
+      for (let line of lines) {
+        let parts = line.split(/\s+/)
+        if (parts.length > 1) {
+          let t = Number.parseFloat((parts[0] == "" ? parts[2] : parts[1]))
+          if (t != undefined) {
+            t = Number.parseFloat(t)
+            if ((t > end) && (parts[0] != "i"+dummyID)) {
+              end = t
+            }
           }
         }
       }
+      this.endTime = Date.now()+1000*(end+endLen)
     }
-    this.endTime = Date.now()+1000*(end+endLen)
+    this.score = `
+      i${dummyID} 3600 0
+      ${score}
+    `
+  }
+  
+  let setEnd = (function(score) {
   }).bind(this);
   
   
@@ -299,15 +306,7 @@ var Synth = function(code, endLen) {
           this.program(score)
         }
         else {
-          if (endLen) {
-            setEnd(score)
-          }
-          //this.score = "\ni3000000 15 0\n" + score + "\n"
-          
-          this.score = `
-            i${dummyID} 3600 0
-            ${score}
-          `
+          this.setScore(score)
         }
       }
       switch(state) {

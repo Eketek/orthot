@@ -593,7 +593,8 @@ $(async function MAIN() {
   $("#controls").append(aboutBTN)
 
   $("#controls").append(orthotCTL.$reload_defaultpack)
-
+  
+  /*
   {(async function() {
     let synth
     await initSynth()
@@ -705,14 +706,8 @@ i1 3 0.8 400 .3
         endLen:1
       })
     })
-    /*
-    let resetSynthsBTN = $("<div>").addClass("btn_active").text("Reset Synths").click(resetSynths)[0]
-    resetSynthsBTN.title = "The sound synthesis system is known to be pretty unstable.  If things seem to have gone a bit quiet, try clicking this to reset it (or refresh the page)."
-    $("#controls").append(resetSynthsBTN)
-    */
-    
   })()}
-  
+  */
   let faderID
   let completionELEM = $("#completionGraphic")[0]
   completionELEM.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )

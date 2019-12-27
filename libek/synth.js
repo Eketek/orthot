@@ -169,10 +169,8 @@ var Synth = function(code, endLen) {
     }
     code = o
     //remove single-line comments starting with ';' or '//'
-    code = code.split(/\;[^\n]*/).join('\n')
+    //code = code.split(/\;[^\n]*/).join('\n')
     code = code.split(/\/\/[^\n]*/).join('\n')
-    
-    this.raw = code
     
     // Find the instrument with the highest ID
     //  The next ID is used for a dummy instrument  
@@ -224,6 +222,7 @@ var Synth = function(code, endLen) {
       code = code.substring(0, scorePos) + code.substring(scoreEnd+10)
     }
     this.code = undefined
+    this.raw = code
   }
   
   this.setScore = function(score) {
@@ -273,7 +272,54 @@ var Synth = function(code, endLen) {
     params = deepcopy(params)
     let lines = this.raw.split('\n')
     let block = params.main
+    let arrayed_lines
+    let arrayed_units
     let altered = []
+    let closeVectoredBlock = function() {
+      if (!arrayed_lines) {
+        return
+      }
+      if (arrayed_units == 0) {
+        arrayed_units = 1
+      }
+      
+      for (let i = 0; i < arrayed_units; i++) {
+        let vbOut = []
+        for (let line of arrayed_lines) {
+          let parts = line.split(/\s+/)
+          //console.log(parts)
+          let parname = parts[0]
+          let replacement = block[parts[0]]
+          if ( (parts[1] == "=") && replacement ) {
+            if (Array.isArray(replacement)) {
+              vbOut.push(`${parname}${i} = ${replacement[i]}`)
+            }
+            else {
+              vbOut.push(`${parname} = ${replacement}`)
+            }
+          }
+          else {
+            vbOut.push({raw:line})
+          }
+        }
+        for (let entry of vbOut) {
+          if (typeof(entry) == "string") {
+            altered.push(entry)
+          }
+          else {
+            let line = entry.raw
+            for (let parname in block) {
+              if (Array.isArray(block[parname])) {
+                line = line.replace(parname, `${parname}${i}`)
+              }
+            }
+            altered.push(line)
+          }
+        }
+      }
+      
+      arrayed_lines = undefined
+    }
     for (let line of lines) {
       line = line.trim()
       let parts = line.split(/\s+/)
@@ -284,15 +330,33 @@ var Synth = function(code, endLen) {
           break
         case "endin":
           block = params.main
+          closeVectoredBlock()
+          break
+        case "startArrayedOP:":
+          if (block && (block != params.main)) {
+            arrayed_lines = []
+          }
+          break
+        case "endArrayedOP:":
+          closeVectoredBlock()
           break
         default:
-          if ( block && (parts[1] == "=") && (block[parts[0]] != undefined) ) {
+          if (arrayed_lines) {
+            if ( (parts[1] == "=") && Array.isArray(block[parts[0]]) ) {
+              arrayed_units = block[parts[0]].length
+            }
+            arrayed_lines.push(line)
+            line = undefined
+          }
+          else if ( block && (parts[1] == "=") && (block[parts[0]] != undefined) ) {
             line = `${parname} = ${block[parname]}`
             delete block[parname]
           }
           break
       }
-      altered.push(line)
+      if (line) {
+        altered.push(line)
+      }
     }
     this.code = altered.join('\n')
   }
@@ -333,6 +397,8 @@ var Synth = function(code, endLen) {
           }
           let closeTagPos = program.indexOf("</CsoundSynthesizer>")
           programCSD = `${program.substring(0, closeTagPos)} <CsScore>${this.score}</CsScore> ${program.substring(closeTagPos)}`
+          console.log(this.code)
+          console.log(this.score)
           console.log(programCSD)
           this.csound.compileCSD(programCSD)
           this.csound.start()

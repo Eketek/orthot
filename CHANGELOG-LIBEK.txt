@@ -1,3 +1,10 @@
+27 Dec 2019
+  Add a vectorization macro to the synth configuration
+    Synth.configure() can now use arrays to expand suitably labelled blocks of synth code.  The expansion generates copies of the targetted block of code
+    with differing values taken from corresponding arrays passed as configuration parameters.
+      (Example:  To define an additive synthesizer, synth code to evaluate a single partial [and accumulate the result] can be transformed by assigning arrays 
+       of modifiers to corresponding frequency and magnitude config parameters)
+
 24-26 Dec 2019
   Attach CSound 6.13.0 (WebAudio variant) to the project.  Plan is to have extensive sound synthesis capabilities (and a few reasonable presets on hand).
       (See https://csound.com/ for details)

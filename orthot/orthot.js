@@ -546,43 +546,51 @@ $(async function MAIN() {
     let synth
     await initSynth()
     let synthPRG = `<CsoundSynthesizer>
-      <CsOptions>
-        -o dac
-      </CsOptions>
-      <CsInstruments>
+<CsOptions>
+-o dac
+</CsOptions>
+<CsInstruments>
 
-        sr = 44100
-        ksmps = 32
-        nchnls = 2
-        0dbfs = 1
-                
-        instr 1
-        iAtklen = 0.05
-        iDecpow = 0.2
-        iDeclen = 0.4
-        iSuspow = 0.05
-        iRellen = 0.1
-        iCutoff = 1000
-        iRes = 0.1
+sr = 44100
+ksmps = 32
+nchnls = 2
+0dbfs = 1
+        
+instr 1
+iFreq = p4
+iAtkpow = p5
+iAtklen = 0.05
+iDecpow = 0.2
+iSuspow = 0.05
+iDeclen = 0.4
+iSuslen = p3-iAtklen-iDeclen
+iRellen = 0.1
+iCutoff = 1000
+iRes = 0.1
 
-        iFreq = p4
-        iAtkpow = p5
-        iSuslen = p3-iAtklen-iDeclen
+kEnv linsegr 0, iAtklen, iAtkpow, iDeclen, iDecpow, iSuslen, iSuspow, iRellen, 0
 
-        kEnv 	linsegr	 0, iAtklen, iAtkpow, iDeclen, iDecpow, iSuslen, iSuspow, iRellen, 0
-        aVco = vco2(1, iFreq) + vco2(1*0.3, iFreq*2) + vco2(1*0.6, iFreq*3) + vco2(1*1, iFreq*0.501)
-        aLp moogladder aVco, iCutoff*kEnv, iRes
-        aOut = aLp*kEnv
-        out aOut, aOut
-        endin
-      </CsInstruments>
-      <CsScore>
-        i1 0 0.8 50 .7
-        i1 1 0.8 100 .3
-        i1 2 0.8 200 .3
-        i1 3 0.8 300 .3
-      </CsScore>
-      </CsoundSynthesizer>`
+aValue = 0
+
+startArrayedOP:
+  iPMag = 1
+  iPFreqMul = 1
+  aValue = aValue + vco2( iPMag, iPFreqMul*iFreq)
+endArrayedOP:
+  
+aLp moogladder aValue, iCutoff*kEnv, iRes
+aOut = aLp*kEnv
+out aOut, aOut
+endin
+
+</CsInstruments>
+<CsScore>
+i1 0 0.8 50 .3
+i1 1 0.8 100 .3
+i1 2 0.8 200 .3
+i1 3 0.8 400 .3
+</CsScore>
+</CsoundSynthesizer>`
     
     on('t', ()=>{
       if (CSOUND_AUDIO_CONTEXT.state == "suspended") {
@@ -601,7 +609,9 @@ $(async function MAIN() {
             iSuspow:Math.random()*0.05,
             iRellen:Math.random()*0.3,
             iCutoff:Math.random()*5000,
-            iRes:Math.random()*0.15
+            iRes:Math.random()*0.15,
+            iPMag:[1, 0.3,0.3,0.2,0.1],
+            iPFreqMul:[1, 2, 3.1, 4.1, 5.1],
           }
         },
         play:true,
@@ -625,14 +635,16 @@ $(async function MAIN() {
             iSuspow:Math.random()*0.05,
             iRellen:Math.random()*0.3,
             iCutoff:Math.random()*5000,
-            iRes:Math.random()*0.15
+            iRes:Math.random()*0.15,
+            iPMag:[1],
+            iPFreq:[1],
           }
         },
         score:`
-          i1 0 0.2 50 .7
-          i1 0.5 0.2 100 .3
-          i1 1 0.2 200 .3
-          i1 1.5 0.2 300 .3
+          i1 0 0.8 50 .3
+          i1 1 0.8 100 .3
+          i1 2 0.8 200 .3
+          i1 3 0.8 400 .3
         `,
         play:true,
         endLen:1

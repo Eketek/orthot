@@ -13,6 +13,7 @@ import { direction } from '../libek/direction.js'
 import { Hackground } from '../libek/hackground.js'
 import { clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
+import { initSynth, updateSynth } from '../libek/synth.js'
 
 import { Zone } from './zone.js'
 import { configureTextDisplay, activateTextDisplay, deactivateTextDisplay, setTextDisplayLocale } from './textdisplay.js'
@@ -46,7 +47,7 @@ var orthotCTL = window.octl = window.appCTL = {
 $(async function MAIN() {
 
   initLIBEK()
-
+  
   let disp_elem = $("#game").attr("tabindex", "0").get(0)
   disp_elem.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )
   disp_elem.focus()
@@ -541,6 +542,74 @@ $(async function MAIN() {
 
   $("#controls").append(orthotCTL.$reload_defaultpack)
 
+  {(async function() {
+    let synth
+    await initSynth()
+    let synthPRG = `<CsoundSynthesizer>
+      <CsOptions>
+        -o dac
+      </CsOptions>
+      <CsInstruments>
+
+        sr = 44100
+        ksmps = 32
+        nchnls = 2
+        0dbfs = 1
+                
+        instr 1
+        iAtklen = 0.05
+        iDecpow = 0.2
+        iDeclen = 0.4
+        iSuspow = 0.05
+        iRellen = 0.1
+        iCutoff = 1000
+        iRes = 0.1
+
+        iFreq = p4
+        iAtkpow = p5
+        iSuslen = p3-iAtklen-iDeclen
+
+        kEnv 	linsegr	 0, iAtklen, iAtkpow, iDeclen, iDecpow, iSuslen, iSuspow, iRellen, 0
+        aVco = vco2(1, iFreq) + vco2(1*0.3, iFreq*2) + vco2(1*0.6, iFreq*3) + vco2(1*1, iFreq*0.501)
+        aLp moogladder aVco, iCutoff*kEnv, iRes
+        aOut = aLp*kEnv
+        out aOut, aOut
+        endin
+      </CsInstruments>
+      <CsScore>
+        i1 0 0.8 50 .7
+        i1 1 0.8 100 .3
+        i1 2 0.8 200 .3
+        i1 3 0.8 300 .3
+      </CsScore>
+      </CsoundSynthesizer>`
+    
+    on('t', ()=>{
+      if (CSOUND_AUDIO_CONTEXT.state == "suspended") {
+        CSOUND_AUDIO_CONTEXT.resume()
+      }
+      updateSynth({
+        group_name:"A",
+        group_maxsize:2,
+        forced:true,
+        program:synthPRG,
+        config:{
+          1:{
+            iAtkLen:Math.random()*0.2,
+            iDecpow:Math.random()*0.5,
+            iDeclen:Math.random()*0.2,
+            iSuspow:Math.random()*0.05,
+            iRellen:Math.random()*0.3,
+            iCutoff:Math.random()*5000,
+            iRes:Math.random()*0.15
+          }
+        },
+        play:true,
+        endLen:1
+      })
+    })
+  })()}
+  
   let faderID
   let completionELEM = $("#completionGraphic")[0]
   completionELEM.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )

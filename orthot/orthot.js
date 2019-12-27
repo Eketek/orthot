@@ -491,7 +491,6 @@ $(async function MAIN() {
         let i = file.name.lastIndexOf('.')
         let ext = file.name.substr(i+1).toLowerCase()
         let shortname = file.name.substr(0, i)
-        console.log(file, ext, shortname)
         switch(ext) {
           case 'ekvx2':
           case 'json':
@@ -502,8 +501,6 @@ $(async function MAIN() {
             let data = {}
             await loadZIP(data, true, file)
             loadDataPack(shortname, undefined, data)
-            console.log(orthotCTL.gdatapack)
-            console.log(data)
             orthotCTL.loadScene(orthotCTL.gdatapack.mainAreaname)
           } break
         }

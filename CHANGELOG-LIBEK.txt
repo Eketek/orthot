@@ -1,3 +1,9 @@
+28 Dec 2019
+  Added a shorthand async delay function (nextevent.js)
+    (Example: await time(1000) to wait 1 second)
+  Added a Generative Music controller (genmusic.js)
+    For now, it accepts a contructor for a Music Generator and auto-plays, in a loop, invoking the composition & synth every iteration
+  
 27 Dec 2019
   Add an "arrayed" operation macro to the synth configuration (synth.js)
     Synth.configure() can now use arrays to expand suitably labelled blocks of synth code.  The expansion generates copies of the targetted block of code

@@ -1,4 +1,4 @@
-export { next, on, NextEventManager }
+export { next, on, NextEventManager, time }
 
 /*
 NextEvent -- A micro-framework which provides an alternative JS event handling interface.
@@ -608,7 +608,7 @@ var flatten = function(arr, levels=1000) {
     back to any code suspended by an await keyword.
    If no transient event listener is present, then the triggering event will be passed directly back to any code suspended by an await keyword
 */
-var next = window.next = async function(... args) {
+var next = async function(... args) {
   let evtman = new NextEventManager(false)
   evtman.on(args)
   return evtman.next()
@@ -619,12 +619,27 @@ var next = window.next = async function(... args) {
    All triggering events will be passed to the event listener.
    This returns a the event handler (which may be used to cancel the event)
 */
-var on = window.on =  async function(... args) {
+var on = async function(... args) {
   let evtman = new NextEventManager()
   evtman.persistent = true
   evtman.on(args)
   return evtman
 }
 
+var time = async function(t, cb) {
+  if (cb) {
+    setTimeout(cb, t)
+  }
+  else {
+    return new Promise(resolve => {
+      setTimeout(resolve, t)
+    })
+  }
+}
 
+if (true && window) {
+  window.on = on
+  window.next = next
+  window.time = time
+}
 

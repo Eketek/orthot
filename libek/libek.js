@@ -11,6 +11,7 @@ export {
 import { flatten } from './util.js'
 import { EkvxLoader, EkvxLoaderLoader } from './ekvx.js'
 import { animtext_Loader, parse_Animtext } from './animtext.js'
+import { on, next } from './nextevent.js'
 
 var PI = Math.PI
 var T = Math.PI*2     // "turn"

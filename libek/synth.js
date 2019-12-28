@@ -1,5 +1,5 @@
 export { Synth, initSynth, updateSynth, resetSynths }
-import { on } from './nextevent.js'
+import { on, time } from './nextevent.js'
 import { deepcopy } from './util.js'
 import { getUID } from './libek.js'
 
@@ -59,6 +59,8 @@ var updateSynth = function(operation) {
   let score = operation.score
   let play = operation.play
   let end = operation.end
+  let defs = operation.defs
+  let destnode = operation.dest_node
   
   let synthset = synths[gname]
   if (!synthset) {
@@ -92,12 +94,11 @@ var updateSynth = function(operation) {
       }
       synth = synthset.shift(1)
       synth.off()
-      //synth.csound.reset()
     }
     // #2:  a new synth
     else {
       if (!synth) {
-        synth = new Synth(undefined, end)
+        synth = new Synth(undefined, end, destnode)
       }
     }
   }
@@ -105,7 +106,7 @@ var updateSynth = function(operation) {
   synthset.push(synth)
   
   if (program) {
-    synth.program(program)
+    synth.program(program, defs, config)
   }
   if (config) {
     synth.configure(config)
@@ -116,7 +117,7 @@ var updateSynth = function(operation) {
   if (play) {
     synth.play()
   }
-  return synth
+  return synth.endTime
 }
 
 var resetSynths = function() {
@@ -130,23 +131,44 @@ var resetSynths = function() {
   }
 }
 
-var Synth = function(code, endLen) {
+var Synth = function(code, endLen, destAudioNode) {
+  
   this.instName = getUID()
   synths_by_instName[this.instName] = this
   this.csound = new CsoundObj()
+  this.csound.setMessageCallback((msg)=>{
+    if (window.PRINT_CSOUND_MESSAGES) {
+      console.log(msg)
+    }
+  })
   csnd_instances.push(this.csound)
+  
+  if (destAudioNode) {
+    this.csound.node.disconnect()
+    this.csound.node.connect(destAudioNode);
+    //destAudioNode.connect(CSOUND_AUDIO_CONTEXT)
+  }
   
   // A hack to try to cover up a bit of internal instability.
   // Subsequent changes seem to have cleaned up a few of the exceptions, but this will remain as-is for now.
   this.repair = function() {
+    if (this.csound) {
+      this.csound.disconnect()
+    }
     this.csound = new CsoundObj()
     csnd_instances.push(this.csound)
     this.broken = false
+    
+    if (destAudioNode) {
+      this.csound.node.disconnect()
+      this.csound.node.connect(destAudioNode);
+      //destAudioNode.connect(CSOUND_AUDIO_CONTEXT)
+    }
   }
   
   let dummyID, endID
   
-  this.program = function(code) {
+  this.program = function(code, defs, params) {
     // remove block comments
     let o = ""
     while (true) {
@@ -176,6 +198,37 @@ var Synth = function(code, endLen) {
     //  The next ID is used for a dummy instrument  
     let maxID = 0
     let lines = code.split('\n')
+    
+    if (defs) {
+      let _lines = []
+      let line
+      let i = 0
+      for (; i < lines.length; i++) {
+        line = lines[i].trim()
+        if (line.indexOf("</CsInstruments>") != -1) {
+          break
+        }
+        _lines.push(line)
+      }
+      for (let instrName in params) {
+        let cfg = params[instrName]
+        if (cfg.def && defs[cfg.def]) {
+          _lines.push("instr " + instrName)
+          let defLines = defs[cfg.def].split('\n')
+          for (let dline of defLines) {
+            _lines.push(dline.trim())
+          }
+          _lines.push("endin")
+        }
+      }
+      for (; i < lines.length; i++) {
+        line = lines[i].trim()
+        _lines.push(line)
+      }
+      lines = _lines
+      code = lines.join('\n')
+    }
+    
     for (let line of lines) {
       let parts = line.split(/\s+/)
       if (parts[0] == "") {
@@ -271,6 +324,7 @@ var Synth = function(code, endLen) {
   this.configure = function(params) {
     params = deepcopy(params)
     let lines = this.raw.split('\n')
+    
     let block = params.main
     let arrayed_lines
     let arrayed_units
@@ -287,7 +341,6 @@ var Synth = function(code, endLen) {
         let vbOut = []
         for (let line of arrayed_lines) {
           let parts = line.split(/\s+/)
-          //console.log(parts)
           let parname = parts[0]
           let replacement = block[parts[0]]
           if ( (parts[1] == "=") && replacement ) {
@@ -377,6 +430,7 @@ var Synth = function(code, endLen) {
         case "playing":
           state = "off"
           this.csound.stop()
+          this.csound.reset()
           
         case "off":
           if ((this.code == undefined) && (this.raw == undefined)) {
@@ -397,9 +451,9 @@ var Synth = function(code, endLen) {
           }
           let closeTagPos = program.indexOf("</CsoundSynthesizer>")
           programCSD = `${program.substring(0, closeTagPos)} <CsScore>${this.score}</CsScore> ${program.substring(closeTagPos)}`
-          console.log(this.code)
-          console.log(this.score)
-          console.log(programCSD)
+          //console.log(this.code)
+          //console.log(this.score)
+          //console.log(programCSD)
           this.csound.compileCSD(programCSD)
           this.csound.start()
           state = "playing"

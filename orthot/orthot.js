@@ -15,6 +15,9 @@ import { clamp, putFloatingElement, centerElementOverElement } from '../libek/ut
 import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { initSynth, updateSynth, resetSynths } from '../libek/synth.js'
 
+import { runGenMusicPlayer } from '../libek/genmusic.js'
+import { AutoEketek } from '../music_generators/AutoEketek.js'
+
 import { Zone } from './zone.js'
 import { configureTextDisplay, activateTextDisplay, deactivateTextDisplay, setTextDisplayLocale } from './textdisplay.js'
 
@@ -390,7 +393,7 @@ $(async function MAIN() {
     return orthotCTL.gdatapack.progress[code]
   }
 
-  on($("loadPuzzle"), "input", ()=>{
+  on($("#loadPuzzle"), "input", ()=>{
     let lvlName = levelSelector.options[levelSelector.selectedIndex].value
     orthotCTL.loadScene(lvlName)
     disp_elem.focus()
@@ -591,120 +594,6 @@ $(async function MAIN() {
 
   $("#controls").append(orthotCTL.$reload_defaultpack)
   
-  /*
-  {(async function() {
-    let synth
-    await initSynth()
-    let synthPRG = `<CsoundSynthesizer>
-<CsOptions>
--o dac
-</CsOptions>
-<CsInstruments>
-
-sr = 44100
-ksmps = 32
-nchnls = 2
-0dbfs = 1
-        
-instr 1
-iFreq = p4
-iAtkpow = p5
-iAtklen = 0.05
-iDecpow = 0.2
-iSuspow = 0.05
-iDeclen = 0.4
-iSuslen = p3-iAtklen-iDeclen
-iRellen = 0.1
-iCutoff = 1000
-iRes = 0.1
-
-aEnv linsegr 0, iAtklen, iAtkpow, iDeclen, iDecpow, iSuslen, iSuspow, iRellen, 0
-
-giSquare ftgen 1, 0, 65536, 10, 1, 0 , .33, 0, .2 , 0, .14, 0 , .11, 0, .09
-
-aValue = 0
-
-startArrayedOP:
-  iPMag = 1
-  iPFreqMul = 1
-  aValue = aValue + poscil( iPMag, iPFreqMul*iFreq, 1)
-endArrayedOP:
-  
-;aLp moogladder aValue, iCutoff*aEnv, iRes
-;aOut = aLp*aEnv
-aOut = aValue * aEnv
-out aOut, aOut
-endin
-
-</CsInstruments>
-<CsScore>
-i1 0 0.8 50 .3
-i1 1 0.8 100 .3
-i1 2 0.8 200 .3
-i1 3 0.8 400 .3
-</CsScore>
-</CsoundSynthesizer>`
-    
-    on('t', ()=>{
-      if (CSOUND_AUDIO_CONTEXT.state == "suspended") {
-        CSOUND_AUDIO_CONTEXT.resume()
-      }
-      updateSynth({
-        group_name:"A",
-        group_maxsize:2,
-        forced:true,
-        program:synthPRG,
-        config:{
-          1:{
-            iAtkLen:Math.random()*0.2,
-            iDecpow:Math.random()*0.5,
-            iDeclen:Math.random()*0.2,
-            iSuspow:Math.random()*0.05,
-            iRellen:Math.random()*0.3,
-            iCutoff:Math.random()*5000,
-            iRes:Math.random()*0.15,
-            iPMag:[1, 0.3,0.3,0.2,0.1],
-            iPFreqMul:[1, 2, 3.1, 4.1, 5.1],
-          }
-        },
-        play:true,
-        endLen:1
-      })
-    })
-    on('y', ()=>{
-      if (CSOUND_AUDIO_CONTEXT.state == "suspended") {
-        CSOUND_AUDIO_CONTEXT.resume()
-      }
-      updateSynth({
-        group_name:"A",
-        group_maxsize:2,
-        forced:true,
-        program:synthPRG,
-        config:{
-          1:{
-            iAtkLen:Math.random()*0.2,
-            iDecpow:Math.random()*0.5,
-            iDeclen:Math.random()*0.2,
-            iSuspow:Math.random()*0.05,
-            iRellen:Math.random()*0.3,
-            iCutoff:Math.random()*5000,
-            iRes:Math.random()*0.15,
-            iPMag:[1],
-            iPFreq:[1],
-          }
-        },
-        score:`
-          i1 0 0.8 50 .3
-          i1 1 0.8 100 .3
-          i1 2 0.8 200 .3
-          i1 3 0.8 400 .3
-        `,
-        play:true,
-        endLen:1
-      })
-    })
-  })()}
-  */
   let faderID
   let completionELEM = $("#completionGraphic")[0]
   completionELEM.addEventListener( 'contextmenu', function(evt) {evt.preventDefault()} )
@@ -1105,7 +994,10 @@ i1 3 0.8 400 .3
     controlActive = true
   })
   
-  //console.log(assets)
+  await initSynth()
+  runGenMusicPlayer(AutoEketek)
+  
+  window.dispatchEvent(new Event("resize"))
 })
 
 

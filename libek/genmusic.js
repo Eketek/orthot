@@ -64,13 +64,13 @@ var runGenMusicPlayer = function(Composer) {
   
   let tryActivate = async function() {
     if (musicMagnitudeController.mainValue > 0) {
+      active = true
       await time(4000)
       compose_and_play()
     }
   }
   
   let compose_and_play = async function() {
-    active = true
     musicMagnitudeController.transientValue = 1
     musicMagnitudeController.update()
     let endTime = composer.compose_and_play()

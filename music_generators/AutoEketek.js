@@ -318,6 +318,8 @@ let AutoEketek = function(audio_destNode) {
   this.compose_and_play = function() {
     reset()
     
+    console.log("AUTO-EKETEK is composing a song... Just for you!")
+    
     // This was going to be random, but deviating significantly from these factors tends to cause more dissonance than its worth 
     //    (particularly since everything else is random).
     setKey(23,2, [[4,6,8,9,12],[4,6,8,9,12]])

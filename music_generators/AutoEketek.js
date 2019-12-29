@@ -282,10 +282,10 @@ let AutoEketek = function(audio_destNode) {
   let ky
   let fundamental
   let fmul
-  let center_hSeries_ID
-  let center_hSeries_toneID
-  let center_value
-  let center_ID
+  //let center_hSeries_ID
+  //let center_hSeries_toneID
+  //let center_value
+  //let center_ID
   
   let setKey = function(hSeriesAmount, hSeriesBase, partials) {
     ky = key(hSeriesAmount, hSeriesBase, partials)
@@ -297,11 +297,12 @@ let AutoEketek = function(audio_destNode) {
   let setFundamental = function(freq) {
     fundamental = freq
     if (ky) {
-      center_hSeries_toneID = 0
-      center_hSeries_ID = Math.floor(ky.each.length / 2)
-      center_value = ky.each[center_hSeries_ID][center_hSeries_toneID]
-      center_ID = ky.all.indexOf(center_value)
-      fmul = freq / center_value
+      //center_hSeries_toneID = 0
+      //center_hSeries_ID = Math.floor(ky.each.length / 2)
+      //center_value = ky.each[center_hSeries_ID][center_hSeries_toneID]
+      //center_ID = ky.all.indexOf(center_value)
+      //fmul = freq / center_value
+      fmul = fundamental / ky.all[0]
     }
   }
   
@@ -319,10 +320,10 @@ let AutoEketek = function(audio_destNode) {
     
     // This was going to be random, but deviating significantly from these factors tends to cause more dissonance than its worth 
     //    (particularly since everything else is random).
-    setKey(11,2, [[4,6,8,9,12],[4,6,8,9,12]])
+    setKey(23,2, [[4,6,8,9,12],[4,6,8,9,12]])
     
     //pick a random fundamental
-    setFundamental(Math.random()*40+25)
+    setFundamental(Math.random()+0.5)
     
     // These strongly control the approaximate length and self-similarity of a "song"
     let phraseLen = Math.floor(Math.random()*16)+16
@@ -394,8 +395,9 @@ let AutoEketek = function(audio_destNode) {
       prev = part
     }
     
-    //tempo, beats per second
-    let bps = Math.random()*0.2+0.10
+    //tempo, seconds per beat
+    let spb = Math.random()*0.2+0.10
+    console.log(`Tempo:  ${60/spb} beats per minute`)
     
     
     let dur = []
@@ -414,21 +416,49 @@ let AutoEketek = function(audio_destNode) {
       altMainTheme2.push(Math.floor(Math.random()*themeRange))
     }
     
+    //target frequency of the highest voice 
+    //  (NOTE:  the synth is set up to produce tones with lots of high-energy harmonics, so the base tones need to be low-ish)
+    let targetHighval = (Math.random()*150+150)
+    
+    let highVal = 0
+    let highOfs = 0
+    for (; highOfs < ky.all.length; highOfs++) {
+      highVal = ky.all[highOfs]*fmul
+      if (highVal > targetHighval) {
+        break
+      }
+    }
+    let targetLowval = highVal/8
+    let lowVal = 0
+    let lowOfs = 0
+    for (; lowOfs < ky.all.length; lowOfs++) {
+      lowVal = ky.all[lowOfs]*fmul
+      if (lowVal > targetLowval) {
+        break
+      }
+    }
+    if (highOfs - lowOfs < numVoices) {
+      lowOfs = Math.floor(highOfs - (1.5*numVoices))
+    }
+    let songVoiceRange = highOfs - lowOfs
+    
     // Pick a random range for each voice
     //  For stylistic reasons, the first 4 voices are spaced widely apart.
-    //    Also, due to not using equal temperment, this also further differentiates the common themes
-    let valOffsets = [ky.hSeries.length, Math.floor(ky.hSeries.length*(1/3)), Math.floor(ky.hSeries.length*(2/3)), 0]
+    
+    let valOffsets = [highOfs, highOfs-Math.floor(songVoiceRange/3), highOfs-Math.floor((songVoiceRange*2)/3), lowOfs]
     for (let i = 3; i < numVoices; i++) {
-      let ofs = 0
-      while (valOffsets.indexOf(ofs) == -1) {
-        ofs = Math.floor(Math.random()*ky.hSeries.length)
+      let ofs = lowOfs
+      while (valOffsets.indexOf(ofs) != -1) {
+        ofs = Math.floor(lowOfs+Math.random()*songVoiceRange)
       }
       valOffsets.push(ofs)
     }
+    
+    console.log(`Base tones: ${lowVal} - ${highVal} Node numbers: ${valOffsets}`)
 
     // Prepare a set of note and rest durations
     for (let i = 0; i < phraseLen; i++) {
-      let _duration = Math.random() > 0.25 ? 2*bps : bps
+      let _duration = Math.random() > 0.25 ? 2*spb : spb
       timing.push({note:true, d:_duration})
       _t += _duration
       dur.push(_duration)
@@ -437,9 +467,9 @@ let AutoEketek = function(audio_destNode) {
     }
     let numRests = Math.floor(Math.random()*5)
     for (let i = 0; i < numRests; i++) {
-      timing.push({rest:true, d:bps})
+      timing.push({rest:true, d:spb})
     }
-    _t += bps*numRests
+    _t += spb*numRests
     
     // make the first and middle notes strong.
     atkPow[0] = 0.5
@@ -451,9 +481,9 @@ let AutoEketek = function(audio_destNode) {
       let valOfs = valOffsets[v]
       
       //articulation: subtract a random amount of time, up to a quarter beat, from every note which the voice sings
-      let durMod = Math.random()*bps*0.25
+      let durMod = Math.random()*spb*0.25
       
-      // Syncopation: shuffle all beat and note durations which this voice sings
+      // Syncopation: shuffle each beat positions/duration and each note duration [this voice]
       let _timing = deepcopy(timing)
       shuffle(_timing)
       
@@ -468,7 +498,7 @@ let AutoEketek = function(audio_destNode) {
       let voiceTheme = []
       for (let i = 0; i < phraseLen; i++) {
         voiceTheme.push(Math.floor(Math.random()*themeRange))
-        let _dur = Math.random() > 0.25 ? 2*bps : bps
+        let _dur = Math.random() > 0.25 ? 2*spb : spb
       }
       
       for (let j = 0; j < numPhrases; j++) {
@@ -528,7 +558,7 @@ let AutoEketek = function(audio_destNode) {
               time = _timing[ti++]
             }
             let atk = atkPow[i]
-            let noteID = center_ID+theme[i] + valOfs
+            let noteID = theme[i] + valOfs
             note(time.t+_t*j, dur[i]-durMod, noteID, atk, voiceArr[v])
           }
         }

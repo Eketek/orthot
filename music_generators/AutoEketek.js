@@ -5,6 +5,111 @@ import { deepcopy } from '../libek/util.js'
 export { AutoEketek }
 
 let AutoEketek = function(audio_destNode) {
+  
+  let RNG = Math.random
+  
+  let gcd = function(a,b) {
+    while (b != 0) {
+      let tmp = b
+      b = a%b
+      a = tmp
+    }
+    return a
+  }
+  
+  let applySeed = function(s) {
+    if (typeof(s) != "string") {
+      s = "" + s
+    }
+    let tmp
+    let state = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+    let v = 15
+    for (let i = 0; i < s.length; i++) {
+      if ( (i%4) == 0) {
+        state.push(v)
+        v = 0
+      }
+      v = (v<<8)|(s.charCodeAt(i)&0xff)
+    }
+    state.push(v)
+    let l = state.length
+    
+    let f = 11
+    while ( (gcd(f,l)!=1) ) {
+      f += 2
+    }
+    let fA = f
+    f += 2
+    
+    while ( (gcd(f,l)!=1) || (gcd(f,fA)!=1) ) {
+      f += 2
+    }
+    let fB = f
+    f += 2
+    
+    while ( (gcd(f,l)!=1) || (gcd(f,fA)!=1) || (gcd(f,fB)!=1) ) {
+      f += 2
+    }
+    let fC = f
+    
+    let a = 0
+    let b = 0
+    let c = 0
+    let d = 0
+    
+    RNG = function() {
+      state[d] = ((state[d] + a + b + c)*16777619) % 4294967296
+      a = (a+fA)%l
+      b = (b+fB)%l
+      c = (c+fC)%l
+      d = (d+state[a]+state[b]+state[c])%l
+      return state[d]/4294967296
+    }
+    
+    for (let i =0; i < l; i++) {
+      RNG()
+    }
+  }
+  
+  let rand = function(curve) {
+    if (curve) {
+      if (curve > 0) {
+        return RNG()**curve
+      }
+      else {
+        return RNG()**(1/(-curve))
+      }
+    }
+    else {
+      return RNG()
+    }
+  }
+  let rand_float = function(max=1, curve=0) {
+    return rand(curve)*max
+  }
+  let randRange_float = function(min, max, curve) {
+    return rand(curve)*(max-min) + min
+  }
+  let rand_int = function(max, curve) {
+    return Math.floor(rand_float(max, curve))
+  }
+  let randRange_int = function(min, max, curve) {
+    return Math.floor(randRange_float(max, min, curve))
+  }
+  
+  let chance = function(n) {
+    return rand() < n
+  }
+  
+  let randSelect = function(arr, curve) {
+    return arr[rand_int(arr.length, curve)]
+  }
+  let randRangeSelect = function(arr, min, max, curve) {
+    return arr[randRange_int(min, max, curve)]
+  }
+  
+  // Synth programs
+  // These get manipulated as part of synthesizer configuration to increase the amount of variety in the output
   let defs = {
     sine_additive:`
       iFreq = p4
@@ -77,44 +182,45 @@ let AutoEketek = function(audio_destNode) {
     </CsoundSynthesizer>
   `
   
-  // A musical key generator.
-  // This accepts a set of partial components, cross-multiples them to generate a harmonic series
-  //  The series is then scaled by simple multiplication with a series of exponents of some base
-  var key = function(hSeriesAmount, hSeriesBase, partials) {
-  
+  // A musical scale generator.
+  // In its simplest usage, this just multiplies a series of frequencies with powers of some base
+  // The more complex usages invole specifing the scale as sets of factors to derive all values from, and octaves that are not powers of some base value
+  // The more complex usages are great for getting bad results out of the any simple composition algorithm, so only the simplest case is invoked.
+  var Scale = function(factorlists, base=2) {
+    
     // a simpler method of specifying partial components
-    if (!Array.isArray(partials)) {
-      if (partials.repeat) {
-        let _partials = []
-        for (let i = 0; i < partials.repeat; i++) {
-          _partials.push(partials.data)
+    if (!Array.isArray(factorlists)) {
+      if (factorlists.repeat) {
+        let _factorlists = []
+        for (let i = 0; i < factorlists.repeat; i++) {
+          _factorlists.push(factorlists.data)
         }
-        partials = _partials
+        factorlists = _factorlists
       }
     }
-    else if (!Array.isArray(partials[0])) {
-      partials = [partials]
+    else if (!Array.isArray(factorlists[0])) {
+      factorlists = [factorlists]
     }
     
-    let hSeries = []
+    let scale = []
     
     // multiply the partial-components in every set with the components in every other set
     let idx = []
     let idxT = 1
-    for (let i = 0; i < partials.length; i++) {
+    for (let i = 0; i < factorlists.length; i++) {
       idx.push(0)
-      idxT *= partials[i].length
+      idxT *= factorlists[i].length
     }
     let j = 0
     outer:
     for (let i = 0; i < idxT; i++) {
       let v = 1
-      for (let k = 0; k < partials.length; k++) {
-        v *= partials[k][idx[k]]
+      for (let k = 0; k < factorlists.length; k++) {
+        v *= factorlists[k][idx[k]]
       }
-      hSeries.push(v)
-      for (let j = 0; j < partials.length; j++) {
-        if (idx[j] == (partials[j].length-1)) {
+      scale.push(v)
+      for (let j = 0; j < factorlists.length; j++) {
+        if (idx[j] == (factorlists[j].length-1)) {
           idx[j] = 0
         }
         else {
@@ -125,54 +231,54 @@ let AutoEketek = function(audio_destNode) {
     }
     
     // remove duplicate entries and sort, yielding a properly formatted representation of a single harmonic series
-    for (let i = 0; i < hSeries.length; i++) {
-      if (hSeries.indexOf(hSeries[i]) < i) {
-        hSeries.splice(i,1)
+    for (let i = 0; i < scale.length; i++) {
+      if (scale.indexOf(scale[i]) < i) {
+        scale.splice(i,1)
         i--
       }
     }
-    hSeries.sort( (a,b)=>{
+    scale.sort( (a,b)=>{
       return a-b
     })
     
-    let key_all = []
-    let key_each = []
+    let scale_all = []
+    let scale_each = []
     
-    //expand the harmonic series to generate the entire musical key
-    if (!Array.isArray(hSeriesBase)) {
-      let base = hSeriesBase
+    //If base is just an number, fill an array with its powers
+    if (!Array.isArray(base)) {
+      let _base = base
       let base_acc = 1
-      hSeriesBase = []
-      for (let i = 0; i < hSeriesAmount; i++) {
-        hSeriesBase.push(base_acc)
-        base_acc *= base
+      base = []
+      for (let i = 0; i < 32; i++) {
+        base.push(base_acc)
+        base_acc *= _base
       }
     }
-    for (let baseID = 0; baseID < hSeriesBase.length; baseID++) {
-      let base = hSeriesBase[baseID]
+    for (let i = 0; i < base.length; i++) {
+      let baseVal = base[i]
       let scale_b = []
-      key_each[baseID] = scale_b
-      for (let partial of hSeries) {
-        let val = partial * base
+      scale_each[i] = scale_b
+      for (let partial of scale) {
+        let val = partial * baseVal
         scale_b.push(val)
-        key_all.push(val)
+        scale_all.push(val)
       }
     }
     // remove any duplicate entries in the completed key
-    for (let i = 0; i < key_all.length; i++) {
-      if (key_all.indexOf(key_all[i]) < i) {
-        key_all.splice(i,1)
+    for (let i = 0; i < scale_all.length; i++) {
+      if (scale_all.indexOf(scale_all[i]) < i) {
+        scale_all.splice(i,1)
         i--
       }
     }
-    key_all.sort( (a,b)=>{
+    scale_all.sort( (a,b)=>{
       return a-b
     })
     
     return {
-      hSeries:hSeries,
-      all:key_all,
-      each:key_each
+      scale:scale,
+      all:scale_all,
+      each:scale_each
     }
   }
   
@@ -190,32 +296,35 @@ let AutoEketek = function(audio_destNode) {
   let randomizeInstruments = function(amount) {
     instruments = []
     for (let i = 0; i < amount; i++) {
-      let useSineSynth = Math.random() > 0.8
+      let useSineSynth = chance(0.25)
       let numPartials = 1
       let partialMagnitude = 1
-      if (Math.random() > 0.25) {
-        numPartials = Math.floor(Math.random()*4+2)
+      if (chance(0.75)) {
+        //numPartials = Math.floor(Math.random()*4+2)
+        numPartials = randRange_int(2,6)
         partialMagnitude = 1/numPartials
       }
-      let pMag = [1.5]
+      let pMag = [1]
       let pFMul = [1]
-      let waveTypes = [Math.floor(Math.random()*3+1)]
-      let dcycleParams = [Math.random()]
+      //let waveTypes = [Math.floor(Math.random()*3+1)]
+      let waveTypes = [randRange_int(1,4)]
+      let dcycleParams = [rand_float()]
       let tMag = 0
       for (let i = 1; i < numPartials; i++) {
-        let mag = 1.5*(Math.random()*partialMagnitude*(numPartials-i)/numPartials)**2
+        //let mag = 1*(Math.random()*partialMagnitude*(numPartials-i)/numPartials)**2
+        let mag = 1 * rand_float(partialMagnitude*(numPartials-i)/numPartials, 2)
         tMag += mag
         pMag.push(mag)
-        if (Math.random() > 0.9) {
-          pFMul.push(i+1+Math.random()*0.05)
+        if (chance(0.1)) {
+          pFMul.push(i+1+rand_float(0.05))
         }
         else {
           pFMul.push(i+1)
         }
-        waveTypes.push(Math.floor(Math.random()*3+1))
-        dcycleParams.push(Math.random())
+        waveTypes.push(randRange_int(1,4))
+        dcycleParams.push(rand_float())
       }
-      let mScale = (Math.random()*0.5+0.25) / (tMag * numPartials)
+      let mScale = (randRange_float(0.25, 0.75)) / (tMag * numPartials)
       for (let i = 1; i < numPartials; i++) {
         pMag[i] *= mScale
       }
@@ -224,21 +333,21 @@ let AutoEketek = function(audio_destNode) {
           pMag[i] *= 0.75
         }
       }
-      let pan = i==0 ? 0.4 : Math.random()*0.8
+      let pan = i==0 ? 0.5 : randRange_float(0.1, 0.9)
       instruments.push({
         def:useSineSynth ? "sine_additive" : "vco_additive",
-        iAtkLen:Math.random()*0.05,
-        iDecpow:Math.random()*0.3,
-        iDeclen:Math.random()*0.05,
-        iSuspow:Math.random()*0.2,
-        iRellen:Math.random()*0.15,
-        iCutoff:(Math.random()**2)*7500,
-        iRes:Math.random()*0.15,
+        iAtkLen:randRange_float(0.025, 0.075),
+        iDecpow:randRange_float(0.05, 0.15),
+        iDeclen:randRange_float(0.025, 0.075),
+        iSuspow:randRange_float(0.05, 0.1),
+        iRellen:rand_float(0.15),
+        iCutoff:rand_float(7500, 2),
+        iRes:rand_float(0.15),
         iPMag:pMag,
         iPFreqMul:pFMul,
         iWaveType:waveTypes,
         iDcycle:dcycleParams,
-        iLeft:0.2+pan,
+        iLeft:pan,
         iRight:1-pan
       })
     }
@@ -265,7 +374,7 @@ let AutoEketek = function(audio_destNode) {
     if (!target) {
       target = voices.i1
     }
-    target.notes.push( {time:time, dur:dur, freq:fmul*ky.all[noteval], pow:pow} )
+    target.notes.push( {time:time, dur:dur, freq:fundamental*scale.all[noteval], pow:pow} )
   }
   
   let toScore = function() {
@@ -279,60 +388,53 @@ let AutoEketek = function(audio_destNode) {
     return score.join('\n')
   }
   
-  let ky
+  let scale
   let fundamental
-  let fmul
-  //let center_hSeries_ID
-  //let center_hSeries_toneID
-  //let center_value
-  //let center_ID
-  
-  let setKey = function(hSeriesAmount, hSeriesBase, partials) {
-    ky = key(hSeriesAmount, hSeriesBase, partials)
-    if (fundamental) {
-      setFundamental(fundamental)
-    }
-  }
-  
-  let setFundamental = function(freq) {
-    fundamental = freq
-    if (ky) {
-      //center_hSeries_toneID = 0
-      //center_hSeries_ID = Math.floor(ky.each.length / 2)
-      //center_value = ky.each[center_hSeries_ID][center_hSeries_toneID]
-      //center_ID = ky.all.indexOf(center_value)
-      //fmul = freq / center_value
-      fmul = fundamental / ky.all[0]
-    }
-  }
   
   let shuffle = function(arr) {
     for (let k = arr.length-1; k >= 0; k--) {
-      let l = Math.floor(Math.random()*k)
+      let l = randRange_int(0,k)
       let tmp = arr[k]
       arr[k] = arr[l]
       arr[l] = tmp
     }
   }
   
-  this.compose_and_play = function() {
+  this.compose_and_play = function(seed) {
+    if (seed) {
+      applySeed(seed)
+    }
+    else {
+      RNG = Math.random
+    }
     reset()
     
-    console.log("AUTO-EKETEK is composing a song... Just for you!")
+    if (seed) {
+      console.log(`AUTO-EKETEK has dutifully located a copy of "${seed}"`)
+    }
+    else {
+      console.log("AUTO-EKETEK is composing a song... Just for you!")
+    }
     
-    // This was going to be random, but deviating significantly from these factors tends to cause more dissonance than its worth 
-    //    (particularly since everything else is random).
-    setKey(23,2, [[4,6,8,9,12],[4,6,8,9,12]])
-    
-    //pick a random fundamental
-    setFundamental(Math.random()+0.5)
+    if (window.Do_a_really_bad_job) {
+      scale = Scale([8192,10000,10240,12500,12800,15625,16000], 2)
+      fundamental = randRange_float(0.5, 1.5)/4096
+    }
+    else {
+      // On further analysis, what AutoEketek has is a Pentatonic scale with a Pythagorean tuning.  
+      //      Which... is probably a best-practice without any other logic behind note selection.
+      //  So might as well declare it explicitly.
+      scale = Scale([64,72,81,96,108], 2)
+      fundamental = randRange_float(0.5, 1.5)/32
+    }
     
     // These strongly control the approaximate length and self-similarity of a "song"
-    let phraseLen = Math.floor(Math.random()*16)+16
-    let numPhrases = 24
+    //let phraseNotes = Math.floor(Math.random()*8)+12
+    let phraseNotes = randRange_int(8, 20)
     
     // Each voice gets a random insrtrument, and will sings in its own range
-    let numVoices = Math.floor(Math.random()*16+4)
+    //let numVoices = Math.floor(Math.random()*4+4)
+    let numVoices = randRange_int(4, 8)
     randomizeInstruments(numVoices)
     for (let i = 0; i < numVoices; i++) {
       addVoice()
@@ -340,6 +442,137 @@ let AutoEketek = function(audio_destNode) {
     
     let parts = []
     let prev
+    
+    console.log("Voices: " + numVoices)
+    
+    //  Rhythmic complexity - maximum number of beats to hold a note
+    //let rhythmicComplexity = Math.floor(Math.random()*4)+1
+    let rhythmicComplexity = randRange_int(1, 5)
+    let bpm, restMaxbeats
+    
+    switch(rhythmicComplexity) {
+      default:
+        rhythmicComplexity = 1
+      case 1:
+        restMaxbeats = 1
+        bpm = randRange_float(150,450)
+        // Reduce the odds of zero rhythmic complexity to 1.25%.
+        if (chance(0.95)) {
+          rhythmicComplexity = 2
+        }
+        break
+      case 2:
+        bpm = randRange_float(175,500)
+        restMaxbeats = 1
+        break
+      case 3:
+        bpm = randRange_float(200,500)
+        restMaxbeats = 1
+        break
+      case 4:
+        bpm = randRange_float(225,400)
+        restMaxbeats = 2
+        break
+    }
+    
+    let spb = 60/bpm
+    console.log(`Rhythmic Complexity: ${rhythmicComplexity}`)
+    console.log(`Tempo:  ${bpm} beats per minute`)
+    
+    let dur = []
+    let timing = []
+    let phraseLen = 0
+    let atkPow = []
+    
+    // Generate a set of themes which all voices may sing.
+    let mainTheme = []
+    let altMainTheme1 = []
+    let altMainTheme2 = []
+    let themeRange = randRange_int(6,9)
+    for (let i = 0; i < phraseNotes; i++) {
+      mainTheme.push( rand_int(themeRange) )
+      altMainTheme1.push(rand_int(themeRange))
+      altMainTheme2.push(rand_int(themeRange))
+    }
+    
+    console.log("Main Theme:", mainTheme)
+    console.log("Alt Theme 1:", altMainTheme1)
+    console.log("Alt Theme 2:", altMainTheme2)
+    
+    //target frequency of the highest voice 
+    //  (NOTE:  the synth is set up to produce tones with lots of high-energy harmonics, so the base tones need to be low-ish)
+    let targetHighval = randRange_float(200, 275)
+    
+    let highVal = 0
+    let highOfs = 0
+    for (; highOfs < scale.all.length; highOfs++) {
+      highVal = scale.all[highOfs]*fundamental
+      if (highVal > targetHighval) {
+        break
+      }
+    }
+    let targetLowval = highVal/4
+    let lowVal = 0
+    let lowOfs = 0
+    for (; lowOfs < scale.all.length; lowOfs++) {
+      lowVal = scale.all[lowOfs]*fundamental
+      if (lowVal > targetLowval) {
+        break
+      }
+    }
+    if (highOfs - lowOfs < numVoices) {
+      lowOfs = Math.floor(highOfs - (1.5*numVoices))
+    }
+    let songVoiceRange = highOfs - lowOfs
+    
+    // Pick a random range for each voice
+    //  For stylistic reasons, the first 4 voices are spaced widely apart.
+    
+    let valOffsets = [highOfs, highOfs-Math.floor(songVoiceRange/3), highOfs-Math.floor((songVoiceRange*2)/3), lowOfs]
+    for (let i = 3; i < numVoices; i++) {
+      let ofs = lowOfs
+      while (valOffsets.indexOf(ofs) != -1) {
+        //ofs = Math.floor(lowOfs+Math.random()*songVoiceRange)
+        ofs = randRange_int(lowOfs, highOfs)
+      }
+      valOffsets.push(ofs)
+    }
+    
+    //console.log(`Base tones: ${lowVal} - ${highVal} Note numbers: ${valOffsets}`)
+
+    // Prepare a set of note and rest durations
+    for (let i = 0; i < phraseNotes; i++) {
+      //let duration = spb*Math.ceil(Math.random() * (rhythmicComplexity)+1)
+      let duration = spb*(rand_int(rhythmicComplexity)+1)
+      timing.push({note:true, d:duration})
+      phraseLen += duration
+      dur.push(duration)
+      
+      atkPow.push(0.25)
+    }
+    let numRests = randRange_int(1,5)
+    for (let i = 0; i < numRests; i++) {
+      let duration = spb*(rand_int(restMaxbeats)+1)
+      phraseLen += duration
+      timing.push({rest:true, d:duration})
+    }
+    
+    let numEmphasized = Math.max( rand_int(phraseNotes/4),2)
+    // make the first and middle notes strong.
+    for (let i = 0; i < numEmphasized; i++) {
+      if (i == 0) {
+        atkPow[i] = 0.4
+      }
+      else {
+        let pos = Math.ceil(i*phraseNotes/numEmphasized)
+        atkPow[pos] = 0.325
+      }
+    }
+    
+    let targetLen = randRange_float(200,300)
+    let numPhrases = Math.max(24, Math.ceil(targetLen / phraseLen))
+    
+    console.log(`Phrases: ${numPhrases}`)
     
     // determine which voice will sing during each part of the song
     for (let i = 0; i < numPhrases; i++) {
@@ -360,27 +593,19 @@ let AutoEketek = function(audio_destNode) {
         part.push(i-3)
       }
       
-      let nVoices = Math.min(i, 6)
+      let nVoices = Math.min(i, 6, numVoices)
       
-      // After the introduction is mostly complete, retain up to 4 random voices from the preceding phrase
+      // After the introduction is mostly complete, retain up to 3 random voices from the preceding phrase
       if (i > (numVoices-3)) {
-        let si = Math.floor(Math.random()*prev.length)
-        let sel = prev[si]
+        let sel = randSelect(prev)
         if (part.indexOf(sel) == -1) {
           part.push(sel)
         }
-        si = (si + Math.floor(Math.random()*prev.length-1))%prev.length
-        sel = prev[si]
+        sel = randSelect(prev)
         if (part.indexOf(sel) == -1) {
           part.push(sel)
         }
-        si = (si + Math.floor(Math.random()*prev.length-1))%prev.length
-        sel = prev[si]
-        if (part.indexOf(sel) == -1) {
-          part.push(sel)
-        }
-        si = (si + Math.floor(Math.random()*prev.length-1))%prev.length
-        sel = prev[si]
+        sel = randSelect(prev)
         if (part.indexOf(sel) == -1) {
           part.push(sel)
         }
@@ -388,125 +613,48 @@ let AutoEketek = function(audio_destNode) {
       
       // replace any departed voices with random ones
       for (let j = part.length; j < nVoices; j++) {
-        let v = Math.floor(Math.random() * i)
+        let v = rand_int(numVoices)
         while (part.indexOf(v) != -1) {
-          v = Math.floor(Math.random() * i)
+          v = rand_int(numVoices)
         }
         part.push(v)
       }
       prev = part
     }
     
-    //tempo, seconds per beat
-    let spb = Math.random()*0.2+0.10
-    console.log(`Tempo:  ${60/spb} beats per minute`)
-    
-    
-    let dur = []
-    let timing = []
-    let _t = 0
-    let atkPow = []
-    
-    // Generate a set of themes which all voices may sing.
-    let mainTheme = []
-    let altMainTheme1 = []
-    let altMainTheme2 = []
-    let themeRange = Math.floor(Math.random()*6+6)
-    for (let i = 0; i < phraseLen; i++) {
-      mainTheme.push(Math.floor(Math.random()*themeRange))
-      altMainTheme1.push(Math.floor(Math.random()*themeRange))
-      altMainTheme2.push(Math.floor(Math.random()*themeRange))
-    }
-    
-    //target frequency of the highest voice 
-    //  (NOTE:  the synth is set up to produce tones with lots of high-energy harmonics, so the base tones need to be low-ish)
-    let targetHighval = (Math.random()*150+150)
-    
-    let highVal = 0
-    let highOfs = 0
-    for (; highOfs < ky.all.length; highOfs++) {
-      highVal = ky.all[highOfs]*fmul
-      if (highVal > targetHighval) {
-        break
-      }
-    }
-    let targetLowval = highVal/8
-    let lowVal = 0
-    let lowOfs = 0
-    for (; lowOfs < ky.all.length; lowOfs++) {
-      lowVal = ky.all[lowOfs]*fmul
-      if (lowVal > targetLowval) {
-        break
-      }
-    }
-    if (highOfs - lowOfs < numVoices) {
-      lowOfs = Math.floor(highOfs - (1.5*numVoices))
-    }
-    let songVoiceRange = highOfs - lowOfs
-    
-    // Pick a random range for each voice
-    //  For stylistic reasons, the first 4 voices are spaced widely apart.
-    
-    let valOffsets = [highOfs, highOfs-Math.floor(songVoiceRange/3), highOfs-Math.floor((songVoiceRange*2)/3), lowOfs]
-    for (let i = 3; i < numVoices; i++) {
-      let ofs = lowOfs
-      while (valOffsets.indexOf(ofs) != -1) {
-        ofs = Math.floor(lowOfs+Math.random()*songVoiceRange)
-      }
-      valOffsets.push(ofs)
-    }
-    
-    console.log(`Base tones: ${lowVal} - ${highVal} Node numbers: ${valOffsets}`)
-
-    // Prepare a set of note and rest durations
-    for (let i = 0; i < phraseLen; i++) {
-      let _duration = Math.random() > 0.25 ? 2*spb : spb
-      timing.push({note:true, d:_duration})
-      _t += _duration
-      dur.push(_duration)
-      
-      atkPow.push(0.3)
-    }
-    let numRests = Math.floor(Math.random()*5)
-    for (let i = 0; i < numRests; i++) {
-      timing.push({rest:true, d:spb})
-    }
-    _t += spb*numRests
-    
-    // make the first and middle notes strong.
-    atkPow[0] = 0.5
-    atkPow[Math.floor(mainTheme.length/2)] = 0.5
+    let numNotes = 0
     
     for (let v = 0; v < numVoices; v++) {
-      let vTarget = voiceArr[Math.floor(Math.random()*voiceArr.length)]
-      
+      let vTarget = voiceArr[v]
       let valOfs = valOffsets[v]
       
       //articulation: subtract a random amount of time, up to a quarter beat, from every note which the voice sings
-      let durMod = Math.random()*spb*0.25
+      let durMod = rand_float(spb*0.25)
       
       // Syncopation: shuffle each beat positions/duration and each note duration [this voice]
       let _timing = deepcopy(timing)
       shuffle(_timing)
       
       // compute the actual timing of each note
-      let __t = 0
+      let t = 0
       for (let time of _timing) {
-        time.t = __t
-        __t += time.d
+        time.t = t
+        t += time.d
       }
+      
+      //console.log(`Voice #${v} timing:`, _timing)
      
       // generate a unique theme for the voice to occasionally sing
       let voiceTheme = []
-      for (let i = 0; i < phraseLen; i++) {
-        voiceTheme.push(Math.floor(Math.random()*themeRange))
-        let _dur = Math.random() > 0.25 ? 2*spb : spb
+      for (let i = 0; i < phraseNotes; i++) {
+        voiceTheme.push(rand_int(themeRange))
       }
       
       for (let j = 0; j < numPhrases; j++) {
         // if the voice is listed as having a part, sing the phrase, otherwise, ignore it
         let phraseParts = parts[j]
         if (phraseParts.indexOf(v) != -1) {
+          numNotes += phraseNotes
           let theme
           
           // introduce the voice with the main theme
@@ -514,44 +662,47 @@ let AutoEketek = function(audio_destNode) {
             theme = mainTheme
           }
           //At all other times when the voice is active:
-          //  17.5%:  sing main-theme
-          //  7.5%:   sing reversed main-theme
-          //  8.75%:  sing alt-theme-1 
-          //  3.75%:  sing reversed alt-theme-1
-          //  8.75%:  sing alt-theme-2
-          //  3.75%:  sing reversed alt-theme-2
-          //  36%:    sing voice-theme
-          //  10%:    sing reversed voice-theme
-          //  4%:     sing voice-theme notes in random order
-          else if (Math.random() > 0.5) {
-            switch(Math.floor(Math.random()*4)) {
+          //  50%:  sing main-theme
+          //  25%:  sing alt-theme-1
+          //  25%:  sing alt-theme-2
+          
+          // Then the theme is transformed at the following rates:
+          //  5%:      shuffle          (random re-arrangement of pitch values)
+          //  48.45%:  no change        (theme is played exactly as defined)
+          //  32.3%:   invert           (exchange high & low pitches [within the voice range] across the theme)
+          //  8.55%:   reverse          (reverse the order in which the pitches are played
+          //  5.7%:    reverse+invert   (combionation of reverse and invert)
+          else {
+            switch(rand_int(8)) {
               case 0:
                 theme = altMainTheme1
                 break
               case 1:
                 theme = altMainTheme2
                 break
-              default:
+              case 2:
+              case 3:
                 theme = mainTheme
+              default:
+                theme = voiceTheme
                 break
             }
-            if (Math.random() > 0.3) {
-              theme = deepcopy(theme)
-              theme.reverse()
-            }
-          }
-          else {
-            theme = voiceTheme
-            if (Math.random() < 0.2) {
-              theme = deepcopy(voiceTheme)
-              theme.reverse()
-            }
-            else if (Math.random() < 0.2) {
-              theme = deepcopy(voiceTheme)
+            theme = deepcopy(theme)
+            
+            if (chance(0.05)) {
               shuffle(theme)
             }
+            else {
+              if (chance(0.15)) {
+                theme.reverse()
+              }
+              if (chance(0.4)) {
+                for (let i = 0; i < theme.length; i++) {
+                  theme[i] = themeRange-theme[i]-1
+                }
+              }
+            }
           }
-          
           //schedule all the notes
           let ti = 0
           for (let i = 0; i < theme.length; i++) {
@@ -561,11 +712,12 @@ let AutoEketek = function(audio_destNode) {
             }
             let atk = atkPow[i]
             let noteID = theme[i] + valOfs
-            note(time.t+_t*j, dur[i]-durMod, noteID, atk, voiceArr[v])
+            note(time.t+phraseLen*j, dur[i]-durMod, noteID, atk, voiceArr[v])
           }
         }
       }
     }
+    console.log(`Notes: ${numNotes}`)
     
     //load the song into the csound and start it.
     let score = toScore()
@@ -589,3 +741,5 @@ let AutoEketek = function(audio_destNode) {
     return len
   }
 }
+
+window.Do_a_really_bad_job = false

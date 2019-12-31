@@ -1,5 +1,5 @@
 Version 0.3.0
-  28 Dec 2019:
+  28-31 Dec 2019:
     Added algorithmicly generated background music.
 
   27 Dec 2019

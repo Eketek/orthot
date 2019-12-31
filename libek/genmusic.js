@@ -2,10 +2,17 @@ import { on, next, time } from './nextevent.js'
 import { initSynth, Synth, updateSynth } from './synth.js'
 import { deepcopy } from './util.js'
 
-export { runGenMusicPlayer }
+export { runGenMusicPlayer, nextSong }
+
+var _nextSong
+
+var nextSong = function(arg) {
+  if (_nextSong) {
+    _nextSong(arg)
+  }
+}
 
 var runGenMusicPlayer = function(Composer) {
-  
   let active = false
   
   let mag = window.localStorage.musicVolume
@@ -70,10 +77,10 @@ var runGenMusicPlayer = function(Composer) {
     }
   }
   
-  let compose_and_play = async function() {
+  let compose_and_play = _nextSong = async function(arg) {
     musicMagnitudeController.transientValue = 1
     musicMagnitudeController.update()
-    let endTime = composer.compose_and_play()
+    let endTime = composer.compose_and_play(arg)
     
     let songLen = endTime - Date.now()
     console.log(`Song Length: ${songLen / 1000} seconds`)
@@ -106,8 +113,8 @@ var runGenMusicPlayer = function(Composer) {
       active = false
     }
   }
-  window.GEN_MUSIC_REFRESH = ()=> {
-    compose_and_play()
+  window.GEN_MUSIC_REFRESH = (arg)=> {
+    compose_and_play(arg)
   }
   
 }

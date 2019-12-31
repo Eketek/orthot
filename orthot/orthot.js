@@ -15,7 +15,7 @@ import { clamp, putFloatingElement, centerElementOverElement } from '../libek/ut
 import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { initSynth, updateSynth, resetSynths } from '../libek/synth.js'
 
-import { runGenMusicPlayer } from '../libek/genmusic.js'
+import { runGenMusicPlayer, nextSong } from '../libek/genmusic.js'
 import { AutoEketek } from '../music_generators/AutoEketek.js'
 
 import { Zone } from './zone.js'
@@ -996,6 +996,16 @@ $(async function MAIN() {
   
   await initSynth()
   runGenMusicPlayer(AutoEketek)
+  
+  let pickSongBTN = $("<div>").addClass("btn_active").text("Pick a Song").click(()=>{
+    let title = prompt("So... Which song would you like to hear?")
+    if (title && (title != "")) {
+      nextSong(title)
+    }
+  })[0]
+  pickSongBTN.title = "WOW.  That sounds bad.  Give me another!"
+  
+  $("#controls").append(pickSongBTN)
   
   window.dispatchEvent(new Event("resize"))
 })

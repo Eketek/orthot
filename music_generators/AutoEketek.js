@@ -4,6 +4,18 @@ import { deepcopy } from '../libek/util.js'
 
 export { AutoEketek }
 
+/*
+  AutoEketek is a fairly simple algorithmic Composer, derived in large part from lessons learned transcribing works of J. S. Bach.
+    (plus a few bits of blatant rule-trampling)
+  
+  Loosely speaking, it generates a set or random phrases, plays them repeatedly, in a variety of distinct "voices", with randomly selected variations.
+  Each phrase is a random pattern of notes.
+  Variations applied to phrases are: shuffle note order, reverse note order, and inversion [within voice range]
+  Each voice uses its own randomly generated rhythm.
+  Each voice is sounded with a randomly parameterized synthesized instrument.
+  
+  To stay reasonably harmonious, the Musical scale is confined to a Pentatonic scale with a Pythagorean tuning.
+*/
 let AutoEketek = function(audio_destNode) {
   
   let RNG = Math.random
@@ -85,16 +97,34 @@ let AutoEketek = function(audio_destNode) {
     }
   }
   let rand_float = function(max=1, curve=0) {
+    if (typeof(max) == "object") {
+      curve = max.curve
+      max = max.max
+    }
     return rand(curve)*max
   }
   let randRange_float = function(min, max, curve) {
+    if (typeof(min) == "object") {
+      max = min.max
+      curve = min.curve
+      min = min.min
+    }
     return rand(curve)*(max-min) + min
   }
   let rand_int = function(max, curve) {
-    return Math.floor(rand_float(max, curve))
+    if (typeof(max) == "object") {
+      curve = max.curve
+      max = max.max
+    }
+    return Math.floor(rand_float(max+1, curve))
   }
   let randRange_int = function(min, max, curve) {
-    return Math.floor(randRange_float(max, min, curve))
+    if (typeof(min) == "object") {
+      max = min.max
+      curve = min.curve
+      min = min.min
+    }
+    return Math.floor(randRange_float(min, max+1, curve))
   }
   
   let chance = function(n) {
@@ -102,7 +132,24 @@ let AutoEketek = function(audio_destNode) {
   }
   
   let randSelect = function(arr, curve) {
-    return arr[rand_int(arr.length, curve)]
+    if (Array.isArray(arr)) {
+      return arr[rand_int(arr.length-1, curve)]
+    }
+    else {
+      let ch_total = 0
+      for (let k in arr) {
+        let obj = arr[k]
+        obj._chance = ch_total + obj.chance
+        ch_total += obj.chance
+      }
+      let sel = rand_float(ch_total, curve)
+      for (let k in arr) {
+        let obj = arr[k]
+        if (obj._chance >= sel) {
+          return obj
+        }
+      }
+    }
   }
   let randRangeSelect = function(arr, min, max, curve) {
     return arr[randRange_int(min, max, curve)]
@@ -400,7 +447,80 @@ let AutoEketek = function(audio_destNode) {
     }
   }
   
-  this.compose_and_play = function(seed) {
+  var defaultSpec = {
+    PhraseLength:{ min:12, max:24 },    // Number of notes per phrase
+    Voices: { min:4, max:10 },          // Number of unique voices
+    TargetSongLen: { min:100, max:250 },
+    Complexity:[
+      { 
+        chance:0.1,             
+        RestMaxBeats:1,                 // Maximum length of rest (in beats)
+        Chance_RandlengthNote:0.25,     // Chance that a note will be longer than 1 beat
+        RhythmicComplexity:1,           // Maximum note length (in beats)
+        Tempo:{ min:150, max:450 },
+      },
+      {
+        chance:0.3,
+        RestMaxBeats:1,
+        Chance_RandlengthNote:0.25,
+        RhythmicComplexity:2,
+        Tempo:{ min:175, max:500 },
+      },
+      {
+        chance:0.3,
+        RestMaxBeats:1,
+        Chance_RandlengthNote:0.25,
+        RhythmicComplexity:3,
+        Tempo:{ min:200, max:500 },
+      },
+      {
+        chance:0.3,
+        RestMaxBeats:2,
+        Chance_RandlengthNote:0.25,
+        RhythmicComplexity:4,
+        Tempo:{ min:225, max:400 },
+      }
+    ],
+    VoiceThemeRange: { min:6, max:9 },
+    Themes:[
+      {
+        chance:0.5, 
+        range: { min:6, max:9 },
+      },
+      { 
+        chance:0.25, 
+        range: { min:6, max:9 }
+      },
+      { 
+        chance:0.25,
+        range: { min:6, max:9 }
+      }
+    ],
+    Modifiers:[
+        //  5%:      shuffle          (random re-arrangement of pitch values)
+        //  48.45%:  no change        (theme is played exactly as defined)
+        //  32.3%:   invert           (exchange high & low pitches [within the voice range] across the theme)
+        //  8.55%:   reverse          (reverse the order in which the pitches are played
+        //  5.7%:    reverse+invert   (combionation of reverse and invert)
+      { chance:0.05, shuffle:true },
+      { chance:48.45 },
+      { chance:32.3, invert:true },
+      { chance:8.55, reverse:true },
+      { chance:5.7,  invert:true, reverse:true },
+    ],
+    TargetLeadvoicePitch:{ min:200, max:275 },    // Approximate frequency the lowest possible note the by the lead voice
+    VoiceIntroOrder:[1, 2/3, 1/3, 0],             // Voice introduction order by pitch (1 - highest, 0 - lowest)
+    IntroPhrases:3,                               // Length of a voice introduction in phrases
+    TargetActiveVoice:6,                          // Number of concurrent voices
+    NoteReduction:{ min:0.1, max:0.75 },          // Amount of time [in beats] to subtract from each note (how "staccato" voices should sing)
+    AtkpowGeneral:0.25,                           // Attack strength of notes in general (initial loudness)
+    AtkpowFirst:0.45,                             // Attack strength of the first note in a phrase
+    AtkpowMid:0.35,                               // Attack strength of various emphasized middle-notes (generally every 4th) (this
+  }
+  
+  this.spec = deepcopy(defaultSpec)
+  
+  this.compose_and_play = function(spec, seed) {
     if (seed) {
       applySeed(seed)
     }
@@ -416,9 +536,27 @@ let AutoEketek = function(audio_destNode) {
       console.log("AUTO-EKETEK is composing a song... Just for you!")
     }
     
+    if (!spec) {
+      spec = defaultSpec
+    }
+    
+    spec = deepcopy(spec)
     if (window.Do_a_really_bad_job) {
-      scale = Scale([8192,10000,10240,12500,12800,15625,16000], 2)
-      fundamental = randRange_float(0.5, 1.5)/4096
+      switch( randRange_int(0,2) ) {
+        case 0:
+          scale = Scale([8192,10000,10240,12500,12800,15625,16000], 2)
+          fundamental = randRange_float(0.5, 1.5)/4096
+          break
+        case 1:
+          scale = Scale([61,71,83,97,109], 2)
+          fundamental = randRange_float(0.5, 1.5)/32
+          break
+        case 2:
+          scale = Scale([rand_float(),rand_float(),rand_float(),rand_float(),rand_float()], 2)
+          fundamental = randRange_float(0.5, 1.5)
+          break
+      }
+      console.log(scale)
     }
     else {
       // On further analysis, what AutoEketek has is a Pentatonic scale with a Pythagorean tuning.  
@@ -429,12 +567,10 @@ let AutoEketek = function(audio_destNode) {
     }
     
     // These strongly control the approaximate length and self-similarity of a "song"
-    //let phraseNotes = Math.floor(Math.random()*8)+12
-    let phraseNotes = randRange_int(8, 20)
+    let phraseNotes = randRange_int(spec.PhraseLength)
     
     // Each voice gets a random insrtrument, and will sings in its own range
-    //let numVoices = Math.floor(Math.random()*4+4)
-    let numVoices = randRange_int(4, 8)
+    let numVoices = randRange_int(spec.Voices)
     randomizeInstruments(numVoices)
     for (let i = 0; i < numVoices; i++) {
       addVoice()
@@ -444,36 +580,14 @@ let AutoEketek = function(audio_destNode) {
     let prev
     
     console.log("Voices: " + numVoices)
-    
     //  Rhythmic complexity - maximum number of beats to hold a note
     //let rhythmicComplexity = Math.floor(Math.random()*4)+1
-    let rhythmicComplexity = randRange_int(1, 5)
-    let bpm, restMaxbeats
-    
-    switch(rhythmicComplexity) {
-      default:
-        rhythmicComplexity = 1
-      case 1:
-        restMaxbeats = 1
-        bpm = randRange_float(150,450)
-        // Reduce the odds of zero rhythmic complexity to 1.25%.
-        if (chance(0.95)) {
-          rhythmicComplexity = 2
-        }
-        break
-      case 2:
-        bpm = randRange_float(175,500)
-        restMaxbeats = 1
-        break
-      case 3:
-        bpm = randRange_float(200,500)
-        restMaxbeats = 1
-        break
-      case 4:
-        bpm = randRange_float(225,400)
-        restMaxbeats = 2
-        break
-    }
+    let cmplxSpec = randSelect(spec.Complexity)
+    //let rhythmicComplexity = randRange_int(1, 5)
+    let rhythmicComplexity = cmplxSpec.RhythmicComplexity
+    let restMaxbeats = cmplxSpec.RestMaxBeats
+    let bpm = randRange_int(cmplxSpec.Tempo)
+    let chance_RandlengthNote = cmplxSpec.Chance_RandlengthNote
     
     let spb = 60/bpm
     console.log(`Rhythmic Complexity: ${rhythmicComplexity}`)
@@ -485,23 +599,30 @@ let AutoEketek = function(audio_destNode) {
     let atkPow = []
     
     // Generate a set of themes which all voices may sing.
-    let mainTheme = []
-    let altMainTheme1 = []
-    let altMainTheme2 = []
-    let themeRange = randRange_int(6,9)
-    for (let i = 0; i < phraseNotes; i++) {
-      mainTheme.push( rand_int(themeRange) )
-      altMainTheme1.push(rand_int(themeRange))
-      altMainTheme2.push(rand_int(themeRange))
+    let mainTheme
+    
+    //let themes = {}
+    for (let name in spec.Themes) {
+      let tdef = spec.Themes[name]
+      if (tdef.range) {
+        tdef.notes = []
+        if (typeof(tdef.range) == "object") {
+          tdef.range = randRange_int(tdef.range)
+        }
+        for (let i = 0; i < phraseNotes; i++) {
+          tdef.notes.push( rand_int(tdef.range) )
+        }
+      }
+      if (name == "Main") {
+        mainTheme = tdef.notes
+      }
     }
     
-    console.log("Main Theme:", mainTheme)
-    console.log("Alt Theme 1:", altMainTheme1)
-    console.log("Alt Theme 2:", altMainTheme2)
+    console.log("Themes:", spec.Themes)
     
     //target frequency of the highest voice 
     //  (NOTE:  the synth is set up to produce tones with lots of high-energy harmonics, so the base tones need to be low-ish)
-    let targetHighval = randRange_float(200, 275)
+    let targetHighval = randRange_float(spec.TargetLeadvoicePitch)
     
     let highVal = 0
     let highOfs = 0
@@ -527,15 +648,21 @@ let AutoEketek = function(audio_destNode) {
     
     // Pick a random range for each voice
     //  For stylistic reasons, the first 4 voices are spaced widely apart.
-    
-    let valOffsets = [highOfs, highOfs-Math.floor(songVoiceRange/3), highOfs-Math.floor((songVoiceRange*2)/3), lowOfs]
-    for (let i = 3; i < numVoices; i++) {
-      let ofs = lowOfs
-      while (valOffsets.indexOf(ofs) != -1) {
-        //ofs = Math.floor(lowOfs+Math.random()*songVoiceRange)
-        ofs = randRange_int(lowOfs, highOfs)
+    let valOffsets = []
+    {
+      let i = 0
+      for (; i < spec.VoiceIntroOrder.length; i++) {
+        valOffsets.push( lowOfs + Math.floor(spec.VoiceIntroOrder[i] * songVoiceRange))
       }
-      valOffsets.push(ofs)
+      //let valOffsets = [highOfs, highOfs-Math.floor(songVoiceRange/3), highOfs-Math.floor((songVoiceRange*2)/3), lowOfs]
+      for (; i < numVoices; i++) {
+        let ofs = lowOfs
+        while (valOffsets.indexOf(ofs) != -1) {
+          //ofs = Math.floor(lowOfs+Math.random()*songVoiceRange)
+          ofs = randRange_int(lowOfs, highOfs)
+        }
+        valOffsets.push(ofs)
+      }
     }
     
     //console.log(`Base tones: ${lowVal} - ${highVal} Note numbers: ${valOffsets}`)
@@ -548,7 +675,7 @@ let AutoEketek = function(audio_destNode) {
       phraseLen += duration
       dur.push(duration)
       
-      atkPow.push(0.25)
+      atkPow.push(spec.AtkpowGeneral)
     }
     let numRests = randRange_int(1,5)
     for (let i = 0; i < numRests; i++) {
@@ -561,16 +688,16 @@ let AutoEketek = function(audio_destNode) {
     // make the first and middle notes strong.
     for (let i = 0; i < numEmphasized; i++) {
       if (i == 0) {
-        atkPow[i] = 0.4
+        atkPow[i] = spec.AtkpowFirst
       }
       else {
         let pos = Math.ceil(i*phraseNotes/numEmphasized)
-        atkPow[pos] = 0.325
+        atkPow[pos] = spec.AtkpowMid
       }
     }
     
-    let targetLen = randRange_float(200,300)
-    let numPhrases = Math.max(24, Math.ceil(targetLen / phraseLen))
+    let targetLen = randRange_float(spec.TargetSongLen)
+    let numPhrases = Math.max(numVoices*2, Math.ceil(targetLen / phraseLen))
     
     console.log(`Phrases: ${numPhrases}`)
     
@@ -580,20 +707,13 @@ let AutoEketek = function(audio_destNode) {
       parts.push(part)
       
       // To start, introduce each voice in a fixed sequence
-      if (i < numVoices) {
-        part.push(i)
-      }
-      if (i < (numVoices-1)) {
-        part.push(i-1)
-      }
-      if (i < (numVoices-2)) {
-        part.push(i-2)
-      }
-      if (i < (numVoices-3)) {
-        part.push(i-3)
+      for (let j = 0; j < spec.IntroPhrases; j++) {
+        if ( ((i-j) < numVoices) && ((i-j) >= 0) ) {
+          part.push(i-j)
+        }
       }
       
-      let nVoices = Math.min(i, 6, numVoices)
+      let nVoices = Math.min(i, spec.Trand_floatargetActiveVoice, numVoices-1)
       
       // After the introduction is mostly complete, retain up to 3 random voices from the preceding phrase
       if (i > (numVoices-3)) {
@@ -612,10 +732,10 @@ let AutoEketek = function(audio_destNode) {
       }
       
       // replace any departed voices with random ones
-      for (let j = part.length; j < nVoices; j++) {
-        let v = rand_int(numVoices)
+      for (let j = part.length; j <= nVoices; j++) {
+        let v = rand_int(numVoices-1)
         while (part.indexOf(v) != -1) {
-          v = rand_int(numVoices)
+          v = rand_int(numVoices-1)
         }
         part.push(v)
       }
@@ -629,7 +749,7 @@ let AutoEketek = function(audio_destNode) {
       let valOfs = valOffsets[v]
       
       //articulation: subtract a random amount of time, up to a quarter beat, from every note which the voice sings
-      let durMod = rand_float(spb*0.25)
+      let durMod = spb*rand_float(spec.NoteReduction)
       
       // Syncopation: shuffle each beat positions/duration and each note duration [this voice]
       let _timing = deepcopy(timing)
@@ -641,13 +761,11 @@ let AutoEketek = function(audio_destNode) {
         time.t = t
         t += time.d
       }
-      
-      //console.log(`Voice #${v} timing:`, _timing)
      
-      // generate a unique theme for the voice to occasionally sing
+      // generate a unique theme for the voice to occasioTargetActiveVoicenally sing
       let voiceTheme = []
       for (let i = 0; i < phraseNotes; i++) {
-        voiceTheme.push(rand_int(themeRange))
+        voiceTheme.push(rand_int(spec.VoiceThemeRange))
       }
       
       for (let j = 0; j < numPhrases; j++) {
@@ -658,47 +776,32 @@ let AutoEketek = function(audio_destNode) {
           let theme
           
           // introduce the voice with the main theme
-          if (j == v) {
+          if (mainTheme && (j == v)) {
             theme = mainTheme
           }
-          //At all other times when the voice is active:
-          //  50%:  sing main-theme
-          //  25%:  sing alt-theme-1
-          //  25%:  sing alt-theme-2
-          
-          // Then the theme is transformed at the following rates:
-          //  5%:      shuffle          (random re-arrangement of pitch values)
-          //  48.45%:  no change        (theme is played exactly as defined)
-          //  32.3%:   invert           (exchange high & low pitches [within the voice range] across the theme)
-          //  8.55%:   reverse          (reverse the order in which the pitches are played
-          //  5.7%:    reverse+invert   (combionation of reverse and invert)
           else {
-            switch(rand_int(8)) {
-              case 0:
-                theme = altMainTheme1
-                break
-              case 1:
-                theme = altMainTheme2
-                break
-              case 2:
-              case 3:
-                theme = mainTheme
-              default:
-                theme = voiceTheme
-                break
-            }
-            theme = deepcopy(theme)
+            let themeSpec = randSelect(spec.Themes)
             
-            if (chance(0.05)) {
+            theme = deepcopy(themeSpec.notes)
+            if (!theme) {
+              theme = voiceTheme
+            }
+            let mod = randSelect(spec.Modifiers)
+            if (mod.shuftle) {
               shuffle(theme)
             }
-            else {
-              if (chance(0.15)) {
-                theme.reverse()
-              }
-              if (chance(0.4)) {
+            if (mod.reverse) {
+              theme.reverse()
+            }
+            if (mod.invert) {
+              if (themeSpec.notes) {
                 for (let i = 0; i < theme.length; i++) {
-                  theme[i] = themeRange-theme[i]-1
+                  theme[i] = themeSpec.range-theme[i]-1
+                }
+              }
+              else {
+                for (let i = 0; i < theme.length; i++) {
+                  theme[i] = spec.VoiceThemeRange-theme[i]-1
                 }
               }
             }

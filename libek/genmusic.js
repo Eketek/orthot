@@ -6,9 +6,9 @@ export { runGenMusicPlayer, nextSong }
 
 var _nextSong
 
-var nextSong = function(arg) {
+var nextSong = function(spec, seed) {
   if (_nextSong) {
-    _nextSong(arg)
+    _nextSong(spec, seed)
   }
 }
 
@@ -77,10 +77,10 @@ var runGenMusicPlayer = function(Composer) {
     }
   }
   
-  let compose_and_play = _nextSong = async function(arg) {
+  let compose_and_play = _nextSong = async function(spec, seed) {
     musicMagnitudeController.transientValue = 1
     musicMagnitudeController.update()
-    let endTime = composer.compose_and_play(arg)
+    let endTime = composer.compose_and_play(spec, seed)
     
     let songLen = endTime - Date.now()
     console.log(`Song Length: ${songLen / 1000} seconds`)
@@ -113,8 +113,8 @@ var runGenMusicPlayer = function(Composer) {
       active = false
     }
   }
-  window.GEN_MUSIC_REFRESH = (arg)=> {
-    compose_and_play(arg)
+  window.GEN_MUSIC_REFRESH = (spec, seed)=> {
+    compose_and_play(spec, seed)
   }
   
 }

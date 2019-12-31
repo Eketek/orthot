@@ -1000,7 +1000,7 @@ $(async function MAIN() {
   let pickSongBTN = $("<div>").addClass("btn_active").text("Pick a Song").click(()=>{
     let title = prompt("So... Which song would you like to hear?")
     if (title && (title != "")) {
-      nextSong(title)
+      nextSong(undefined, title)
     }
   })[0]
   pickSongBTN.title = "WOW.  That sounds bad.  Give me another!"

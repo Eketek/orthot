@@ -481,14 +481,15 @@ let AutoEketek = function(audio_destNode) {
         Tempo:{ min:225, max:400 },
       }
     ],
-    VoiceThemeRange: { min:6, max:9 },
+    VoiceThemeRange: { min:6, max:9 },  // Range of each voice
+    MaxThemeStep: { min:1, max:4 } ,    // max difference between two adjacent notes within a voice
     Themes:[
       {
-        chance:0.5, 
+        chance:0.5,
         range: { min:6, max:9 },
       },
       { 
-        chance:0.25, 
+        chance:0.25,
         range: { min:6, max:9 }
       },
       { 
@@ -602,6 +603,22 @@ let AutoEketek = function(audio_destNode) {
     let mainTheme
     
     //let themes = {}
+    
+    let maxStep = randRange_int(spec.MaxThemeStep)
+
+    let genTheme = function(range) {
+      let notes = []
+      let note = rand_int(range)
+      notes.push( note )
+      for (let i = 1; i < phraseNotes; i++) {
+        let high = Math.min(range, note + maxStep)
+        let low = Math.max(0, note - maxStep)
+        note = randRange_int(low, high)
+        notes.push( note )
+      }
+      return notes
+    }
+    
     for (let name in spec.Themes) {
       let tdef = spec.Themes[name]
       if (tdef.range) {
@@ -609,9 +626,7 @@ let AutoEketek = function(audio_destNode) {
         if (typeof(tdef.range) == "object") {
           tdef.range = randRange_int(tdef.range)
         }
-        for (let i = 0; i < phraseNotes; i++) {
-          tdef.notes.push( rand_int(tdef.range) )
-        }
+        tdef.notes = genTheme(tdef.range)
       }
       if (name == "Main") {
         mainTheme = tdef.notes
@@ -741,7 +756,7 @@ let AutoEketek = function(audio_destNode) {
       }
       prev = part
     }
-    console.log("PARTS:", parts)
+    console.log("Parts:", parts)
     
     let numNotes = 0
     
@@ -764,10 +779,7 @@ let AutoEketek = function(audio_destNode) {
       }
      
       // generate a unique theme for the voice to occasionally sing
-      let voiceTheme = []
-      for (let i = 0; i < phraseNotes; i++) {
-        voiceTheme.push(rand_int(spec.VoiceThemeRange))
-      }
+      let voiceTheme = genTheme(spec.VoiceThemeRange)
       
       for (let j = 0; j < numPhrases; j++) {
         // if the voice is listed as having a part, sing the phrase, otherwise, ignore it

@@ -369,7 +369,7 @@ let AutoEketek = function(audio_destNode) {
           pFMul.push(i+1)
         }
         waveTypes.push(randRange_int(1,4))
-        dcycleParams.push(rand_float())
+        dcycleParams.push(randRange_float(0.1, 0.9))
       }
       let mScale = (randRange_float(0.25, 0.75)) / (tMag * numPartials)
       for (let i = 1; i < numPartials; i++) {
@@ -383,12 +383,12 @@ let AutoEketek = function(audio_destNode) {
       let pan = i==0 ? 0.5 : randRange_float(0.1, 0.9)
       instruments.push({
         def:useSineSynth ? "sine_additive" : "vco_additive",
-        iAtkLen:randRange_float(0.025, 0.075),
+        iAtklen:randRange_float(0.025, 0.075),
         iDecpow:randRange_float(0.05, 0.15),
         iDeclen:randRange_float(0.025, 0.075),
         iSuspow:randRange_float(0.05, 0.1),
-        iRellen:rand_float(0.15),
-        iCutoff:rand_float(7500, 2),
+        iRellen:randRange_float(0.05, 0.15),
+        iCutoff:randRange_float(1500, 7500, 2),
         iRes:rand_float(0.15),
         iPMag:pMag,
         iPFreqMul:pFMul,

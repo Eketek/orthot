@@ -511,7 +511,7 @@ let AutoEketek = function(audio_destNode) {
     TargetLeadvoicePitch:{ min:200, max:275 },    // Approximate frequency the lowest possible note the by the lead voice
     VoiceIntroOrder:[1, 2/3, 1/3, 0],             // Voice introduction order by pitch (1 - highest, 0 - lowest)
     IntroPhrases:3,                               // Length of a voice introduction in phrases
-    TargetActiveVoice:6,                          // Number of concurrent voices
+    TargetActiveVoices:6,                          // Number of concurrent voices
     NoteReduction:{ min:0.1, max:0.75 },          // Amount of time [in beats] to subtract from each note (how "staccato" voices should sing)
     AtkpowGeneral:0.25,                           // Attack strength of notes in general (initial loudness)
     AtkpowFirst:0.45,                             // Attack strength of the first note in a phrase
@@ -713,7 +713,7 @@ let AutoEketek = function(audio_destNode) {
         }
       }
       
-      let nVoices = Math.min(i, spec.Trand_floatargetActiveVoice, numVoices-1)
+      let nVoices = Math.min(i, spec.TargetActiveVoices, numVoices-1)
       
       // After the introduction is mostly complete, retain up to 3 random voices from the preceding phrase
       if (i > (numVoices-3)) {
@@ -741,6 +741,7 @@ let AutoEketek = function(audio_destNode) {
       }
       prev = part
     }
+    console.log("PARTS:", parts)
     
     let numNotes = 0
     
@@ -762,7 +763,7 @@ let AutoEketek = function(audio_destNode) {
         t += time.d
       }
      
-      // generate a unique theme for the voice to occasioTargetActiveVoicenally sing
+      // generate a unique theme for the voice to occasionally sing
       let voiceTheme = []
       for (let i = 0; i < phraseNotes; i++) {
         voiceTheme.push(rand_int(spec.VoiceThemeRange))

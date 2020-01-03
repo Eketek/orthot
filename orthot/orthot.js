@@ -15,7 +15,7 @@ import { clamp, putFloatingElement, centerElementOverElement } from '../libek/ut
 import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { initSynth, updateSynth, resetSynths } from '../libek/synth.js'
 
-import { playMusic, nextSong } from '../libek/genmusic.js'
+import { playMusic, nextSong } from '../libek/music.js'
 import { AutoEketek } from '../music_generators/AutoEketek.js'
 
 import { Zone } from './zone.js'

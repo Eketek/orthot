@@ -2,7 +2,7 @@ import { on, next, time } from './nextevent.js'
 import { initSynth, Synth, updateSynth } from './synth.js'
 import { deepcopy } from './util.js'
 
-export { runGenMusicPlayer, nextSong }
+export { playMusic, nextSong }
 
 var _nextSong
 
@@ -12,7 +12,7 @@ var nextSong = function(spec, seed) {
   }
 }
 
-var runGenMusicPlayer = function(Composer, endAction="restart", fadeAt = -6000, fadeLen=5000, fadeSteps=100, endDelay=2000) {
+var playMusic = function(Source, endAction="restart", fadeAt = -6000, fadeLen=5000, fadeSteps=100, endDelay=2000) {
   let active = false
   
   let mag = window.localStorage.musicVolume
@@ -53,7 +53,7 @@ var runGenMusicPlayer = function(Composer, endAction="restart", fadeAt = -6000, 
   $volContainer.append(magSlider)
   $("#controls").append($volContainer)
   
-  let composer = new Composer(musicMagnitudeController.node)
+  let src = new Source(musicMagnitudeController.node)
   
   // First, prepare up a couple instruments.
   // These are mass-duplicated and expanded and parameterized through expansion logic prior to tranfer to csound.
@@ -73,14 +73,14 @@ var runGenMusicPlayer = function(Composer, endAction="restart", fadeAt = -6000, 
     if (musicMagnitudeController.mainValue > 0) {
       active = true
       await time(startDelay)
-      compose_and_play()
+      play()
     }
   }
   
-  let compose_and_play = _nextSong = async function(spec, seed) {
+  let play = _nextSong = async function(spec, seed) {
     musicMagnitudeController.transientValue = 1
     musicMagnitudeController.update()
-    let endTime = composer.compose_and_play(spec, seed)
+    let endTime = src.play(spec, seed)
     
     let songLen = endTime - Date.now()
     console.log(`Song Length: ${songLen / 1000} seconds`)
@@ -110,10 +110,10 @@ var runGenMusicPlayer = function(Composer, endAction="restart", fadeAt = -6000, 
       else {
         switch (endAction) {
           case "restart":
-            compose_and_play(spec)
+            play(spec)
             break
           case "repeat":
-            compose_and_play(spec, seed)
+            play(spec, seed)
             break
         }
       }
@@ -123,7 +123,7 @@ var runGenMusicPlayer = function(Composer, endAction="restart", fadeAt = -6000, 
     }
   }
   window.GEN_MUSIC_REFRESH = (spec, seed)=> {
-    compose_and_play(spec, seed)
+    play(spec, seed)
   }
 }
 

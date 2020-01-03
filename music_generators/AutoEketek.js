@@ -521,7 +521,7 @@ let AutoEketek = function(audio_destNode) {
   
   this.spec = deepcopy(defaultSpec)
   
-  this.compose_and_play = function(spec, seed) {
+  this.play = function(spec, seed) {
     if (seed) {
       applySeed(seed)
     }

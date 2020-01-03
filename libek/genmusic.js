@@ -12,7 +12,7 @@ var nextSong = function(spec, seed) {
   }
 }
 
-var runGenMusicPlayer = function(Composer) {
+var runGenMusicPlayer = function(Composer, endAction="restart", fadeAt = -6000, fadeLen=5000, fadeSteps=100, endDelay=2000) {
   let active = false
   
   let mag = window.localStorage.musicVolume
@@ -69,10 +69,10 @@ var runGenMusicPlayer = function(Composer) {
     tryActivate()
   })
   
-  let tryActivate = async function() {
+  let tryActivate = async function(startDelay=4000) {
     if (musicMagnitudeController.mainValue > 0) {
       active = true
-      await time(4000)
+      await time(startDelay)
       compose_and_play()
     }
   }
@@ -85,14 +85,10 @@ var runGenMusicPlayer = function(Composer) {
     let songLen = endTime - Date.now()
     console.log(`Song Length: ${songLen / 1000} seconds`)
     songLen = Math.floor(songLen)
-    
     let _runID = runID + 1
     runID = _runID
     
-    let fadeTime = songLen-6000
-    let fadeLen = 5000
-    let fadeSteps = 100
-    let restartDelay = 2000
+    let fadeTime = songLen+fadeAt
     
     await time(fadeTime)
     
@@ -107,7 +103,20 @@ var runGenMusicPlayer = function(Composer) {
       if (runID != _runID) return
     }
     if (musicMagnitudeController.mainValue > 0) {
-      time(restartDelay, compose_and_play)
+      await time(endDelay)
+      if (typeof(endAction) == "function") {
+        endAction()
+      }
+      else {
+        switch (endAction) {
+          case "restart":
+            compose_and_play(spec)
+            break
+          case "repeat":
+            compose_and_play(spec, seed)
+            break
+        }
+      }
     }
     else {
       active = false
@@ -116,7 +125,6 @@ var runGenMusicPlayer = function(Composer) {
   window.GEN_MUSIC_REFRESH = (spec, seed)=> {
     compose_and_play(spec, seed)
   }
-  
 }
 
 

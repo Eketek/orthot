@@ -22,15 +22,18 @@ import { getUID } from './libek.js'
       ( This is likely the same issue as was found with CSoundObj.reset() )
 */
 var csnd_instances = []
+var init_p
 var initSynth = async function() {
-  on(window, "unload", ()=>{
-    for (let inst of csnd_instances) {
-      inst.stop()
-      inst.destroy()
-    }
-  })
-  
-  await CsoundObj.importScripts("lib/csound/")
+  if (!init_p) {
+    on(window, "unload", ()=>{
+      for (let inst of csnd_instances) {
+        inst.stop()
+        inst.destroy()
+      }
+    })
+    init_p = CsoundObj.importScripts("lib/csound/")
+  }
+  await init_p
 }
 
 

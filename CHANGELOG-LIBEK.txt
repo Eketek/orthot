@@ -1,3 +1,7 @@
+2 Jan 2019
+  Prevent repeated csound initialization
+  Make music player end-of-song actions controllable
+
 28 Dec 2019
   Added a shorthand async delay function (nextevent.js)
     (Example: await time(1000) to wait 1 second)

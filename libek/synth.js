@@ -332,6 +332,8 @@ var Synth = function(code, endLen, destAudioNode) {
     let arrayed_lines
     let arrayed_units
     let altered = []
+    let _code = ""
+    
     let closeVectoredBlock = function() {
       if (!arrayed_lines) {
         return
@@ -346,7 +348,8 @@ var Synth = function(code, endLen, destAudioNode) {
           let parts = line.split(/\s+/)
           let parname = parts[0]
           let replacement = block[parts[0]]
-          if ( (parts[1] == "=") && replacement ) {
+          
+          if ( (parname[0] != "$") && (parts[1] == "=") && replacement ) {
             if (Array.isArray(replacement)) {
               vbOut.push(`${parname}${i} = ${replacement[i]}`)
             }
@@ -365,7 +368,7 @@ var Synth = function(code, endLen, destAudioNode) {
           else {
             let line = entry.raw
             for (let parname in block) {
-              if (Array.isArray(block[parname])) {
+              if ( (parname[0] != "$") && (Array.isArray(block[parname])) ) {
                 line = line.replace(parname, `${parname}${i}`)
               }
             }
@@ -373,8 +376,34 @@ var Synth = function(code, endLen, destAudioNode) {
           }
         }
       }
-      
       arrayed_lines = undefined
+    }
+    
+    let closeInstrumentBlock = function() {
+      closeVectoredBlock()
+      let blkCode = altered.join('\n')
+      
+      // For "$" params, replace each instance of tis name with the result of block property evaluation
+      //      (If block property is an array, write it as a comma-separated list, if a function, call it and write in the result)
+      for (let parname in block) {
+        if (parname[0] == "$") {
+          let pos = blkCode.indexOf(parname)
+          while (pos != -1) {
+            let repl = block[parname]
+            if (typeof(repl) == "function") {
+              repl = repl()
+            }
+            if (Array.isArray(repl)) {
+              repl = repl.join(", ")
+            }
+            blkCode = blkCode.substring(0, pos) + repl + blkCode.substring(pos + parname.length)
+            pos = blkCode.indexOf(parname)
+          }
+        }
+      }
+      altered = []
+      _code = _code + "\n" + blkCode
+      block = params.main
     }
     for (let line of lines) {
       line = line.trim()
@@ -385,8 +414,9 @@ var Synth = function(code, endLen, destAudioNode) {
           block = params[parts[1]]
           break
         case "endin":
-          block = params.main
-          closeVectoredBlock()
+          altered.push(line)
+          line = undefined
+          closeInstrumentBlock()
           break
         case "startArrayedOP:":
           if (block && (block != params.main)) {
@@ -405,8 +435,10 @@ var Synth = function(code, endLen, destAudioNode) {
             line = undefined
           }
           else if ( block && (parts[1] == "=") && (block[parts[0]] != undefined) ) {
-            line = `${parname} = ${block[parname]}`
-            delete block[parname]
+            if (parname[0] != "$") {
+              line = `${parname} = ${block[parname]}`
+              delete block[parname]
+            }
           }
           break
       }
@@ -414,7 +446,28 @@ var Synth = function(code, endLen, destAudioNode) {
         altered.push(line)
       }
     }
-    this.code = altered.join('\n')
+    if (altered.length > 0) {
+      _code = _code + "\n" + altered.join("\n")
+    }
+    //this.code = altered.join('\n')
+    
+    if (block && block.defines) {
+      let defCode = ""
+      for (let k in block.defines) {
+        let v = block.defines[k]
+        if ( (v == undefined) || (typeof(v) == "boolean") ) {
+          defCode = defCode + "\n" + `#define ${k} ##`
+        }
+        else {
+          defCode = defCode + "\n" + `#define ${k} #v#`
+        }
+      }
+      let insPos = _code.indexOf("<CsInstruments>")+15
+      
+      _code = _code.substring(0, insPos) + defCode + _code.substring(insPos)
+    }
+    
+    this.code = _code
   }
   
   let state = "off"

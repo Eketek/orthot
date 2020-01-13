@@ -351,7 +351,7 @@ let AutoEketek = function(audio_destNode) {
         numPartials = randRange_int(2,6)
         partialMagnitude = 1/numPartials
       }
-      let pMag = [1]
+      let pMag = [0.6]
       let pFMul = [1]
       //let waveTypes = [Math.floor(Math.random()*3+1)]
       let waveTypes = [randRange_int(1,4)]
@@ -359,7 +359,7 @@ let AutoEketek = function(audio_destNode) {
       let tMag = 0
       for (let i = 1; i < numPartials; i++) {
         //let mag = 1*(Math.random()*partialMagnitude*(numPartials-i)/numPartials)**2
-        let mag = 1 * rand_float(partialMagnitude*(numPartials-i)/numPartials, 2)
+        let mag = 0.6 * rand_float(partialMagnitude*(numPartials-i)/numPartials, 2)
         tMag += mag
         pMag.push(mag)
         if (chance(0.1)) {
@@ -377,7 +377,7 @@ let AutoEketek = function(audio_destNode) {
       }
       if (!useSineSynth) {
         for (let i = 0; i < numPartials; i++) {
-          pMag[i] *= 0.75
+          pMag[i] *= 0.5
         }
       }
       let pan = i==0 ? 0.5 : randRange_float(0.1, 0.9)
@@ -448,8 +448,9 @@ let AutoEketek = function(audio_destNode) {
   }
   
   var defaultSpec = {
-    PhraseLength:{ min:12, max:24 },    // Number of notes per phrase
-    Voices: { min:4, max:10 },          // Number of unique voices
+    PhraseLength:{ min:16, max:48, curve:2 },    // Number of notes per phrase
+    Voices: { min:6, max:18 },          // Number of unique voices
+    Octaves:4,
     TargetSongLen: { min:100, max:250 },
     Complexity:[
       { 
@@ -512,7 +513,7 @@ let AutoEketek = function(audio_destNode) {
     TargetLeadvoicePitch:{ min:200, max:275 },    // Approximate frequency the lowest possible note the by the lead voice
     VoiceIntroOrder:[1, 2/3, 1/3, 0],             // Voice introduction order by pitch (1 - highest, 0 - lowest)
     IntroPhrases:3,                               // Length of a voice introduction in phrases
-    TargetActiveVoices:6,                          // Number of concurrent voices
+    TargetActiveVoices:10,                          // Number of concurrent voices
     NoteReduction:{ min:0.1, max:0.75 },          // Amount of time [in beats] to subtract from each note (how "staccato" voices should sing)
     AtkpowGeneral:0.25,                           // Attack strength of notes in general (initial loudness)
     AtkpowFirst:0.45,                             // Attack strength of the first note in a phrase
@@ -647,7 +648,7 @@ let AutoEketek = function(audio_destNode) {
         break
       }
     }
-    let targetLowval = highVal/4
+    let targetLowval = highVal/(2**spec.Octaves)
     let lowVal = 0
     let lowOfs = 0
     for (; lowOfs < scale.all.length; lowOfs++) {
@@ -705,7 +706,7 @@ let AutoEketek = function(audio_destNode) {
       if (i == 0) {
         atkPow[i] = spec.AtkpowFirst
       }
-      else {
+      else {parts
         let pos = Math.ceil(i*phraseNotes/numEmphasized)
         atkPow[pos] = spec.AtkpowMid
       }

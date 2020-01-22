@@ -450,7 +450,7 @@ let AutoEketek = function(audio_destNode) {
   var defaultSpec = {
     PhraseLength:{ min:16, max:48, curve:2 },    // Number of notes per phrase
     Voices: { min:6, max:18 },          // Number of unique voices
-    Octaves:4,
+    Octaves:3,
     TargetSongLen: { min:100, max:250 },
     Complexity:[
       { 
@@ -510,10 +510,42 @@ let AutoEketek = function(audio_destNode) {
       { chance:8.55, reverse:true },
       { chance:5.7,  invert:true, reverse:true },
     ],
-    TargetLeadvoicePitch:{ min:200, max:275 },    // Approximate frequency the lowest possible note the by the lead voice
-    VoiceIntroOrder:[1, 2/3, 1/3, 0],             // Voice introduction order by pitch (1 - highest, 0 - lowest)
-    IntroPhrases:3,                               // Length of a voice introduction in phrases
-    TargetActiveVoices:10,                          // Number of concurrent voices
+    TargetLeadvoicePitch:{ min:300, max:400 },    // Approximate frequency the lowest possible note the by the lead voice
+    Sections:[
+      {
+        MinBase:0.8, 
+        MaxBase:1,
+        NumVoices:{ min:3, max:6 },
+        MaxActive:{ min:1, max:2 },
+        MinActive:{ min:1, max:1 },
+        ExpoOrderPositive:1,
+        ExpoSpacing:{ min:2, max:4 },
+        ExpoLen:{ min:1, max:4 },
+        RegLen:{ min:3, max:9 }
+      },
+      {
+        MinBase:0.4,
+        MaxBase:0.8,
+        NumVoices:{ min:3, max:6 },
+        MaxActive:{ min:1, max:3 },
+        MinActive:{ min:1, max:2 },
+        ExpoOrderPositive:0.75,
+        ExpoSpacing:{ min:2, max:4 },
+        ExpoLen:{ min:1, max:4 },
+        RegLen:{ min:3, max:9 }
+      },
+      {
+        MinBase:0,
+        MaxBase:0.4,
+        NumVoices:{ min:3, max:6 },
+        MaxActive:{ min:1, max:2 },
+        MinActive:{ min:1, max:1 },
+        ExpoOrderPositive:0.5,
+        ExpoSpacing:{ min:2, max:4 },
+        ExpoLen:{ min:1, max:4 },
+        RegLen:{ min:3, max:9 }
+      }
+    ],
     NoteReduction:{ min:0.1, max:0.75 },          // Amount of time [in beats] to subtract from each note (how "staccato" voices should sing)
     AtkpowGeneral:0.25,                           // Attack strength of notes in general (initial loudness)
     AtkpowFirst:0.45,                             // Attack strength of the first note in a phrase
@@ -572,13 +604,46 @@ let AutoEketek = function(audio_destNode) {
     let phraseNotes = randRange_int(spec.PhraseLength)
     
     // Each voice gets a random insrtrument, and will sings in its own range
-    let numVoices = randRange_int(spec.Voices)
+    //let numVoices = randRange_int(spec.Voices)
+    let numVoices = 0
+    
+    let sections = []
+    
+    for (let section of spec.Sections) {
+      let expo_positive = chance(section.ExpoOrderPositive)
+      let expo_len = randRange_int(section.ExpoLen.min, section.ExpoLen.max)
+      let nVoices = randRange_int(section.NumVoices.min, section.NumVoices.max)
+      numVoices += nVoices
+      let max_active = randRange_int(section.MaxActive.min, section.MaxActive.max)
+      if (max_active > nVoices) {
+        max_active = nVoices
+      }
+      let min_active = randRange_int(section.MinActive.min, section.MinActive.max)
+      if (min_active > max_active) {
+        min_active = max_active
+      }
+      let expo_spacing = randRange_int(section.ExpoSpacing.min, section.ExpoSpacing.max)
+      if (expo_spacing > expo_len) {
+        expo_spacing = expo_len
+      }
+      
+      // Actual part coverage for each voice can/should not be detrermined until the number of phrases is determined
+      sections.push({
+        ExpoOrderPositive:chance(section.ExpoOrderPositive),
+        ExpoLen:randRange_int(section.ExpoLen.min, section.ExpoLen.max),
+        ExpoSpacing:expo_spacing,
+        RegLen:section.RegLen,
+        NumVoices:nVoices,
+        MaxActive:max_active,
+        MinActive:min_active
+      })
+    }
+    
     randomizeInstruments(numVoices)
     for (let i = 0; i < numVoices; i++) {
       addVoice()
     }
     
-    let parts = []
     let prev
     
     console.log("Voices: " + numVoices)
@@ -666,12 +731,7 @@ let AutoEketek = function(audio_destNode) {
     //  For stylistic reasons, the first 4 voices are spaced widely apart.
     let valOffsets = []
     {
-      let i = 0
-      for (; i < spec.VoiceIntroOrder.length; i++) {
-        valOffsets.push( lowOfs + Math.floor(spec.VoiceIntroOrder[i] * songVoiceRange))
-      }
-      //let valOffsets = [highOfs, highOfs-Math.floor(songVoiceRange/3), highOfs-Math.floor((songVoiceRange*2)/3), lowOfs]
-      for (; i < numVoices; i++) {
+      for (let i = 0; i < numVoices; i++) {
         let ofs = lowOfs
         while (valOffsets.indexOf(ofs) != -1) {
           //ofs = Math.floor(lowOfs+Math.random()*songVoiceRange)
@@ -680,6 +740,7 @@ let AutoEketek = function(audio_destNode) {
         valOffsets.push(ofs)
       }
     }
+    valOffsets.sort( (a,b)=>{ return b-a })
     
     //console.log(`Base tones: ${lowVal} - ${highVal} Note numbers: ${valOffsets}`)
 
@@ -706,57 +767,128 @@ let AutoEketek = function(audio_destNode) {
       if (i == 0) {
         atkPow[i] = spec.AtkpowFirst
       }
-      else {parts
+      else {
         let pos = Math.ceil(i*phraseNotes/numEmphasized)
         atkPow[pos] = spec.AtkpowMid
       }
     }
     
     let targetLen = randRange_float(spec.TargetSongLen)
-    let numPhrases = Math.max(numVoices*2, Math.ceil(targetLen / phraseLen))
+    let numPhrases = Math.ceil(targetLen / phraseLen)
     
     console.log(`Phrases: ${numPhrases}`)
     
-    // determine which voice will sing during each part of the song
+    let parts = []
     for (let i = 0; i < numPhrases; i++) {
-      let part = []
-      parts.push(part)
-      
-      // To start, introduce each voice in a fixed sequence
-      for (let j = 0; j < spec.IntroPhrases; j++) {
-        if ( ((i-j) < numVoices) && ((i-j) >= 0) ) {
-          part.push(i-j)
-        }
-      }
-      
-      let nVoices = Math.min(i, spec.TargetActiveVoices, numVoices-1)
-      
-      // After the introduction is mostly complete, retain up to 3 random voices from the preceding phrase
-      if (i > (numVoices-3)) {
-        let sel = randSelect(prev)
-        if (part.indexOf(sel) == -1) {
-          part.push(sel)
-        }
-        sel = randSelect(prev)
-        if (part.indexOf(sel) == -1) {
-          part.push(sel)
-        }
-        sel = randSelect(prev)
-        if (part.indexOf(sel) == -1) {
-          part.push(sel)
-        }
-      }
-      
-      // replace any departed voices with random ones
-      for (let j = part.length; j <= nVoices; j++) {
-        let v = rand_int(numVoices-1)
-        while (part.indexOf(v) != -1) {
-          v = rand_int(numVoices-1)
-        }
-        part.push(v)
-      }
-      prev = part
+      parts.push([])
     }
+    
+    let phraseIndices = []
+    for (let i = 0; i < numPhrases; i++) {
+      phraseIndices.push(i)
+    }
+    
+    let voiceOfs = 0
+    
+    // Generate a moderately random song structure
+    //  This divides the voices into a set of ranges (based on base pitch), then attempts to keep voices from each range singing at all times
+    //  Voices are activated at a semi-random times, sing for the duration of a "part", then de-activate (allowing other voices within the range to take over).
+    
+    for (let section of sections) {
+      //console.log("SECTION-INFO:", section)
+      
+      let firstVoice = voiceOfs
+      let voices = []
+      for (let i = 0; i < section.NumVoices; i++) {
+        let voice = voiceOfs
+        voices.push(voice)
+        voiceOfs++
+        
+        for (let j = 0; j <= section.ExpoLen; j++) {
+          let partNum = section.ExpoSpacing*i+j
+          if (parts[partNum]) {
+            parts[partNum].push(voice)
+          }
+        }
+      }
+      
+      let amtActive = function(part) {
+        let amt = 0
+        for (let v of part) {
+          if (voices.indexOf(v) != -1) {
+            amt++
+          }
+        }
+        return amt
+      }
+      
+      let lim = 10000
+      
+      // Consider all phrases in a random order
+      shuffle(phraseIndices)
+      for (let i of phraseIndices) {
+        //console.log("PHRASE", i, amtActive(parts[i]), section.MinActive)
+        addParts:
+        while (amtActive(parts[i]) < section.MinActive) {
+        
+          // select a random voice to assign a part to
+          shuffle(voices)
+          let voice
+          //console.log("VOICES:", voices.join(","))
+          for (let v of voices) {
+            
+            lim--
+            if (lim == 0) {
+              //console.log("Phrase Cancelled!")
+              break addParts
+            }
+            // If voice sings in the phrase or an adjacent phrase, skip the voice
+            
+            if (parts[i].indexOf(v) != -1) {
+              //console.log("skip-here", v, parts[i])
+              continue
+            }
+            if (parts[i-1] && parts[i-1].indexOf(v) != -1) {
+              //console.log("skip-prev", v, parts[i-1])
+              continue
+            }
+            if (parts[i+1] && parts[i+1].indexOf(v) != -1) {
+              //console.log("skip-next", v, parts[i+1])
+              continue
+            }
+            // If the phrase is in or prior to the voice's exposition, skip the voice
+            if (i <= ((v-firstVoice)*section.ExpoSpacing + section.ExpoLen) ) {
+              //console.log("skip-tooearly", v, parts[i-1], i, (v-firstVoice), section.ExpoSpacing, (v-firstVoice)*section.ExpoSpacing, section.ExpoLen)
+              continue
+            }
+            voice = v
+            break
+          }
+          
+          // if voice can sing during the initial phrase, fail and allow less than the specified minimum
+          if (voice == undefined) {
+            //console.log("Phrase-FAILURE", i)
+            break addParts
+          }
+          
+          let maxLen = randRange_int(section.RegLen.min, section.RegLen.max)
+          let end = i+maxLen
+          if (end > numPhrases) {
+            end = numPhrases
+          }
+          for (let j = i; j < end; j++) {
+            if ( (!parts[j+1] || (parts[j+1].indexOf(voice) == -1)) && (parts[j].indexOf(voice) == -1) && (amtActive(parts[j]) <= section.MaxActive) ) {
+              parts[j].push(voice)
+            }
+            else {
+              break
+            }
+          }
+        }
+      }
+    }
+    
+    
     console.log("Parts:", parts)
     
     let numNotes = 0
@@ -781,7 +913,7 @@ let AutoEketek = function(audio_destNode) {
      
       // generate a unique theme for the voice to occasionally sing
       let voiceTheme = genTheme(spec.VoiceThemeRange)
-      
+      let introduction = true
       for (let j = 0; j < numPhrases; j++) {
         // if the voice is listed as having a part, sing the phrase, otherwise, ignore it
         let phraseParts = parts[j]
@@ -790,7 +922,8 @@ let AutoEketek = function(audio_destNode) {
           let theme
           
           // introduce the voice with the main theme
-          if (mainTheme && (j == v)) {
+          if (mainTheme && introduction) {
+            introduction = false
             theme = mainTheme
           }
           else {

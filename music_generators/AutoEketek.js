@@ -888,6 +888,13 @@ let AutoEketek = function(audio_destNode) {
       }
     }
     
+    // In the unlikely event that a part is otherwise completely silent, assign random voices to empty entries
+    for (let part of parts) {
+      if (part.length == 0) {
+        part.push(randRange_int(0, numVoices-1))
+      }
+    }
+    
     
     console.log("Parts:", parts)
     

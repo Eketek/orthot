@@ -449,9 +449,11 @@ let AutoEketek = function(audio_destNode) {
   
   var defaultSpec = {
     PhraseLength:{ min:16, max:48, curve:2 },    // Number of notes per phrase
-    Voices: { min:6, max:18 },          // Number of unique voices
-    Octaves:3,
-    TargetSongLen: { min:100, max:250 },
+    PhraseStructurePoints:{ min:2, max:5 },      // number of randomly selected phrase-structure target points
+    PhraseStructureWeight:{ min:0.5, max:0.85 },    // chance of biasing value of next note in phrase toward the current phrase structure value
+    PhraseStructureBias:{ min:1, max:3 },        // amount of possible note values to exclude from the other direction when moving toward stucture value
+    Octaves:2,
+    TargetSongLen: { min:210, max:300 },
     Complexity:[
       { 
         chance:0.1,             
@@ -482,22 +484,6 @@ let AutoEketek = function(audio_destNode) {
         Tempo:{ min:225, max:400 },
       }
     ],
-    VoiceThemeRange: { min:6, max:9 },  // Range of each voice
-    MaxThemeStep: { min:1, max:4 } ,    // max difference between two adjacent notes within a voice
-    Themes:[
-      {
-        chance:0.5,
-        range: { min:6, max:9 },
-      },
-      { 
-        chance:0.25,
-        range: { min:6, max:9 }
-      },
-      { 
-        chance:0.25,
-        range: { min:6, max:9 }
-      }
-    ],
     Modifiers:[
         //  5%:      shuffle          (random re-arrangement of pitch values)
         //  48.45%:  no change        (theme is played exactly as defined)
@@ -510,12 +496,12 @@ let AutoEketek = function(audio_destNode) {
       { chance:8.55, reverse:true },
       { chance:5.7,  invert:true, reverse:true },
     ],
-    TargetLeadvoicePitch:{ min:300, max:400 },    // Approximate frequency the lowest possible note the by the lead voice
+    TargetLeadvoicePitch:{ min:250, max:350 },    // Approximate frequency the lowest possible note the by the lead voice
     Sections:[
       {
         MinBase:0.8, 
         MaxBase:1,
-        NumVoices:{ min:3, max:6 },
+        NumVoices:{ min:2, max:4 },
         MaxActive:{ min:1, max:2 },
         MinActive:{ min:1, max:1 },
         ExpoOrderPositive:1,
@@ -526,7 +512,7 @@ let AutoEketek = function(audio_destNode) {
       {
         MinBase:0.4,
         MaxBase:0.8,
-        NumVoices:{ min:3, max:6 },
+        NumVoices:{ min:2, max:4 },
         MaxActive:{ min:1, max:3 },
         MinActive:{ min:1, max:2 },
         ExpoOrderPositive:0.75,
@@ -537,7 +523,7 @@ let AutoEketek = function(audio_destNode) {
       {
         MinBase:0,
         MaxBase:0.4,
-        NumVoices:{ min:3, max:6 },
+        NumVoices:{ min:2, max:4 },
         MaxActive:{ min:1, max:2 },
         MinActive:{ min:1, max:1 },
         ExpoOrderPositive:0.5,
@@ -550,6 +536,50 @@ let AutoEketek = function(audio_destNode) {
     AtkpowGeneral:0.25,                           // Attack strength of notes in general (initial loudness)
     AtkpowFirst:0.45,                             // Attack strength of the first note in a phrase
     AtkpowMid:0.35,                               // Attack strength of various emphasized middle-notes (generally every 4th) (this
+    Scale:[
+      { 
+        chance:0.875, 
+        values:[64,72,81,96,108],
+        denom:64,
+        VoiceThemeRange: { min:6, max:9 },  // Range of each voice
+        MaxThemeStep: { min:1, max:4 } ,    // max difference between two adjacent notes within a voice
+        Themes:[
+          {
+            chance:0.5,
+            range: { min:6, max:9 },
+          },
+          { 
+            chance:0.25,
+            range: { min:6, max:9 }
+          },
+          { 
+            chance:0.25,
+            range: { min:6, max:9 }
+          }
+        ],
+      },
+      { 
+        chance:0.125, 
+        values:[24,27,30,36,40],
+        denom:32,
+        VoiceThemeRange: { min:6, max:9 },  // Range of each voice
+        MaxThemeStep: { min:1, max:4 } ,    // max difference between two adjacent notes within a voice
+        Themes:[
+          {
+            chance:0.5,
+            range: { min:6, max:9 },
+          },
+          { 
+            chance:0.25,
+            range: { min:6, max:9 }
+          },
+          { 
+            chance:0.25,
+            range: { min:6, max:9 }
+          }
+        ],
+      }
+    ]
   }
   
   this.spec = deepcopy(defaultSpec)
@@ -575,30 +605,18 @@ let AutoEketek = function(audio_destNode) {
     }
     
     spec = deepcopy(spec)
-    if (window.Do_a_really_bad_job) {
-      switch( randRange_int(0,2) ) {
-        case 0:
-          scale = Scale([8192,10000,10240,12500,12800,15625,16000], 2)
-          fundamental = randRange_float(0.5, 1.5)/4096
-          break
-        case 1:
-          scale = Scale([61,71,83,97,109], 2)
-          fundamental = randRange_float(0.5, 1.5)/32
-          break
-        case 2:
-          scale = Scale([rand_float(),rand_float(),rand_float(),rand_float(),rand_float()], 2)
-          fundamental = randRange_float(0.5, 1.5)
-          break
-      }
-      console.log(scale)
-    }
-    else {
-      // On further analysis, what AutoEketek has is a Pentatonic scale with a Pythagorean tuning.  
-      //      Which... is probably a best-practice without any other logic behind note selection.
-      //  So might as well declare it explicitly.
-      scale = Scale([64,72,81,96,108], 2)
-      fundamental = randRange_float(0.5, 1.5)/32
-    }
+    // On further analysis, what AutoEketek has is a Pentatonic scale with a Pythagorean tuning.  
+    //      Which... is probably a best-practice without any other logic behind note selection.
+    //  So might as well declare it explicitly.
+    //scale = Scale([64,72,81,96,108], 2)
+    //fundamental = randRange_float(0.5, 1.5)/32
+    
+    //scale = Scale([24,27,30,36,40], 2)
+    //fundamental = randRange_float(0.5, 1.5)/16
+    let scSpec = randSelect(spec.Scale)
+    scale = Scale(scSpec.values, 2)
+    fundamental = randRange_float(0.5, 1.5)/scSpec.denom
+    console.log("SELECTED SCALE:", scSpec)
     
     // These strongly control the approaximate length and self-similarity of a "song"
     let phraseNotes = randRange_int(spec.PhraseLength)
@@ -670,23 +688,75 @@ let AutoEketek = function(audio_destNode) {
     
     //let themes = {}
     
-    let maxStep = randRange_int(spec.MaxThemeStep)
-
+    let maxStep = randRange_int(scSpec.MaxThemeStep)
+    let phraseStructureWeight = randRange_float(spec.PhraseStructureWeight)
+    let phraseStructureBias = randRange_int(spec.PhraseStructureBias)
+    console.log("Phrase-Structure-Weight:", phraseStructureWeight)
+    console.log("Phrase-Structure-Bias:", phraseStructureBias)
     let genTheme = function(range) {
+    
+      let numTargets = randRange_int(spec.PhraseStructurePoints)
+      let tPoints = []
+      for (let i = 0; i < numTargets; i++) {
+        let v = 0
+        
+        while (tPoints.indexOf(v) != -1) {
+          v = randRange_int(1, phraseNotes-2)
+        }
+        tPoints.push(v)
+      }
+      tPoints.sort((a,b)=>{
+        return a-b
+      })
+      
+      let tVals = []
+      for (let i = 0; i < numTargets; i++) {
+        tVals.push(randRange_int(0, range))
+      }
+      
+      let tI = 0
+      let tV = tVals[0]
+      
+      //console.log("Phrase-Structure:", tPoints, tVals)
+      
       let notes = []
-      let note = rand_int(range)
+      let note = tV
       notes.push( note )
       for (let i = 1; i < phraseNotes; i++) {
+        if (i >= tPoints[tI+1]) {
+          tI++
+          tV = tVals[tI]
+        }
+        
         let high = Math.min(range, note + maxStep)
         let low = Math.max(0, note - maxStep)
+        if (note != tV) {
+          if (chance(phraseStructureWeight)) {
+            if (note > tV) {
+              let _high = high - phraseStructureBias
+              if (_high < note) {
+                _high = note
+              }
+              high = _high
+            }
+            else {
+              let _low = low + phraseStructureBias
+              if (_low > note) {
+                _low = note
+              }
+              low = _low
+            }
+          }
+        }
+        
         note = randRange_int(low, high)
         notes.push( note )
       }
       return notes
     }
     
-    for (let name in spec.Themes) {
-      let tdef = spec.Themes[name]
+    for (let name in scSpec.Themes) {
+      let tdef = scSpec.Themes[name]
       if (tdef.range) {
         tdef.notes = []
         if (typeof(tdef.range) == "object") {
@@ -699,7 +769,7 @@ let AutoEketek = function(audio_destNode) {
       }
     }
     
-    console.log("Themes:", spec.Themes)
+    console.log("Themes:", scSpec.Themes)
     
     //target frequency of the highest voice 
     //  (NOTE:  the synth is set up to produce tones with lots of high-energy harmonics, so the base tones need to be low-ish)
@@ -919,7 +989,13 @@ let AutoEketek = function(audio_destNode) {
       }
      
       // generate a unique theme for the voice to occasionally sing
-      let voiceTheme = genTheme(spec.VoiceThemeRange)
+      let voiceTheme
+      if (typeof(scSpec.VoiceThemeRange) == "object") {
+        voiceTheme = randRange_int(scSpec.VoiceThemeRange)
+      }
+      else {
+        voiceTheme = genTheme(scSpec.VoiceThemeRange)
+      }
       let introduction = true
       for (let j = 0; j < numPhrases; j++) {
         // if the voice is listed as having a part, sing the phrase, otherwise, ignore it
@@ -934,7 +1010,7 @@ let AutoEketek = function(audio_destNode) {
             theme = mainTheme
           }
           else {
-            let themeSpec = randSelect(spec.Themes)
+            let themeSpec = randSelect(scSpec.Themes)
             
             theme = deepcopy(themeSpec.notes)
             if (!theme) {
@@ -955,7 +1031,7 @@ let AutoEketek = function(audio_destNode) {
               }
               else {
                 for (let i = 0; i < theme.length; i++) {
-                  theme[i] = spec.VoiceThemeRange-theme[i]-1
+                  theme[i] = scSpec.VoiceThemeRange-theme[i]-1
                 }
               }
             }
@@ -998,5 +1074,3 @@ let AutoEketek = function(audio_destNode) {
     return len
   }
 }
-
-window.Do_a_really_bad_job = false

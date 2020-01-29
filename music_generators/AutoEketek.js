@@ -450,7 +450,7 @@ let AutoEketek = function(audio_destNode) {
   var defaultSpec = {
     PhraseLength:{ min:16, max:48, curve:2 },    // Number of notes per phrase
     PhraseStructurePoints:{ min:2, max:5 },      // number of randomly selected phrase-structure target points
-    PhraseStructureWeight:{ min:0.5, max:0.85 },    // chance of biasing value of next note in phrase toward the current phrase structure value
+    PhraseStructureWeight:{ min:0, max:0.85, curve:1.5 },    // chance of biasing value of next note in phrase toward the current phrase structure value
     PhraseStructureBias:{ min:1, max:3 },        // amount of possible note values to exclude from the other direction when moving toward stucture value
     Octaves:2,
     TargetSongLen: { min:210, max:300 },

@@ -450,6 +450,7 @@ let AutoEketek = function(audio_destNode) {
   var defaultSpec = {
     PhraseLength:{ min:16, max:48, curve:2 },    // Number of notes per phrase
     PhraseStructurePoints:{ min:2, max:5 },      // number of randomly selected phrase-structure target points
+    PhraseStructureExPtsPerNote:{ min:0.1, max:0.25},        // Additional phrase-structure points to add for each note in the phrase
     PhraseStructureWeight:{ min:0, max:0.85, curve:1.5 },    // chance of biasing value of next note in phrase toward the current phrase structure value
     PhraseStructureBias:{ min:1, max:3 },        // amount of possible note values to exclude from the other direction when moving toward stucture value
     Octaves:2,
@@ -694,8 +695,9 @@ let AutoEketek = function(audio_destNode) {
     console.log("Phrase-Structure-Weight:", phraseStructureWeight)
     console.log("Phrase-Structure-Bias:", phraseStructureBias)
     let genTheme = function(range) {
-    
-      let numTargets = randRange_int(spec.PhraseStructurePoints)
+      
+      let numTargets = randRange_int(spec.PhraseStructurePoints) + Math.ceil(randRange_float(spec.PhraseStructureExPtsPerNote)*phraseNotes)
+      
       let tPoints = []
       for (let i = 0; i < numTargets; i++) {
         let v = 0
@@ -716,6 +718,23 @@ let AutoEketek = function(audio_destNode) {
       
       let tI = 0
       let tV = tVals[0]
+      
+      // scan the phrase structure.  If any target value is similar to the preceding value, deviate it a bit.
+      //  (this is to ensure that a phrase structure can cause a phrase to wander around within a voice's range).
+      let minDiff = Math.max(Math.ceil(range / 3), 2)
+      for (let i = 1; i < numTargets; i++) {
+        let prev = tVals[i-1]
+        let val = tVals[i]
+        if ( Math.abs((val-prev) < minDiff)) {
+          if (val >= prev) {
+            val = (val + minDiff) % range
+          }
+          else {
+            val = (val + range - minDiff) % range
+          }
+          tVals[i] = val
+        }
+      }
       
       //console.log("Phrase-Structure:", tPoints, tVals)
       

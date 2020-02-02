@@ -1,6 +1,7 @@
 import { on, next, time } from '../libek/nextevent.js'
 import { initSynth, Synth, updateSynth } from '../libek/synth.js'
 import { deepcopy } from '../libek/util.js'
+import { setCommonScale } from '../libek/sfx.js'
 
 export { AutoEketek }
 
@@ -229,106 +230,6 @@ let AutoEketek = function(audio_destNode) {
     </CsoundSynthesizer>
   `
   
-  // A musical scale generator.
-  // In its simplest usage, this just multiplies a series of frequencies with powers of some base
-  // The more complex usages invole specifing the scale as sets of factors to derive all values from, and octaves that are not powers of some base value
-  // The more complex usages are great for getting bad results out of the any simple composition algorithm, so only the simplest case is invoked.
-  var Scale = function(factorlists, base=2) {
-    
-    // a simpler method of specifying partial components
-    if (!Array.isArray(factorlists)) {
-      if (factorlists.repeat) {
-        let _factorlists = []
-        for (let i = 0; i < factorlists.repeat; i++) {
-          _factorlists.push(factorlists.data)
-        }
-        factorlists = _factorlists
-      }
-    }
-    else if (!Array.isArray(factorlists[0])) {
-      factorlists = [factorlists]
-    }
-    
-    let scale = []
-    
-    // multiply the partial-components in every set with the components in every other set
-    let idx = []
-    let idxT = 1
-    for (let i = 0; i < factorlists.length; i++) {
-      idx.push(0)
-      idxT *= factorlists[i].length
-    }
-    let j = 0
-    outer:
-    for (let i = 0; i < idxT; i++) {
-      let v = 1
-      for (let k = 0; k < factorlists.length; k++) {
-        v *= factorlists[k][idx[k]]
-      }
-      scale.push(v)
-      for (let j = 0; j < factorlists.length; j++) {
-        if (idx[j] == (factorlists[j].length-1)) {
-          idx[j] = 0
-        }
-        else {
-          idx[j] += 1
-          break
-        }
-      }
-    }
-    
-    // remove duplicate entries and sort, yielding a properly formatted representation of a single harmonic series
-    for (let i = 0; i < scale.length; i++) {
-      if (scale.indexOf(scale[i]) < i) {
-        scale.splice(i,1)
-        i--
-      }
-    }
-    scale.sort( (a,b)=>{
-      return a-b
-    })
-    
-    let scale_all = []
-    let scale_each = []
-    
-    //If base is just an number, fill an array with its powers
-    if (!Array.isArray(base)) {
-      let _base = base
-      let base_acc = 1
-      base = []
-      for (let i = 0; i < 32; i++) {
-        base.push(base_acc)
-        base_acc *= _base
-      }
-    }
-    for (let i = 0; i < base.length; i++) {
-      let baseVal = base[i]
-      let scale_b = []
-      scale_each[i] = scale_b
-      for (let partial of scale) {
-        let val = partial * baseVal
-        scale_b.push(val)
-        scale_all.push(val)
-      }
-    }
-    // remove any duplicate entries in the completed key
-    for (let i = 0; i < scale_all.length; i++) {
-      if (scale_all.indexOf(scale_all[i]) < i) {
-        scale_all.splice(i,1)
-        i--
-      }
-    }
-    scale_all.sort( (a,b)=>{
-      return a-b
-    })
-    
-    return {
-      scale:scale,
-      all:scale_all,
-      each:scale_each
-    }
-  }
-  
   let voices
   let voiceArr = []
   
@@ -421,7 +322,7 @@ let AutoEketek = function(audio_destNode) {
     if (!target) {
       target = voices.i1
     }
-    target.notes.push( {time:time, dur:dur, freq:fundamental*scale.all[noteval], pow:pow} )
+    target.notes.push( {time:time, dur:dur, freq:fundamental*scale[noteval], pow:pow} )
   }
   
   let toScore = function() {
@@ -609,15 +510,10 @@ let AutoEketek = function(audio_destNode) {
     // On further analysis, what AutoEketek has is a Pentatonic scale with a Pythagorean tuning.  
     //      Which... is probably a best-practice without any other logic behind note selection.
     //  So might as well declare it explicitly.
-    //scale = Scale([64,72,81,96,108], 2)
-    //fundamental = randRange_float(0.5, 1.5)/32
     
-    //scale = Scale([24,27,30,36,40], 2)
-    //fundamental = randRange_float(0.5, 1.5)/16
     let scSpec = randSelect(spec.Scale)
-    scale = Scale(scSpec.values, 2)
+    scale = setCommonScale(scSpec.values)
     fundamental = randRange_float(0.5, 1.5)/scSpec.denom
-    console.log("SELECTED SCALE:", scSpec)
     
     // These strongly control the approaximate length and self-similarity of a "song"
     let phraseNotes = randRange_int(spec.PhraseLength)
@@ -796,8 +692,8 @@ let AutoEketek = function(audio_destNode) {
     
     let highVal = 0
     let highOfs = 0
-    for (; highOfs < scale.all.length; highOfs++) {
-      highVal = scale.all[highOfs]*fundamental
+    for (; highOfs < scale.length; highOfs++) {
+      highVal = scale[highOfs]*fundamental
       if (highVal > targetHighval) {
         break
       }
@@ -805,8 +701,8 @@ let AutoEketek = function(audio_destNode) {
     let targetLowval = highVal/(2**spec.Octaves)
     let lowVal = 0
     let lowOfs = 0
-    for (; lowOfs < scale.all.length; lowOfs++) {
-      lowVal = scale.all[lowOfs]*fundamental
+    for (; lowOfs < scale.length; lowOfs++) {
+      lowVal = scale[lowOfs]*fundamental
       if (lowVal > targetLowval) {
         break
       }

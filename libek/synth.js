@@ -2,6 +2,7 @@ export { Synth, initSynth, updateSynth, resetSynths }
 import { on, time } from './nextevent.js'
 import { deepcopy } from './util.js'
 import { getUID } from './libek.js'
+import { sfxGlobals, setCommonScale } from './sfx.js'
 
 /*
   Utility for handling CSound.

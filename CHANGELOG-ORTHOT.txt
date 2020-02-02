@@ -1,4 +1,8 @@
 Version 0.3.0
+
+  1 Feb 2019
+    Simplify the music scale generator and move it to a planned sound effects handler (libek/sfx.js)
+
   28 Dec 2019 - 31 Jan 2020:
     Added algorithmicly generated background music.
 

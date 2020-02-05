@@ -1,5 +1,12 @@
 Version 0.3.0
 
+  5 Feb 2019
+    Music generator 
+      Offset parts/voices by moderately-random amounts of beats
+      Increase the general pitch of all notes (It was determined that the amount of low frequency sound produced was absurd)
+      Reduce the loudness of higher-pitched voices.
+      Gate console spam behind a debug setting.
+  
   1 Feb 2019
     Simplify the music scale generator and move it to a planned sound effects handler (libek/sfx.js)
 

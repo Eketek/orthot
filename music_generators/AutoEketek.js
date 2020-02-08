@@ -1060,6 +1060,9 @@ let AutoEketek = function(audio_destNode) {
       end:1,
       dest_node:audio_destNode
     })
+    if (debug) {
+      console.log(`Song Length: ${len / 1000} seconds`)
+    }
     return len
   }
 }

@@ -83,7 +83,6 @@ var playMusic = function(Source, endAction="restart", fadeAt = -6000, fadeLen=50
     let endTime = src.play(spec, seed)
     
     let songLen = endTime - Date.now()
-    console.log(`Song Length: ${songLen / 1000} seconds`)
     songLen = Math.floor(songLen)
     let _runID = runID + 1
     runID = _runID

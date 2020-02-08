@@ -1,6 +1,8 @@
 # Orthot III
 3D Puzzle game with blocks, stairs, ladders, portals, and other complications.
 
+![title-picture](/assets/textures/o3title.png)
+
 Though presently incomplete, the game is playable here:
 https://eketek.github.io/orthot/
 

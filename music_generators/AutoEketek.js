@@ -1048,7 +1048,7 @@ let AutoEketek = function(audio_destNode) {
       configs[i+1] = instruments[i]
     }
     
-    let len = updateSynth({
+    let endTime = updateSynth({
       group_name:"randTheme",
       group_maxsize:1,
       forced:true,
@@ -1061,8 +1061,8 @@ let AutoEketek = function(audio_destNode) {
       dest_node:audio_destNode
     })
     if (debug) {
-      console.log(`Song Length: ${len / 1000} seconds`)
+      console.log(`Song Length: ${(endTime-Date.now()) / 1000} seconds`)
     }
-    return len
+    return endTime
   }
 }

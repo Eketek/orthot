@@ -1,9 +1,12 @@
-1 Feb 2019
+21 Feb 2020
+  Abstract and move "main" audio node + ui slider setup from music.js to sfx.js
+
+1 Feb 2020
   Sound effects handler
     The plan with this is to accept a [simple] sound effect specifications (with some light coordination with the music generator), 
     convert it into a csound score, and pass it to a wrapped instance of csound.
 
-2 Jan 2019
+2 Jan 2020
   Prevent repeated csound initialization
   Make music player end-of-song actions controllable
 

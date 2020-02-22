@@ -144,10 +144,10 @@ let configureSFX = function(params) {
     score:``,
     dest_node:params.audio_outputnode,
     play:true,
-    end:sfxGlobals.forever
+    end:sfxGlobals.forever,
+    forced:true
   }
   updateSynth(sfxSynthHandle)
-  sfxSynthHandle.play = false
 }
 
 // Play sound from simple sound-effect definition.
@@ -157,10 +157,8 @@ var playSound = function(category, effect) {
   let sfxSynthHandle = sfxHandles[category]
   if (sfxSynthHandle) {
     if (typeof(effect) == "string") {
-      sfxSynthHandle.score_transient = effect
+      sfxSynthHandle.synth.csound.readScore(effect)
     }
-    updateSynth(sfxSynthHandle)
-    sfxSynthHandle.score_transient = undefined
   }
 }
 

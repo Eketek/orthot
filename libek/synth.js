@@ -65,7 +65,6 @@ var updateSynth = function(operation) {
   let end = operation.end
   let defs = operation.defs
   let destnode = operation.dest_node
-  let score_transient = operation.score_transient
   
   let synthset = synths[gname]
   if (!synthset) {
@@ -95,10 +94,6 @@ var updateSynth = function(operation) {
     // #3:  an existing active synth (if flag to cancel a running synth is set)
     if (synthset.length >= gmax) {
       if (!forced) {
-        if (score_transient) {
-          synth = synthset[0]
-          synth.csound.readScore(score_transient)
-        }
         return
       }
       synth = synthset.shift(1)
@@ -123,12 +118,10 @@ var updateSynth = function(operation) {
   if (score) {
     synth.setScore(score)
   } 
-  if (score_transient) {
-    synth.csound.readScore(score_transient)
-  }
   else if (play) {
     synth.play()
   }
+  operation.synth = synth
   return synth.endTime
 }
 

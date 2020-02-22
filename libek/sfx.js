@@ -97,48 +97,65 @@ let sfxHandles = {}
 
 // setup a synth back-end for sound effects
 let configureSFX = function(params) {
-  if (params.synthProgram == undefined) {
-    params.synthProgram = `
+  let synthPRG = params.synthProgram
+  if (synthPRG == undefined) {
+    synthPRG = `
       <CsoundSynthesizer>
         <CsOptions>
           -o dac
         </CsOptions>
         <CsInstruments>
-
           sr = 44100
           ksmps = 32
           nchnls = 2
           0dbfs = 1
-
-          giSine ftgen 1, 0, 65536, 10, 1
-          
-          instr 1
-            iFreq = p4
-            iAtkpow = p5
-            iAtklen = 0.05
-            iDecpow = 0.2
-            iSuspow = 0.05
-            iDeclen = 0.4
-            iSuslen = p3-iAtklen-iDeclen
-            iRellen = 0.1
-            iCutoff = 5000
-
-            aEnv linsegr 0, iAtklen, iAtkpow, iDeclen, iDecpow, iSuslen, iSuspow, iRellen, 0
-
-            aValue = vco( 1, iFreq, 1 )
-            aValue = moogladder(aValue, iCutoff, 0.25)
-                 
-            aOut = aValue * aEnv
-            out aOut, aOut
-          endin
         </CsInstruments>
       </CsoundSynthesizer>
     `
+    params.synthDefs = {
+      sine_additive:`
+        iFreq = p4
+        iAtkpow = p5
+        iAtklen = 0.05
+        iDecpow = 0.2
+        iSuspow = 0.05
+        iDeclen = 0.4
+        iSuslen = p3-iAtklen-iDeclen
+        iRellen = 0.1
+        iLeft = p6
+        iRight = p7
+
+        aEnv linsegr 0, iAtklen, iAtkpow, iDeclen, iDecpow, iSuslen, iSuspow, iRellen, 0
+
+        aValue = 0
+        startArrayedOP:
+          iPMag = 1
+          iPFreqMul = 1
+          aValue = aValue + poscil( iPMag, iPFreqMul*iFreq)
+        endArrayedOP:
+        
+        aOut = aValue * aEnv
+        out aOut*iLeft, aOut*iRight`
+    }
+    params.synthConfig = {
+      1:{
+        def:"sine_additive",
+        iAtklen:Math.random() * 0.025 + 0.02,
+        iDecpow:Math.random() * 0.2 + 0.15,
+        iDeclen:Math.random() * 0.05 + 0.03,
+        iSuspow:Math.random() * 0.1 + 0.05,
+        iRellen:Math.random() * 0.1 + 0.02,
+        iCutoff:1200,
+        iRes:0.1,
+        iPMag:[1, Math.random(), Math.random()*0.75, Math.random()*0.6, Math.random()*0.5, Math.random()*0.3 ],
+        iPFreqMul:[1,2,3,4,5,6]
+      }
+    }
   }
   let sfxSynthHandle = sfxHandles[params.category] = {
     group_name:params.category,
     group_maxsize:1,
-    program:params.synthProgram,
+    program:synthPRG,
     defs:params.synthDefs,
     config:params.synthConfig,
     score:``,
@@ -164,21 +181,31 @@ var playSound = function(category, effect) {
 
 // test:  press k -> sound plays some notes
 //        press k many times, the same synth plays the sequence multiple times concurrently
+//        press j -> choose random values and reprogram the synthesizer
 var testSFX = async function() {
+
+  // basic setup
   await initSynth()
   let sndCTL = setupMainAudioController("SoundVolume", "Sound")
-  configureSFX({
+  let cfgParams = {
     audio_outputnode:sndCTL.node,
-    category:"sfx",
-    max_concurrency:1
+    category:"sfx"
+  }
+  configureSFX(cfgParams)
+  
+  // test synth reprogramming
+  on("j", ()=>{
+    configureSFX(cfgParams)
   })
+  
+  // test sound-effect
   on("k", ()=>{
     playSound("sfx", `
-      i1 0 0.25 200 0.25
-      i1 0.25 0.25 220 0.25
-      i1 0.5 0.25 242 0.25
-      i1 0.75 0.25 220 0.25
-      i1 1 0.25 200 0.25
+      i1 0 0.25 200 0.25 1 0
+      i1 0.25 0.25 220 0.25 0.75 0.25
+      i1 0.5 0.25 242 0.25 0.5 0.5
+      i1 0.75 0.25 220 0.25 0.25 0.75
+      i1 1 0.25 200 0.25 0 1
     `)
   })
 }

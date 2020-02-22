@@ -118,7 +118,7 @@ var updateSynth = function(operation) {
   if (score) {
     synth.setScore(score)
   } 
-  else if (play) {
+  if (play) {
     synth.play()
   }
   operation.synth = synth

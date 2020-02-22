@@ -14,6 +14,7 @@ import { Hackground } from '../libek/hackground.js'
 import { clamp, putFloatingElement, centerElementOverElement } from '../libek/util.js'
 import { NextEventManager, next, on } from '../libek/nextevent.js'
 import { initSynth, updateSynth, resetSynths } from '../libek/synth.js'
+import { testSFX } from '../libek/sfx.js'
 
 import { playMusic, nextSong } from '../libek/music.js'
 import { AutoEketek } from '../music_generators/AutoEketek.js'
@@ -996,6 +997,7 @@ $(async function MAIN() {
   
   await initSynth()
   playMusic(AutoEketek)
+  testSFX()
   
   let pickSongBTN = $("<div>").addClass("btn_active").text("Pick a Song").click(()=>{
     let title = prompt("So... Which song would you like to hear?")

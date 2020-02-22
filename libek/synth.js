@@ -14,7 +14,7 @@ import { sfxGlobals, setCommonScale } from './sfx.js'
     Workaround: adjust the synth program to setup and output to two channels
     
     CSoundObj.reset() does not put csound into a workable state if it has completed its synth program
-    Workaround:  Insert a dummy note into the score at the 3600th second.  
+    Workaround:  Insert a dummy note into the score 5 years into the future ...  
     
   Potential issues:  
     During testing, zealously hammering away at start/stop/suspend/resume/re-instantiation caused CSound to fail to output sound and to fail to yield any 
@@ -65,6 +65,7 @@ var updateSynth = function(operation) {
   let end = operation.end
   let defs = operation.defs
   let destnode = operation.dest_node
+  let score_transient = operation.score_transient
   
   let synthset = synths[gname]
   if (!synthset) {
@@ -94,6 +95,10 @@ var updateSynth = function(operation) {
     // #3:  an existing active synth (if flag to cancel a running synth is set)
     if (synthset.length >= gmax) {
       if (!forced) {
+        if (score_transient) {
+          synth = synthset[0]
+          synth.csound.readScore(score_transient)
+        }
         return
       }
       synth = synthset.shift(1)
@@ -117,8 +122,11 @@ var updateSynth = function(operation) {
   }
   if (score) {
     synth.setScore(score)
+  } 
+  if (score_transient) {
+    synth.csound.readScore(score_transient)
   }
-  if (play) {
+  else if (play) {
     synth.play()
   }
   return synth.endTime
@@ -301,7 +309,7 @@ var Synth = function(code, endLen, destAudioNode) {
       this.endTime = Date.now()+1000*(end+endLen)
     }
     this.score = `
-      i${dummyID} 3600 0
+      i${dummyID} ${sfxGlobals.forever} 0
       ${score}
     `
   }
@@ -494,7 +502,13 @@ var Synth = function(code, endLen, destAudioNode) {
             throw new Error("Can not operate synthesizer because:  No synthesizer program is loaded")
           }
           else if (this.score == undefined) {
-            throw new Error("Can not operate synthesizer because:  No sound to synthesize")
+            //throw new Error("Can not operate synthesizer because:  No sound to synthesize")
+            this.score = `
+              instr ${dummyID}
+              aOut = 0
+              out aOut, aOut
+              endin
+            `
           }
           
           let program

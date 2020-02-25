@@ -153,26 +153,26 @@
         <p>Notation is a sequence of commands which are [mostly] sequential in time.  Each command is a single-character symbol, often followed by a numeric argument (which may be mandatory or optional).</p>
         
         <table class="tbl">
-          <tr><td>Command</td><td>Info</td></tr>
-          <tr><td>a-e#</td><td>Note at base octave - 'a' is lowest, 'e' is highest.  Optional suffix specifies length of the note in beats.</td></tr>
-          <tr><td>A-E#</td><td>Note at +1 octave - 'a' is lowest, 'e' is highest.  Optional suffix specifies length of the note in beats.</td></tr>
-          <tr><td>.#</td><td>Rest.  Optional suffix specifies length of the rest in beats.</td></tr>
+          <tr><td>Name</td><td>Symbol</td><td>Details</td></tr>
+          <tr><td>Play Note</td><td>a-e#</td><td>Note at base octave - 'a' is lowest, 'e' is highest.  Optional suffix specifies length of the note in beats.</td></tr>
+          <tr><td>Play High Note</td><td>A-E#</td><td>Note at +1 octave - 'a' is lowest, 'e' is highest.  Optional suffix specifies length of the note in beats.</td></tr>
+          <tr><td>Rest</td><td>.#</td><td>Optional suffix specifies length of the rest in beats.</td></tr>
           
-          <tr><td>@</td><td>Set [approximate] fundamental ('a' in base octave).  If coordinated tuning is in use, this is only a hint.</td></tr>
-          <tr><td>o#</td><td>Set the base octave (relative to fundamental)</td></tr>
-          <tr><td>+</td><td>Increment the base octave</td></tr>
-          <tr><td>-</td><td>Decrement the base octave</td></tr>
+          <tr><td>Fundamental</td><td>@</td><td>Set [approximate] fundamental ('a' in base octave).  If coordinated tuning is in use, this is only a hint.</td></tr>
+          <tr><td>Octave</td><td>o#</td><td>Set the base octave (relative to fundamental)</td></tr>
+          <tr><td>Raise by Octave</td><td>+</td><td>Increment the base octave</td></tr>
+          <tr><td>Lower by Octave</td><td>-</td><td>Decrement the base octave</td></tr>
           
-          <tr><td>!#</td><td>Set tempo in beats per second, default is 4</td></tr>
+          <tr><td>New Voice</td><td>:(instrument)(space)</td><td>This starts at the first measure and plays concurrently with every other voice.  The instrument may be referenced either by name or by numeric ID.  This must also be followed by a space character.</td></tr>
+          <tr><td>Jump to Measure</td><td>m#</td><td>Sets the time of the next event to the start of the specified measure.<br>#0 is the first measure.</td></tr>
+          <tr><td>Jump to Beat</td><td>m#/#</td><td>Sets the time of the next event to the start of the specified beat within the specified measure.</td></tr>
           
-          <tr><td>:#</td><td>New Voice.  This starts at the first measure and plays concurrently with every other voice.<br>Optional Suffix specifies which defined instrument to use (from "Instruments" section)</td></tr>
-          <tr><td>m#</td><td>Jump to Measure - sets the time of the next event to the start of the specified measure. <br> (also: #0 is the first measure)</td></tr>
-          <tr><td>m#/#</td><td>Jump to Beat - sets the time of the next event to the start of the specified beat within the specified measure.</td></tr>
+          <tr><td>Tempo</td><td>!#</td><td>Beats per second, default is 4.  Applies to all voices starting at that beat (even if the later notes appear before of the tempo command).</td></tr>
           
-          <tr><td>'</td><td>Subtract half a beat from the nominal duration of the next note</td></tr>
-          <tr><td>`</td><td>Apply a stronger emphasis/attack to the next note</td></tr>
-          <tr><td>^</td><td>Apply a stronger emphasis/attack to the next note and reduce its duration by half a beat</td></tr>
-          <tr><td> </td><td>(space) - separates measures.<br> If the first voice and the jump to measure/beat command has not been used, measure separators define the behavior of the jump to measure/beat command (only measures which include at leat one beat or note count/are counted), otherwise, this is cosmetic only.  </td></tr>
+          <tr><td>Staccato</td><td>'</td><td>Subtract half a beat from the nominal duration of the next note</td></tr>
+          <tr><td>Accent</td><td>`</td><td>Apply a stronger emphasis/attack to the next note</td></tr>
+          <tr><td>Staccatissimo</td><td>^</td><td>Apply a stronger emphasis/attack to the next note and reduce its duration by half a beat</td></tr>
+          <tr><td>Measure Division</td><td>(space)</td><td>If the first voice and the jump to measure/beat command has not been used, measure separators define the behavior of the jump to measure/beat command (only measures which include at leat one beat or note count/are counted), otherwise, this is cosmetic only.<br>Also:  Measure length is based on how many beats are defined, not on a time signature or anything like it.</td></tr>
         </table>
       </div>
       <br>

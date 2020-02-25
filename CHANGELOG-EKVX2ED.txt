@@ -1,3 +1,6 @@
+24 Feb 2020 - <ongoing>
+  Add a Sound Effect String Design/Test interface.
+
 21 Dec 2019
   Fix "Embed Texture" UI handler
   Use localStorage to hold non-embedded custom textures.  

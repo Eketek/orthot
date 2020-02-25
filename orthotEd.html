@@ -108,6 +108,77 @@
       </p>
       <span class="btn_active" id="hideabout">Close</span>
     </div>
+    
+    <div id="soundDesigner" class="info" style="min-width:400px;width:33%;padding:10px">
+      Sound Designer
+      <hr>
+      <div class="btn_neutral" id="foldSndInstruments">Instruments</div>
+      <div id="sndInstruments">
+        <table><tr>
+          <td style="width:250px">
+            <select id="objSelector" size=4 style="width:100%;"></select>
+            <div class="btn_active" id="addInstrument">+ New Instrument</div>
+          </td>
+          <td style="width:100px">
+            Name:<br>
+            Harmonics:<br>
+            Magnitudes:<br>
+            Volume:<br>
+          </td>
+          <td style="width:600px">
+            <input type="text" id="sndInstrumentName" value="Instrument Name"><br>
+            <input type="text" id="sndInstrumentHarmonics" value="1 2 3 4 5"><br>
+            <input type="text" id="sndInstrumentMagnitudes" value="0.6 0.3 0.2 0.1 0.1"><br>
+            <input type="text" id="sndInstrumentVolume" value="1"><br>
+          </td>
+        </tr></table>
+      </div>
+      <div class="btn_neutral" id="foldSndEffects">Sound Effects</div>
+      <div id="sndEffects">
+        <table><tr>
+          <td style="width:250px">
+            <select id="sndEffectSelector" size=4 style="width:100%;"></select>
+            <div class="btn_active" id="addEffect">+ New Sound Effect</div>
+          </td>
+          <td style="width:700px">
+            <textarea id="sndEffectString" rows="5" cols="40">abcde</textarea><br>
+            <div class="btn_active" id="sndTestEffect">Test</div>
+          </td>
+        </tr></table>
+      </div>
+      <div class="btn_neutral" id="foldSndHelp">Instructions</div>
+      <div id="sndHelp" style="max-height:250px;overflow:scroll">
+        <p>This sound design tool is for defining and testing sound effect strings (simple representation of a sequence of beeps to be fed into a synthesizer).  This also optionally can be used to adjust synthesizer settings.</p>
+        <p>For the time being, this should be understood as using a pentatonic scale, but otherwise abstract (pitch and pitch ratios are to be controlled by the application).</p>
+        <p>Notation is a sequence of commands which are [mostly] sequential in time.  Each command is a single-character symbol, often followed by a numeric argument (which may be mandatory or optional).</p>
+        
+        <table class="tbl">
+          <tr><td>Command</td><td>Info</td></tr>
+          <tr><td>a-e#</td><td>Note at base octave - 'a' is lowest, 'e' is highest.  Optional suffix specifies length of the note in beats.</td></tr>
+          <tr><td>A-E#</td><td>Note at +1 octave - 'a' is lowest, 'e' is highest.  Optional suffix specifies length of the note in beats.</td></tr>
+          <tr><td>.#</td><td>Rest.  Optional suffix specifies length of the rest in beats.</td></tr>
+          
+          <tr><td>@</td><td>Set [approximate] fundamental ('a' in base octave).  If coordinated tuning is in use, this is only a hint.</td></tr>
+          <tr><td>o#</td><td>Set the base octave (relative to fundamental)</td></tr>
+          <tr><td>+</td><td>Increment the base octave</td></tr>
+          <tr><td>-</td><td>Decrement the base octave</td></tr>
+          
+          <tr><td>!#</td><td>Set tempo in beats per second, default is 4</td></tr>
+          
+          <tr><td>:#</td><td>New Voice.  This starts at the first measure and plays concurrently with every other voice.<br>Optional Suffix specifies which defined instrument to use (from "Instruments" section)</td></tr>
+          <tr><td>m#</td><td>Jump to Measure - sets the time of the next event to the start of the specified measure. <br> (also: #0 is the first measure)</td></tr>
+          <tr><td>m#/#</td><td>Jump to Beat - sets the time of the next event to the start of the specified beat within the specified measure.</td></tr>
+          
+          <tr><td>'</td><td>Subtract half a beat from the nominal duration of the next note</td></tr>
+          <tr><td>`</td><td>Apply a stronger emphasis/attack to the next note</td></tr>
+          <tr><td>^</td><td>Apply a stronger emphasis/attack to the next note and reduce its duration by half a beat</td></tr>
+          <tr><td> </td><td>(space) - separates measures.<br> If the first voice and the jump to measure/beat command has not been used, measure separators define the behavior of the jump to measure/beat command (only measures which include at leat one beat or note count/are counted), otherwise, this is cosmetic only.  </td></tr>
+        </table>
+      </div>
+      <br>
+      <span class="btn_active" id="hideSoundDesigner">Close</span>
+    </div>
+    
     <div id="textdisplay" style="position:absolute;margin:auto;pointer-events:none;opacity:0"></div>
     
     <div id="colorPicker" class="info">

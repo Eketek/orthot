@@ -407,6 +407,18 @@ $(async function MAIN() {
   $("#controls").append(instructionsBTN)
   on($("#hideinstructions"), "click", toggleInstructionsBox)
   
+  let soundDesignerBTN
+  let toggleSndDesignBox = function() {
+    $("#soundDesigner").toggle()
+    putFloatingElement($("#soundDesigner")[0], soundDesignerBTN)
+  }
+  soundDesignerBTN = $("<div>").addClass("btn_active").text("Sound Designer").click(toggleSndDesignBox)[0]
+  $("#controls").append(soundDesignerBTN)
+  on($("#hideSoundDesigner"), "click", toggleSndDesignBox)
+  on($("#foldSndInstruments"), "click", ()=>{ $("#sndInstruments").toggle()})
+  on($("#foldSndEffects"), "click", ()=>{ $("#sndEffects").toggle()})
+  on($("#foldSndHelp"), "click", ()=>{ console.log($("#sndHelp"));$("#sndHelp").toggle()})
+  
   let portuiBTN
   let portuiVisible = false
   let togglePortUI = function() {

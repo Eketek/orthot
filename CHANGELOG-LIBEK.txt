@@ -1,3 +1,7 @@
+25 Mar 2020
+  Added a path renderer (widepath.js)
+    This one does customized lateral color variation and predictable pixels
+
 22 Feb 2020 - <ongoing>
   Support for sound effect strings
 
